@@ -1,0 +1,46 @@
+# Ignorar archivos de configuración sensibles
+config/config.local.php
+
+# Ignorar archivos subidos por usuarios
+public/uploads/**
+!public/uploads/.gitkeep
+
+# Ignorar logs
+*.log
+logs/
+
+# Ignorar archivos temporales
+*.tmp
+*.temp
+/tmp/
+
+# Ignorar archivos del sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Ignorar archivos del IDE
+.vscode/
+.idea/
+*.sublime-*
+*.swp
+*.swo
+*~
+
+# Ignorar backups
+*.bak
+*.backup
+backup/
+
+# Ignorar dependencias (si usas composer en el futuro)
+vendor/
+composer.lock
+
+# Ignorar node_modules (si usas npm en el futuro)
+node_modules/
+package-lock.json
+
+# Ignorar archivos de entorno
+.env
+.env.local
+.env.*.local
