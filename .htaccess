@@ -1,6 +1,13 @@
 # Redirigir todas las peticiones a la carpeta public
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^$ public/ [L]
-    RewriteRule (.*) public/$1 [L]
+    
+    # Si se accede a la raíz, redirigir a public/
+    RewriteCond %{REQUEST_URI} ^/$
+    RewriteRule ^(.*)$ public/ [L]
+    
+    # Si el archivo o directorio no existe en la raíz, buscar en public/
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
