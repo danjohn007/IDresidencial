@@ -111,6 +111,37 @@
                     </a>
                 </li>
                 <?php endif; ?>
+                
+                <?php if ($_SESSION['role'] === 'superadmin'): ?>
+                <!-- Admin Modules -->
+                <li class="pt-4 pb-2">
+                    <div class="border-t"></div>
+                </li>
+                
+                <!-- Usuarios -->
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/users" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fas fa-users-cog w-5"></i>
+                        <span>Usuarios</span>
+                    </a>
+                </li>
+                
+                <!-- Importar Datos -->
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/import" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fas fa-file-import w-5"></i>
+                        <span>Importar Datos</span>
+                    </a>
+                </li>
+                
+                <!-- Auditoría -->
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/audit" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fas fa-clipboard-list w-5"></i>
+                        <span>Auditoría</span>
+                    </a>
+                </li>
+                <?php endif; ?>
             </ul>
         </nav>
         
