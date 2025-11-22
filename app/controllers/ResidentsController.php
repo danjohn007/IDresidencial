@@ -144,7 +144,7 @@ class ResidentsController extends Controller {
         ");
         $properties = $stmt->fetchAll();
         
-        // Calcular estadísticas
+        // Calculate statistics
         $stats = [
             'total' => count($properties),
             'ocupada' => count(array_filter($properties, fn($p) => $p['status'] === 'ocupada')),
@@ -195,7 +195,7 @@ class ResidentsController extends Controller {
         $stmt->execute($params);
         $fees = $stmt->fetchAll();
         
-        // Calcular estadísticas
+        // Calculate statistics
         $stats = [
             'total' => count($fees),
             'pending' => count(array_filter($fees, fn($f) => $f['status'] === 'pending')),

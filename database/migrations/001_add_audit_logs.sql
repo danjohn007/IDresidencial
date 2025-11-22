@@ -1,5 +1,5 @@
 -- ============================================
--- Agregar tabla de auditoría
+-- Add audit logs table
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS audit_logs (
