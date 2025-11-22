@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS amenities (
     hourly_rate DECIMAL(10,2) DEFAULT 0.00,
     hours_open TIME,
     hours_close TIME,
-    days_available VARCHAR(50) DEFAULT 'Lunes,Martes,Miercoles,Jueves,Viernes,Sabado,Domingo',
+    days_available VARCHAR(50),
     requires_payment BOOLEAN DEFAULT FALSE,
     status ENUM('active', 'maintenance', 'inactive') DEFAULT 'active',
     photo VARCHAR(255),
