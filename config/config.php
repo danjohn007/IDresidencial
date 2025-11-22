@@ -21,11 +21,6 @@ define('PUBLIC_URL', BASE_URL . '/public');
 // Configuración de zona horaria
 date_default_timezone_set('America/Mexico_City');
 
-// Configuración de sesión
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_only_cookies', 1);
-ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) ? 1 : 0);
-
 // Configuración de errores (cambiar en producción)
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
