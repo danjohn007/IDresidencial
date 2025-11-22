@@ -112,8 +112,8 @@ class ImportController extends Controller {
                     INSERT INTO users (username, email, password, first_name, last_name, phone, role, status)
                     VALUES (?, ?, ?, ?, ?, ?, 'residente', 'active')
                 ");
-                // Generar contraseña aleatoria segura
-                $randomPassword = bin2hex(random_bytes(8));
+                // Generar contraseña aleatoria segura (16 bytes = 32 caracteres hex)
+                $randomPassword = bin2hex(random_bytes(16));
                 $password = password_hash($randomPassword, PASSWORD_DEFAULT);
                 $stmt->execute([$row[0], $row[1], $password, $row[2], $row[3], $row[4]]);
                 
