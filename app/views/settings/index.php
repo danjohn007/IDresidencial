@@ -72,7 +72,7 @@
                 </a>
 
                 <!-- Hours Settings -->
-                <div class="bg-white p-6 rounded-lg shadow">
+                <a href="<?php echo BASE_URL; ?>/settings/hours" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
                     <div class="flex items-center space-x-4">
                         <div class="bg-red-100 p-4 rounded-lg">
                             <i class="fas fa-clock text-red-600 text-3xl"></i>
@@ -82,10 +82,10 @@
                             <p class="text-sm text-gray-600">Atención y servicio</p>
                         </div>
                     </div>
-                </div>
+                </a>
 
                 <!-- QR Settings -->
-                <div class="bg-white p-6 rounded-lg shadow">
+                <a href="<?php echo BASE_URL; ?>/settings/qr" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
                     <div class="flex items-center space-x-4">
                         <div class="bg-indigo-100 p-4 rounded-lg">
                             <i class="fas fa-qrcode text-indigo-600 text-3xl"></i>
@@ -95,7 +95,7 @@
                             <p class="text-sm text-gray-600">API y configuración</p>
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- Current Settings Overview -->

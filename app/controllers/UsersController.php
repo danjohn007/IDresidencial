@@ -119,7 +119,7 @@ class UsersController extends Controller {
     /**
      * Ver detalles de usuario
      */
-    public function view($id) {
+    public function viewDetails($id) {
         $user = $this->userModel->findById($id);
         
         if (!$user) {
@@ -143,7 +143,7 @@ class UsersController extends Controller {
             'activity' => $activity
         ];
         
-        $this->view('users/view', $data);
+        $this->view('users/viewDetails', $data);
     }
     
     /**

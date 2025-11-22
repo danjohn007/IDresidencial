@@ -95,7 +95,7 @@ class AuditController extends Controller {
     /**
      * Ver detalles de un log
      */
-    public function view($id) {
+    public function viewDetails($id) {
         $stmt = $this->db->prepare("
             SELECT al.*, u.username, u.first_name, u.last_name, u.role, u.email
             FROM audit_logs al
@@ -115,7 +115,7 @@ class AuditController extends Controller {
             'log' => $log
         ];
         
-        $this->view('audit/view', $data);
+        $this->view('audit/viewDetails', $data);
     }
     
     /**

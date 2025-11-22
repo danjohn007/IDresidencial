@@ -207,6 +207,87 @@ class SettingsController extends Controller {
     }
     
     /**
+     * Configuración de horarios
+     */
+    public function hours() {
+        $data = [
+            'title' => 'Configuración de Horarios'
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $hoursSettings = [
+                'hours_office_weekday' => $this->post('hours_office_weekday'),
+                'hours_office_weekend' => $this->post('hours_office_weekend'),
+                'hours_amenities_weekday' => $this->post('hours_amenities_weekday'),
+                'hours_amenities_weekend' => $this->post('hours_amenities_weekend'),
+                'hours_guard_24_7' => $this->post('hours_guard_24_7', '1')
+            ];
+            
+            foreach ($hoursSettings as $key => $value) {
+                $stmt = $this->db->prepare("
+                    INSERT INTO system_settings (setting_key, setting_value) 
+                    VALUES (?, ?) 
+                    ON DUPLICATE KEY UPDATE setting_value = ?
+                ");
+                $stmt->execute([$key, $value, $value]);
+            }
+            
+            $_SESSION['success_message'] = 'Configuración de horarios actualizada';
+            $this->redirect('settings/hours');
+        }
+        
+        // Obtener configuración actual
+        $stmt = $this->db->query("SELECT * FROM system_settings WHERE setting_key LIKE 'hours_%'");
+        $currentSettings = [];
+        while ($row = $stmt->fetch()) {
+            $currentSettings[$row['setting_key']] = $row['setting_value'];
+        }
+        
+        $data['current'] = $currentSettings;
+        $this->view('settings/hours', $data);
+    }
+    
+    /**
+     * Configuración de QR
+     */
+    public function qr() {
+        $data = [
+            'title' => 'Configuración de Códigos QR'
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $qrSettings = [
+                'qr_enabled' => $this->post('qr_enabled', '0'),
+                'qr_expiration_hours' => $this->post('qr_expiration_hours', '24'),
+                'qr_api_key' => $this->post('qr_api_key'),
+                'qr_logo_enabled' => $this->post('qr_logo_enabled', '1')
+            ];
+            
+            foreach ($qrSettings as $key => $value) {
+                $stmt = $this->db->prepare("
+                    INSERT INTO system_settings (setting_key, setting_value) 
+                    VALUES (?, ?) 
+                    ON DUPLICATE KEY UPDATE setting_value = ?
+                ");
+                $stmt->execute([$key, $value, $value]);
+            }
+            
+            $_SESSION['success_message'] = 'Configuración de QR actualizada';
+            $this->redirect('settings/qr');
+        }
+        
+        // Obtener configuración actual
+        $stmt = $this->db->query("SELECT * FROM system_settings WHERE setting_key LIKE 'qr_%'");
+        $currentSettings = [];
+        while ($row = $stmt->fetch()) {
+            $currentSettings[$row['setting_key']] = $row['setting_value'];
+        }
+        
+        $data['current'] = $currentSettings;
+        $this->view('settings/qr', $data);
+    }
+    
+    /**
      * Obtener configuración por clave
      */
     public static function getSetting($key, $default = null) {
