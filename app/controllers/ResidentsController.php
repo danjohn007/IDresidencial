@@ -144,9 +144,18 @@ class ResidentsController extends Controller {
         ");
         $properties = $stmt->fetchAll();
         
+        // Calcular estadísticas
+        $stats = [
+            'total' => count($properties),
+            'ocupada' => count(array_filter($properties, fn($p) => $p['status'] === 'ocupada')),
+            'desocupada' => count(array_filter($properties, fn($p) => $p['status'] === 'desocupada')),
+            'en_construccion' => count(array_filter($properties, fn($p) => $p['status'] === 'en_construccion'))
+        ];
+        
         $data = [
             'title' => 'Propiedades',
-            'properties' => $properties
+            'properties' => $properties,
+            'stats' => $stats
         ];
         
         $this->view('residents/properties', $data);
@@ -186,10 +195,18 @@ class ResidentsController extends Controller {
         $stmt->execute($params);
         $fees = $stmt->fetchAll();
         
+        // Calcular estadísticas
+        $stats = [
+            'total' => count($fees),
+            'pending' => count(array_filter($fees, fn($f) => $f['status'] === 'pending')),
+            'overdue' => count(array_filter($fees, fn($f) => $f['status'] === 'overdue'))
+        ];
+        
         $data = [
             'title' => 'Pagos y Cuotas',
             'fees' => $fees,
-            'filters' => $filters
+            'filters' => $filters,
+            'stats' => $stats
         ];
         
         $this->view('residents/payments', $data);

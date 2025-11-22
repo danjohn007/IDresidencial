@@ -121,19 +121,15 @@
             <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Total Registros</p>
-                    <p class="text-3xl font-bold text-blue-600"><?php echo count($fees); ?></p>
+                    <p class="text-3xl font-bold text-blue-600"><?php echo $stats['total']; ?></p>
                 </div>
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Pagos Pendientes</p>
-                    <p class="text-3xl font-bold text-yellow-600">
-                        <?php echo count(array_filter($fees, fn($f) => $f['status'] === 'pending')); ?>
-                    </p>
+                    <p class="text-3xl font-bold text-yellow-600"><?php echo $stats['pending']; ?></p>
                 </div>
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Pagos Vencidos</p>
-                    <p class="text-3xl font-bold text-red-600">
-                        <?php echo count(array_filter($fees, fn($f) => $f['status'] === 'overdue')); ?>
-                    </p>
+                    <p class="text-3xl font-bold text-red-600"><?php echo $stats['overdue']; ?></p>
                 </div>
             </div>
         </main>

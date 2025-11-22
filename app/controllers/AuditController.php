@@ -143,7 +143,7 @@ class AuditController extends Controller {
                 $userAgent
             ]);
         } catch (Exception $e) {
-            // Silent fail - no queremos que errores de logging rompan la aplicación
+            // Silent fail - we don't want logging errors to break the application
             error_log("Error logging audit: " . $e->getMessage());
         }
     }

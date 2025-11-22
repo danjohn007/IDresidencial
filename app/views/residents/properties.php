@@ -91,25 +91,19 @@
             <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Total Propiedades</p>
-                    <p class="text-3xl font-bold text-blue-600"><?php echo count($properties); ?></p>
+                    <p class="text-3xl font-bold text-blue-600"><?php echo $stats['total']; ?></p>
                 </div>
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Ocupadas</p>
-                    <p class="text-3xl font-bold text-green-600">
-                        <?php echo count(array_filter($properties, fn($p) => $p['status'] === 'ocupada')); ?>
-                    </p>
+                    <p class="text-3xl font-bold text-green-600"><?php echo $stats['ocupada']; ?></p>
                 </div>
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Desocupadas</p>
-                    <p class="text-3xl font-bold text-yellow-600">
-                        <?php echo count(array_filter($properties, fn($p) => $p['status'] === 'desocupada')); ?>
-                    </p>
+                    <p class="text-3xl font-bold text-yellow-600"><?php echo $stats['desocupada']; ?></p>
                 </div>
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">En Construcción</p>
-                    <p class="text-3xl font-bold text-orange-600">
-                        <?php echo count(array_filter($properties, fn($p) => $p['status'] === 'en_construccion')); ?>
-                    </p>
+                    <p class="text-3xl font-bold text-orange-600"><?php echo $stats['en_construccion']; ?></p>
                 </div>
             </div>
         </main>

@@ -107,12 +107,14 @@ class ImportController extends Controller {
             try {
                 $this->db->beginTransaction();
                 
-                // Crear usuario
+                // Crear usuario con contraseña temporal aleatoria
                 $stmt = $this->db->prepare("
                     INSERT INTO users (username, email, password, first_name, last_name, phone, role, status)
                     VALUES (?, ?, ?, ?, ?, ?, 'residente', 'active')
                 ");
-                $password = password_hash('default123', PASSWORD_DEFAULT);
+                // Generar contraseña aleatoria segura
+                $randomPassword = bin2hex(random_bytes(8));
+                $password = password_hash($randomPassword, PASSWORD_DEFAULT);
                 $stmt->execute([$row[0], $row[1], $password, $row[2], $row[3], $row[4]]);
                 
                 $imported++;
