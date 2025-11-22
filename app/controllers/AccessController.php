@@ -84,7 +84,7 @@ class AccessController extends Controller {
                     $this->generateQRImage($visitData['qr_code']);
                     
                     $_SESSION['success_message'] = 'Pase de visita generado exitosamente';
-                    $this->redirect('access/view/' . $visitData['qr_code']);
+                    $this->redirect('access/viewDetails/' . $visitData['qr_code']);
                 } else {
                     $data['error'] = 'Error al generar el pase de visita';
                 }
@@ -98,7 +98,7 @@ class AccessController extends Controller {
     /**
      * Ver detalles de una visita
      */
-    public function view($qrCode = null) {
+    public function viewDetails($qrCode = null) {
         if (!$qrCode) {
             $this->redirect('access');
         }

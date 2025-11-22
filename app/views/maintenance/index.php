@@ -86,7 +86,7 @@
                                     <span><i class="fas fa-calendar mr-1"></i> <?php echo date('d/m/Y', strtotime($report['created_at'])); ?></span>
                                 </div>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/maintenance/view/<?php echo $report['id']; ?>" 
+                            <a href="<?php echo BASE_URL; ?>/maintenance/viewDetails/<?php echo $report['id']; ?>" 
                                class="ml-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
                                 Ver Detalles
                             </a>

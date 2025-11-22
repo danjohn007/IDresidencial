@@ -54,7 +54,7 @@
                                         <span><i class="fas fa-calendar mr-1"></i> <?php echo date('d/m/Y H:i', strtotime($announcement['created_at'])); ?></span>
                                     </div>
                                 </div>
-                                <a href="<?php echo BASE_URL; ?>/announcements/view/<?php echo $announcement['id']; ?>" 
+                                <a href="<?php echo BASE_URL; ?>/announcements/viewDetails/<?php echo $announcement['id']; ?>" 
                                    class="ml-4 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200">
                                     Ver más
                                 </a>

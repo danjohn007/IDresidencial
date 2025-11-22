@@ -76,7 +76,7 @@ class MaintenanceController extends Controller {
     /**
      * Ver detalles del reporte
      */
-    public function view($id) {
+    public function viewDetails($id) {
         $report = $this->maintenanceModel->findById($id);
         
         if (!$report) {

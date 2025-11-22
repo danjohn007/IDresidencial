@@ -209,7 +209,7 @@ class SettingsController extends Controller {
     /**
      * Obtener configuración por clave
      */
-    public static function get($key, $default = null) {
+    public static function getSetting($key, $default = null) {
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare("SELECT setting_value FROM system_settings WHERE setting_key = ?");
         $stmt->execute([$key]);
