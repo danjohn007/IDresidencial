@@ -102,7 +102,7 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                    <a href="<?php echo BASE_URL; ?>/residents/view/<?php echo $resident['id']; ?>" 
+                                    <a href="<?php echo BASE_URL; ?>/residents/viewDetails/<?php echo $resident['id']; ?>" 
                                        class="text-blue-600 hover:text-blue-900">
                                         <i class="fas fa-eye"></i>
                                     </a>

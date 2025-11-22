@@ -168,7 +168,7 @@
                                                         <i class="fas fa-sign-out-alt"></i>
                                                     </a>
                                                 <?php endif; ?>
-                                                <a href="<?php echo BASE_URL; ?>/access/view/<?php echo $visit['qr_code']; ?>" 
+                                                <a href="<?php echo BASE_URL; ?>/access/viewDetails/<?php echo $visit['qr_code']; ?>" 
                                                    class="text-gray-600 hover:text-gray-900" title="Ver Detalles">
                                                     <i class="fas fa-eye"></i>
                                                 </a>

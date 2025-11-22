@@ -82,7 +82,7 @@ class AnnouncementsController extends Controller {
     /**
      * Ver detalle de comunicado
      */
-    public function view($id) {
+    public function viewDetails($id) {
         $stmt = $this->db->prepare("
             SELECT a.*, u.first_name, u.last_name
             FROM announcements a

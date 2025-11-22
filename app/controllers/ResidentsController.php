@@ -43,7 +43,7 @@ class ResidentsController extends Controller {
     /**
      * Ver detalles de residente
      */
-    public function view($id) {
+    public function viewDetails($id) {
         $resident = $this->residentModel->findById($id);
         
         if (!$resident) {
