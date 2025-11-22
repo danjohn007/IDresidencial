@@ -4,9 +4,10 @@
     
     # Si se accede a la raíz, redirigir a public/
     RewriteCond %{REQUEST_URI} ^/$
-    RewriteRule ^(.*)$ public/ [L]
+    RewriteRule ^$ public/ [L]
     
     # Si el archivo o directorio no existe en la raíz, buscar en public/
+    RewriteCond %{REQUEST_URI} !^/public/
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ public/$1 [L]
