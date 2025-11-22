@@ -1,7 +1,6 @@
 # URL amigables y enrutamiento
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /
     
     # Si el archivo o directorio existe, mostrarlo directamente
     RewriteCond %{REQUEST_FILENAME} !-f
