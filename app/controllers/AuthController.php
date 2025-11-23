@@ -43,8 +43,11 @@ class AuthController extends Controller {
                 
                 if ($user && $this->userModel->verifyPassword($password, $user['password'])) {
                     // Verificar estado del usuario
-                    if ($user['status'] !== 'active') {
-                        $data['error'] = 'Tu cuenta está inactiva. Contacta al administrador.';
+                    if ($user['status'] === 'pending') {
+                        $data['error'] = 'Tu cuenta está pendiente de verificación de correo electrónico y aprobación del administrador.';
+                        AuditController::log('login_failed', 'Intento de login con cuenta pendiente: ' . $username, 'users', $user['id']);
+                    } elseif ($user['status'] !== 'active') {
+                        $data['error'] = 'Tu cuenta está inactiva o bloqueada. Contacta al administrador.';
                         AuditController::log('login_failed', 'Intento de login con cuenta inactiva: ' . $username, 'users', $user['id']);
                     } else {
                         // Iniciar sesión
@@ -217,32 +220,120 @@ class AuthController extends Controller {
         ];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $userData = [
-                'username' => $this->post('username'),
-                'email' => $this->post('email'),
-                'password' => $this->post('password'),
-                'first_name' => $this->post('first_name'),
-                'last_name' => $this->post('last_name'),
-                'phone' => $this->post('phone'),
-                'role' => 'residente'
-            ];
+            // Validate CAPTCHA
+            $captchaAnswer = $this->post('captcha');
+            $correctAnswer = $_SESSION['captcha_answer'] ?? null;
+            
+            if (empty($captchaAnswer) || $captchaAnswer != $correctAnswer) {
+                $data['error'] = 'La verificación matemática es incorrecta';
+                $this->view('auth/register', $data);
+                return;
+            }
+            
+            // Validate terms acceptance
+            if (!$this->post('accept_terms')) {
+                $data['error'] = 'Debes aceptar los términos y condiciones';
+                $this->view('auth/register', $data);
+                return;
+            }
+            
+            // Validate phone (10 digits)
+            $phone = $this->post('phone');
+            if (!preg_match('/^[0-9]{10}$/', $phone)) {
+                $data['error'] = 'El teléfono debe contener exactamente 10 dígitos';
+                $this->view('auth/register', $data);
+                return;
+            }
+            
+            $email = $this->post('email');
+            $password = $this->post('password');
+            $first_name = $this->post('first_name');
+            $last_name = $this->post('last_name');
+            $property_id = $this->post('property_id');
             
             // Validaciones básicas
-            if (empty($userData['username']) || empty($userData['email']) || empty($userData['password'])) {
+            if (empty($email) || empty($password) || empty($first_name) || empty($last_name) || empty($property_id)) {
                 $data['error'] = 'Por favor, completa todos los campos requeridos';
-            } elseif ($this->userModel->findByUsername($userData['username'])) {
-                $data['error'] = 'El nombre de usuario ya existe';
-            } elseif ($this->userModel->findByEmail($userData['email'])) {
+            } elseif (strlen($password) < 6) {
+                $data['error'] = 'La contraseña debe tener al menos 6 caracteres';
+            } elseif ($this->userModel->findByEmail($email)) {
                 $data['error'] = 'El correo electrónico ya está registrado';
             } else {
-                if ($this->userModel->create($userData)) {
-                    $data['success'] = 'Usuario registrado exitosamente. Ahora puedes iniciar sesión.';
-                } else {
-                    $data['error'] = 'Error al registrar el usuario. Inténtalo de nuevo.';
+                // Generate username from email
+                $username = explode('@', $email)[0] . '_' . rand(1000, 9999);
+                
+                // Generate email verification token
+                $email_verification_token = bin2hex(random_bytes(32));
+                
+                // Create user with pending status
+                $db = Database::getInstance()->getConnection();
+                try {
+                    $db->beginTransaction();
+                    
+                    // Insert user
+                    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                    $stmt = $db->prepare("
+                        INSERT INTO users (username, email, password, first_name, last_name, phone, role, status, email_verification_token) 
+                        VALUES (?, ?, ?, ?, ?, ?, 'residente', 'pending', ?)
+                    ");
+                    $stmt->execute([$username, $email, $hashedPassword, $first_name, $last_name, $phone, $email_verification_token]);
+                    $userId = $db->lastInsertId();
+                    
+                    // Create resident record linked to property
+                    $stmt = $db->prepare("
+                        INSERT INTO residents (user_id, property_id, relationship, is_primary, status) 
+                        VALUES (?, ?, 'propietario', 1, 'pending')
+                    ");
+                    $stmt->execute([$userId, $property_id]);
+                    
+                    $db->commit();
+                    
+                    // Log the registration
+                    AuditController::log('register', 'Nuevo registro pendiente de aprobación: ' . $email, 'users', $userId);
+                    
+                    // In production, send verification email here
+                    // For now, show success message
+                    $verificationLink = BASE_URL . '/auth/verifyEmail?token=' . $email_verification_token;
+                    
+                    $data['success'] = 'Registro exitoso. Tu cuenta está pendiente de verificación de correo electrónico y aprobación del administrador. 
+                                       <br><br>Por favor, verifica tu correo en: <a href="' . $verificationLink . '" class="underline font-medium">Verificar correo</a>';
+                    
+                } catch (PDOException $e) {
+                    $db->rollBack();
+                    $data['error'] = 'Error al registrar el usuario: ' . $e->getMessage();
                 }
             }
         }
         
         $this->view('auth/register', $data);
+    }
+    
+    /**
+     * Verify email address
+     */
+    public function verifyEmail() {
+        $token = $this->get('token');
+        
+        if (empty($token)) {
+            $_SESSION['error_message'] = 'Token de verificación no válido';
+            $this->redirect('auth/login');
+            return;
+        }
+        
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("
+            UPDATE users 
+            SET email_verified_at = NOW(), email_verification_token = NULL 
+            WHERE email_verification_token = ? AND email_verified_at IS NULL
+        ");
+        $stmt->execute([$token]);
+        
+        if ($stmt->rowCount() > 0) {
+            $_SESSION['success_message'] = 'Correo electrónico verificado exitosamente. Tu cuenta está pendiente de aprobación del administrador.';
+        } else {
+            $_SESSION['error_message'] = 'Token de verificación inválido o ya utilizado';
+        }
+        
+        $this->redirect('auth/login');
     }
 }

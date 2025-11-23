@@ -79,37 +79,54 @@
                     >
                 </div>
 
-                <!-- Phone -->
+                <!-- Phone/WhatsApp -->
                 <div class="mb-4">
                     <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
-                        Teléfono
+                        Teléfono/WhatsApp <span class="text-red-500">*</span>
                     </label>
                     <input 
                         type="tel" 
                         id="phone" 
                         name="phone" 
+                        maxlength="10"
+                        pattern="[0-9]{10}"
                         class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        placeholder="+52 442 123 4567"
-                    >
-                </div>
-
-                <!-- Username -->
-                <div class="mb-4">
-                    <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
-                        Usuario <span class="text-red-500">*</span>
-                    </label>
-                    <input 
-                        type="text" 
-                        id="username" 
-                        name="username" 
-                        class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        placeholder="usuario"
+                        placeholder="4421234567 (10 dígitos)"
                         required
                     >
+                    <p class="text-xs text-gray-500 mt-1">Ingresa 10 dígitos sin espacios ni guiones</p>
+                </div>
+
+                <!-- Property Selection -->
+                <div class="mb-4">
+                    <label for="property_id" class="block text-sm font-medium text-gray-700 mb-2">
+                        Propiedad/Casa <span class="text-red-500">*</span>
+                    </label>
+                    <select 
+                        id="property_id" 
+                        name="property_id" 
+                        class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        required
+                    >
+                        <option value="">Selecciona tu propiedad</option>
+                        <?php
+                        $db = Database::getInstance()->getConnection();
+                        $stmt = $db->query("SELECT id, property_number, street, section FROM properties ORDER BY section, property_number");
+                        $properties = $stmt->fetchAll();
+                        foreach ($properties as $property):
+                        ?>
+                            <option value="<?php echo $property['id']; ?>">
+                                <?php echo htmlspecialchars($property['property_number']); ?>
+                                <?php if ($property['section']): ?>
+                                    - <?php echo htmlspecialchars($property['section']); ?>
+                                <?php endif; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 
                 <!-- Password -->
-                <div class="mb-6">
+                <div class="mb-4">
                     <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
                         Contraseña <span class="text-red-500">*</span>
                     </label>
@@ -117,10 +134,53 @@
                         type="password" 
                         id="password" 
                         name="password" 
+                        minlength="6"
                         class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                         placeholder="Mínimo 6 caracteres"
                         required
                     >
+                </div>
+
+                <!-- CAPTCHA -->
+                <div class="mb-4">
+                    <label for="captcha" class="block text-sm font-medium text-gray-700 mb-2">
+                        Verificación <span class="text-red-500">*</span>
+                    </label>
+                    <?php
+                    $num1 = rand(1, 9);
+                    $num2 = rand(1, 9);
+                    $_SESSION['captcha_answer'] = $num1 + $num2;
+                    ?>
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-gray-100 px-4 py-3 rounded-lg border border-gray-300 font-mono text-lg">
+                            <?php echo $num1; ?> + <?php echo $num2; ?> = ?
+                        </div>
+                        <input 
+                            type="number" 
+                            id="captcha" 
+                            name="captcha" 
+                            class="w-24 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="?"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <!-- Terms and Conditions -->
+                <div class="mb-6">
+                    <label class="flex items-start space-x-3">
+                        <input 
+                            type="checkbox" 
+                            name="accept_terms" 
+                            required
+                            class="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        >
+                        <span class="text-sm text-gray-700">
+                            Acepto los <a href="#" class="text-blue-600 hover:text-blue-700 underline">términos y condiciones</a> 
+                            y la <a href="#" class="text-blue-600 hover:text-blue-700 underline">política de privacidad</a>
+                            <span class="text-red-500">*</span>
+                        </span>
+                    </label>
                 </div>
                 
                 <!-- Submit button -->
@@ -131,6 +191,14 @@
                     <i class="fas fa-user-plus mr-2"></i>
                     Registrarse
                 </button>
+
+                <!-- Notice -->
+                <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p class="text-xs text-yellow-800">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Tu cuenta estará pendiente de verificación por correo electrónico y aprobación del administrador antes de poder acceder al sistema.
+                    </p>
+                </div>
             </form>
             
             <!-- Additional links -->

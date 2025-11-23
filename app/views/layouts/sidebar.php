@@ -83,6 +83,12 @@
                             </a>
                         </li>
                         <li>
+                            <a href="<?php echo BASE_URL; ?>/residents/pendingRegistrations" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-user-clock w-5"></i>
+                                <span>Registros Pendientes</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="<?php echo BASE_URL; ?>/vehicles" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
                                 <i class="fas fa-car w-5"></i>
                                 <span>Vehículos Registrados</span>

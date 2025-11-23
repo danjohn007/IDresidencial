@@ -372,4 +372,89 @@ class ResidentsController extends Controller {
         
         $this->redirect('residents/properties');
     }
+    
+    /**
+     * View pending registrations from public registration form
+     */
+    public function pendingRegistrations() {
+        // Get all pending users with their property info
+        $stmt = $this->db->query("
+            SELECT u.*, 
+                   p.property_number,
+                   r.id as resident_id,
+                   r.relationship,
+                   u.created_at as registration_date
+            FROM users u
+            LEFT JOIN residents r ON u.id = r.user_id
+            LEFT JOIN properties p ON r.property_id = p.id
+            WHERE u.status = 'pending' AND u.role = 'residente'
+            ORDER BY u.created_at DESC
+        ");
+        $pendingUsers = $stmt->fetchAll();
+        
+        $data = [
+            'title' => 'Registros Pendientes',
+            'pendingUsers' => $pendingUsers
+        ];
+        
+        $this->view('residents/pending_registrations', $data);
+    }
+    
+    /**
+     * Approve a pending registration
+     */
+    public function approveRegistration($userId) {
+        try {
+            $this->db->beginTransaction();
+            
+            // Update user status to active
+            $stmt = $this->db->prepare("UPDATE users SET status = 'active' WHERE id = ? AND status = 'pending'");
+            $stmt->execute([$userId]);
+            
+            // Update resident status to active
+            $stmt = $this->db->prepare("UPDATE residents SET status = 'active' WHERE user_id = ? AND status = 'pending'");
+            $stmt->execute([$userId]);
+            
+            $this->db->commit();
+            
+            AuditController::log('approve', 'Registro de residente aprobado', 'users', $userId);
+            $_SESSION['success_message'] = 'Registro aprobado exitosamente';
+            
+            // In production, send welcome email here
+            
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            $_SESSION['error_message'] = 'Error al aprobar el registro: ' . $e->getMessage();
+        }
+        
+        $this->redirect('residents/pendingRegistrations');
+    }
+    
+    /**
+     * Reject a pending registration
+     */
+    public function rejectRegistration($userId) {
+        try {
+            $this->db->beginTransaction();
+            
+            // Delete resident record first
+            $stmt = $this->db->prepare("DELETE FROM residents WHERE user_id = ?");
+            $stmt->execute([$userId]);
+            
+            // Delete user record
+            $stmt = $this->db->prepare("DELETE FROM users WHERE id = ? AND status = 'pending'");
+            $stmt->execute([$userId]);
+            
+            $this->db->commit();
+            
+            AuditController::log('reject', 'Registro de residente rechazado', 'users', $userId);
+            $_SESSION['success_message'] = 'Registro rechazado y eliminado';
+            
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            $_SESSION['error_message'] = 'Error al rechazar el registro: ' . $e->getMessage();
+        }
+        
+        $this->redirect('residents/pendingRegistrations');
+    }
 }
