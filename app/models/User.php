@@ -41,8 +41,8 @@ class User {
      * Crear nuevo usuario
      */
     public function create($data) {
-        $sql = "INSERT INTO users (username, email, password, role, first_name, last_name, phone, status) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO users (username, email, password, role, first_name, last_name, phone, house_number, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([
@@ -53,6 +53,7 @@ class User {
             $data['first_name'],
             $data['last_name'],
             $data['phone'] ?? null,
+            $data['house_number'] ?? null,
             $data['status'] ?? 'active'
         ]);
     }

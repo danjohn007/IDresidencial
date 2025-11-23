@@ -72,10 +72,16 @@
                         class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                     <i class="fas fa-sync-alt mr-2"></i> Actualizar Estados
                 </button>
-                <button onclick="location.href='<?php echo BASE_URL; ?>/devices/createShelly'" 
-                        class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-                    <i class="fas fa-plus mr-2"></i> Nuevo Dispositivo Shelly
-                </button>
+                <div class="flex space-x-2">
+                    <button onclick="location.href='<?php echo BASE_URL; ?>/devices/createHikvision'" 
+                            class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-video mr-2"></i> Nuevo Dispositivo Hikvision
+                    </button>
+                    <button onclick="location.href='<?php echo BASE_URL; ?>/devices/createShelly'" 
+                            class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                        <i class="fas fa-plus mr-2"></i> Nuevo Dispositivo Shelly
+                    </button>
+                </div>
             </div>
 
             <!-- Dispositivos Shelly Section -->
