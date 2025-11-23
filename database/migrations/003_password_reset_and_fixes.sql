@@ -64,18 +64,84 @@ WHERE NOT EXISTS (
 -- ============================================
 
 -- Índice para búsquedas de residentes por usuario
-ALTER TABLE residents 
-ADD INDEX IF NOT EXISTS idx_status (status);
+SET @idx_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE table_schema = DATABASE()
+      AND table_name = 'residents'
+      AND index_name = 'idx_status'
+);
+SET @sql := IF(@idx_exists = 0,
+    'ALTER TABLE residents ADD INDEX idx_status (status);',
+    'SELECT "Index idx_status already exists in residents";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Índice para búsquedas de membresías
-ALTER TABLE IF EXISTS memberships 
-ADD INDEX IF NOT EXISTS idx_status (status),
-ADD INDEX IF NOT EXISTS idx_dates (start_date, end_date);
+-- Índice para búsquedas de membresías: idx_status
+SET @idx_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE table_schema = DATABASE()
+      AND table_name = 'memberships'
+      AND index_name = 'idx_status'
+);
+SET @sql := IF(@idx_exists = 0,
+    'ALTER TABLE memberships ADD INDEX idx_status (status);',
+    'SELECT "Index idx_status already exists in memberships";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Índice para movimientos financieros
-ALTER TABLE IF EXISTS financial_movements 
-ADD INDEX IF NOT EXISTS idx_transaction_date (transaction_date),
-ADD INDEX IF NOT EXISTS idx_transaction_type (transaction_type);
+-- Índice para búsquedas de membresías: idx_dates
+SET @idx_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE table_schema = DATABASE()
+      AND table_name = 'memberships'
+      AND index_name = 'idx_dates'
+);
+SET @sql := IF(@idx_exists = 0,
+    'ALTER TABLE memberships ADD INDEX idx_dates (start_date, end_date);',
+    'SELECT "Index idx_dates already exists in memberships";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Índice para movimientos financieros: idx_transaction_date
+SET @idx_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE table_schema = DATABASE()
+      AND table_name = 'financial_movements'
+      AND index_name = 'idx_transaction_date'
+);
+SET @sql := IF(@idx_exists = 0,
+    'ALTER TABLE financial_movements ADD INDEX idx_transaction_date (transaction_date);',
+    'SELECT "Index idx_transaction_date already exists in financial_movements";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Índice para movimientos financieros: idx_transaction_type
+SET @idx_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE table_schema = DATABASE()
+      AND table_name = 'financial_movements'
+      AND index_name = 'idx_transaction_type'
+);
+SET @sql := IF(@idx_exists = 0,
+    'ALTER TABLE financial_movements ADD INDEX idx_transaction_type (transaction_type);',
+    'SELECT "Index idx_transaction_type already exists in financial_movements";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- ============================================
 -- Verificar configuraciones del sistema
