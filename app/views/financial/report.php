@@ -193,33 +193,40 @@
 </div>
 
 <script>
-// Gráfica de Ingresos vs Egresos
-const ctxPie = document.getElementById('incomeExpenseChart').getContext('2d');
-new Chart(ctxPie, {
-    type: 'pie',
-    data: {
-        labels: ['Ingresos', 'Egresos'],
-        datasets: [{
-            data: [
-                <?php echo $stats['total_ingresos'] ?? 0; ?>,
-                <?php echo $stats['total_egresos'] ?? 0; ?>
-            ],
-            backgroundColor: ['#10b981', '#ef4444']
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: {
-                position: 'bottom'
+// Verificar que Chart.js esté cargado
+if (typeof Chart !== 'undefined') {
+    // Gráfica de Ingresos vs Egresos
+    const pieCanvas = document.getElementById('incomeExpenseChart');
+    if (pieCanvas) {
+        const ctxPie = pieCanvas.getContext('2d');
+        new Chart(ctxPie, {
+            type: 'pie',
+            data: {
+                labels: ['Ingresos', 'Egresos'],
+                datasets: [{
+                    data: [
+                        <?php echo $stats['total_ingresos'] ?? 0; ?>,
+                        <?php echo $stats['total_egresos'] ?? 0; ?>
+                    ],
+                    backgroundColor: ['#10b981', '#ef4444']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
             }
-        }
+        });
     }
-});
 
-// Gráfica de tendencia mensual (ejemplo simplificado)
-const ctxLine = document.getElementById('monthlyTrendChart').getContext('2d');
-new Chart(ctxLine, {
+    // Gráfica de tendencia mensual (ejemplo simplificado)
+    const lineCanvas = document.getElementById('monthlyTrendChart');
+    if (lineCanvas) {
+        const ctxLine = lineCanvas.getContext('2d');
+        new Chart(ctxLine, {
     type: 'line',
     data: {
         labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
@@ -252,8 +259,11 @@ new Chart(ctxLine, {
                 beginAtZero: true
             }
         }
+    });
     }
-});
+} else {
+    console.error('Chart.js no está cargado');
+}
 
 function exportToExcel() {
     alert('Función de exportación a Excel en desarrollo');

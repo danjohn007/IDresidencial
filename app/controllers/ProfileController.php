@@ -146,9 +146,12 @@ class ProfileController extends Controller {
         
         $file = $_FILES['photo'];
         
-        // Validar tipo de archivo
+        // Validar tipo de archivo por MIME y extensión
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-        if (!in_array($file['type'], $allowedTypes)) {
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+        $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        
+        if (!in_array($file['type'], $allowedTypes) || !in_array($fileExtension, $allowedExtensions)) {
             $_SESSION['error_message'] = 'Tipo de archivo no permitido. Solo se aceptan imágenes JPG, PNG o GIF.';
             $this->redirect('profile');
             return;
@@ -186,6 +189,9 @@ class ProfileController extends Controller {
                 if ($oldPhoto && file_exists($uploadDir . '/' . $oldPhoto)) {
                     unlink($uploadDir . '/' . $oldPhoto);
                 }
+                
+                // Update session cache
+                $_SESSION['user_photo'] = $filename;
                 
                 AuditController::log('update', 'Usuario actualizó su foto de perfil', 'users', $userId);
                 $_SESSION['success_message'] = 'Foto de perfil actualizada exitosamente';

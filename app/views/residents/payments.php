@@ -145,10 +145,10 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                                         <?php if ($fee['status'] !== 'paid'): ?>
-                                            <button onclick="registerPayment(<?php echo $fee['id']; ?>, '<?php echo $fee['property_number']; ?>')" 
-                                                    class="text-blue-600 hover:text-blue-800">
+                                            <a href="<?php echo BASE_URL; ?>/financial/create?property_id=<?php echo $fee['property_id'] ?? ''; ?>&amount=<?php echo $fee['amount'] ?? ''; ?>" 
+                                               class="text-blue-600 hover:text-blue-800">
                                                 <i class="fas fa-dollar-sign mr-1"></i>Registrar Pago
-                                            </button>
+                                            </a>
                                         <?php else: ?>
                                             <span class="text-gray-400">-</span>
                                         <?php endif; ?>
@@ -178,14 +178,5 @@
         </main>
     </div>
 </div>
-
-<script>
-function registerPayment(feeId, propertyNumber) {
-    if (confirm('¿Confirmar el registro de pago para la propiedad ' + propertyNumber + '?')) {
-        // Redirect to a payment registration page or handle via AJAX
-        window.location.href = '<?php echo BASE_URL; ?>/residents/registerPayment/' + feeId;
-    }
-}
-</script>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>

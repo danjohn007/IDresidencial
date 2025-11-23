@@ -42,14 +42,19 @@
                 <div class="relative group">
                     <button class="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
                         <?php
-                        $userId = $_SESSION['user_id'] ?? null;
-                        $userPhoto = null;
-                        if ($userId) {
-                            $stmt = $db->prepare("SELECT photo FROM users WHERE id = ?");
-                            $stmt->execute([$userId]);
-                            $userRow = $stmt->fetch();
-                            $userPhoto = $userRow ? $userRow['photo'] : null;
+                        // Cache user photo in session to avoid repeated DB queries
+                        if (!isset($_SESSION['user_photo'])) {
+                            $userId = $_SESSION['user_id'] ?? null;
+                            if ($userId) {
+                                $stmt = $db->prepare("SELECT photo FROM users WHERE id = ?");
+                                $stmt->execute([$userId]);
+                                $userRow = $stmt->fetch();
+                                $_SESSION['user_photo'] = $userRow ? $userRow['photo'] : '';
+                            } else {
+                                $_SESSION['user_photo'] = '';
+                            }
                         }
+                        $userPhoto = $_SESSION['user_photo'];
                         ?>
                         <?php if ($userPhoto && file_exists(PUBLIC_PATH . '/uploads/profiles/' . $userPhoto)): ?>
                             <img src="<?php echo PUBLIC_URL . '/uploads/profiles/' . htmlspecialchars($userPhoto); ?>" 
