@@ -117,6 +117,13 @@ class UsersController extends Controller {
     }
     
     /**
+     * Ver detalles de usuario (alias public para compatibilidad con Router)
+     */
+    public function view($id) {
+        $this->viewDetails($id);
+    }
+    
+    /**
      * Ver detalles de usuario
      */
     public function viewDetails($id) {
