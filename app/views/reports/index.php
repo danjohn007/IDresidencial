@@ -79,15 +79,15 @@
                     </div>
                 </a>
 
-                <!-- Reporte de Amenidades -->
-                <a href="<?php echo BASE_URL; ?>/amenities" class="bg-white rounded-lg shadow hover:shadow-lg transition p-6">
+                <!-- Reporte de Seguridad -->
+                <a href="<?php echo BASE_URL; ?>/security" class="bg-white rounded-lg shadow hover:shadow-lg transition p-6">
                     <div class="flex items-center space-x-4">
                         <div class="p-4 bg-teal-100 rounded-full">
-                            <i class="fas fa-swimming-pool text-teal-600 text-3xl"></i>
+                            <i class="fas fa-shield-alt text-teal-600 text-3xl"></i>
                         </div>
                         <div>
-                            <h3 class="font-bold text-lg text-gray-900">Reporte de Amenidades</h3>
-                            <p class="text-sm text-gray-600">Reservaciones y uso</p>
+                            <h3 class="font-bold text-lg text-gray-900">Reporte de Seguridad</h3>
+                            <p class="text-sm text-gray-600">Alertas y patrullajes</p>
                         </div>
                     </div>
                 </a>

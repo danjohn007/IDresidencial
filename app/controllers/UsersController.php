@@ -53,7 +53,15 @@ class UsersController extends Controller {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Generate username from email
             $email = $this->post('email');
-            $username = strstr($email, '@', true);
+            $baseUsername = strstr($email, '@', true);
+            
+            // Ensure username is unique by adding suffix if needed
+            $username = $baseUsername;
+            $counter = 1;
+            while ($this->userModel->findByUsername($username)) {
+                $username = $baseUsername . $counter;
+                $counter++;
+            }
             
             $userData = [
                 'username' => $username,
