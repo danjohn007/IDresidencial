@@ -1,13 +1,35 @@
-<?php require_once APP_PATH . '/views/layouts/header.php'; ?>
+<?php 
+require_once APP_PATH . '/views/layouts/header.php';
+
+// Get settings from database
+$db = Database::getInstance()->getConnection();
+$stmt = $db->query("SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('site_name', 'site_logo', 'site_email', 'site_phone')");
+$settings = [];
+while ($row = $stmt->fetch()) {
+    $settings[$row['setting_key']] = $row['setting_value'];
+}
+
+$siteName = $settings['site_name'] ?? SITE_NAME;
+$siteLogo = $settings['site_logo'] ?? null;
+$siteEmail = $settings['site_email'] ?? SITE_EMAIL;
+$sitePhone = $settings['site_phone'] ?? SITE_PHONE;
+?>
 
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 px-4">
     <div class="max-w-md w-full">
         <!-- Logo and title -->
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-full mb-4">
-                <i class="fas fa-building text-white text-4xl"></i>
-            </div>
-            <h1 class="text-3xl font-bold text-gray-900 mb-2"><?php echo SITE_NAME; ?></h1>
+            <?php if ($siteLogo && file_exists($siteLogo)): ?>
+                <div class="mb-4">
+                    <img src="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($siteLogo); ?>" 
+                         alt="Logo" class="h-20 mx-auto object-contain">
+                </div>
+            <?php else: ?>
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-full mb-4">
+                    <i class="fas fa-building text-white text-4xl"></i>
+                </div>
+            <?php endif; ?>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2"><?php echo htmlspecialchars($siteName); ?></h1>
             <p class="text-gray-600">Sistema de Gestión Residencial</p>
         </div>
         
@@ -98,11 +120,12 @@
         
         <!-- Footer -->
         <div class="mt-8 text-center text-sm text-gray-500">
-            <p>&copy; <?php echo date('Y'); ?> <?php echo SITE_NAME; ?>. Todos los derechos reservados.</p>
+            <p>&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($siteName); ?>. Todos los derechos reservados.</p>
+            <p class="mt-2">
+                <i class="fas fa-envelope mr-1"></i> <?php echo htmlspecialchars($siteEmail); ?>
+            </p>
             <p class="mt-1">
-                <a href="<?php echo BASE_URL; ?>/test_connection.php" class="text-blue-600 hover:text-blue-700">
-                    <i class="fas fa-plug mr-1"></i> Probar conexión
-                </a>
+                <i class="fas fa-phone mr-1"></i> <?php echo htmlspecialchars($sitePhone); ?>
             </p>
         </div>
     </div>
