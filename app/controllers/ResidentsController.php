@@ -3,6 +3,8 @@
  * Controlador de Residentes
  */
 
+require_once APP_PATH . '/controllers/AuditController.php';
+
 class ResidentsController extends Controller {
     
     private $residentModel;
@@ -125,6 +127,7 @@ class ResidentsController extends Controller {
                 ];
                 
                 if ($this->residentModel->create($residentData)) {
+                    AuditController::log('create', 'Residente creado: ' . $userData['first_name'] . ' ' . $userData['last_name'], 'residents', null);
                     $_SESSION['success_message'] = 'Residente creado exitosamente';
                     $this->redirect('residents');
                 } else {
@@ -179,28 +182,42 @@ class ResidentsController extends Controller {
     public function payments() {
         $filters = [
             'status' => $this->get('status'),
-            'month' => $this->get('month', date('Y-m'))
+            'month' => $this->get('month', date('Y-m')),
+            'search' => $this->get('search', '')
         ];
         
         $where = [];
         $params = [];
         
         if ($filters['status']) {
-            $where[] = "status = ?";
+            $where[] = "mf.status = ?";
             $params[] = $filters['status'];
         }
         
         if ($filters['month']) {
-            $where[] = "period = ?";
+            $where[] = "mf.period = ?";
             $params[] = $filters['month'];
+        }
+        
+        // Search by resident name or phone
+        if (!empty($filters['search'])) {
+            $where[] = "(u.first_name LIKE ? OR u.last_name LIKE ? OR u.phone LIKE ? OR p.property_number LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
         }
         
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
         $stmt = $this->db->prepare("
-            SELECT mf.*, p.property_number, p.section
+            SELECT mf.*, p.property_number, p.section,
+                   u.first_name, u.last_name, u.phone
             FROM maintenance_fees mf
             JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1
+            LEFT JOIN users u ON r.user_id = u.id
             $whereClause
             ORDER BY mf.due_date DESC, p.property_number
         ");

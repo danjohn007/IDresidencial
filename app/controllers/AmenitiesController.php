@@ -3,6 +3,8 @@
  * Controlador de Amenidades
  */
 
+require_once APP_PATH . '/controllers/AuditController.php';
+
 class AmenitiesController extends Controller {
     
     private $amenityModel;
@@ -80,6 +82,7 @@ class AmenitiesController extends Controller {
                     $data['error'] = 'El horario seleccionado no está disponible';
                 } else {
                     if ($this->reservationModel->create($reservationData)) {
+                        AuditController::log('create', 'Reservación de amenidad creada: ' . $amenity['name'], 'reservations', null);
                         $_SESSION['success_message'] = 'Reservación creada exitosamente';
                         $this->redirect('amenities/myReservations');
                     } else {
@@ -155,6 +158,7 @@ class AmenitiesController extends Controller {
         $resident = $this->residentModel->findByUserId($_SESSION['user_id']);
         if ($resident && $reservation['resident_id'] == $resident['id'] || in_array($_SESSION['role'], ['superadmin', 'administrador'])) {
             if ($this->reservationModel->updateStatus($id, 'cancelled')) {
+                AuditController::log('update', 'Reservación cancelada ID: ' . $id, 'reservations', $id);
                 $_SESSION['success_message'] = 'Reservación cancelada exitosamente';
             } else {
                 $_SESSION['error_message'] = 'Error al cancelar la reservación';
