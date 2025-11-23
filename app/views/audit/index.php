@@ -139,7 +139,11 @@
                 </table>
                 
                 <!-- Pagination -->
-                <?php if ($pagination['totalPages'] > 1): ?>
+                <?php if ($pagination['totalPages'] > 1): 
+                    // Build query params for pagination
+                    $queryParams = array_filter($filters);
+                    $queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
+                ?>
                 <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                     <div class="text-sm text-gray-700">
                         Mostrando página <?php echo $pagination['page']; ?> de <?php echo $pagination['totalPages']; ?>
@@ -147,23 +151,15 @@
                     </div>
                     <div class="flex space-x-2">
                         <?php if ($pagination['page'] > 1): ?>
-                            <a href="<?php echo BASE_URL; ?>/audit?page=<?php echo $pagination['page'] - 1; ?><?php 
-                                echo $filters['user_id'] ? '&user_id=' . $filters['user_id'] : '';
-                                echo $filters['action'] ? '&action=' . $filters['action'] : '';
-                                echo $filters['date_from'] ? '&date_from=' . $filters['date_from'] : '';
-                                echo $filters['date_to'] ? '&date_to=' . $filters['date_to'] : '';
-                            ?>" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                            <a href="<?php echo BASE_URL; ?>/audit?page=<?php echo $pagination['page'] - 1; ?><?php echo $queryString; ?>" 
+                               class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                                 Anterior
                             </a>
                         <?php endif; ?>
                         
                         <?php if ($pagination['page'] < $pagination['totalPages']): ?>
-                            <a href="<?php echo BASE_URL; ?>/audit?page=<?php echo $pagination['page'] + 1; ?><?php 
-                                echo $filters['user_id'] ? '&user_id=' . $filters['user_id'] : '';
-                                echo $filters['action'] ? '&action=' . $filters['action'] : '';
-                                echo $filters['date_from'] ? '&date_from=' . $filters['date_from'] : '';
-                                echo $filters['date_to'] ? '&date_to=' . $filters['date_to'] : '';
-                            ?>" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            <a href="<?php echo BASE_URL; ?>/audit?page=<?php echo $pagination['page'] + 1; ?><?php echo $queryString; ?>" 
+                               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                                 Siguiente
                             </a>
                         <?php endif; ?>

@@ -7,6 +7,10 @@ class SettingsController extends Controller {
     
     private $db;
     
+    // Constants for file uploads
+    const MAX_LOGO_SIZE = 2097152; // 2MB in bytes
+    const ALLOWED_LOGO_EXTENSIONS = ['jpg', 'jpeg', 'png', 'svg'];
+    
     public function __construct() {
         $this->requireAuth();
         $this->requireRole(['superadmin', 'administrador']);
@@ -101,9 +105,8 @@ class SettingsController extends Controller {
                 
                 $fileInfo = pathinfo($_FILES['site_logo']['name']);
                 $extension = strtolower($fileInfo['extension']);
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'svg'];
                 
-                if (in_array($extension, $allowedExtensions) && $_FILES['site_logo']['size'] <= 2097152) { // 2MB
+                if (in_array($extension, self::ALLOWED_LOGO_EXTENSIONS) && $_FILES['site_logo']['size'] <= self::MAX_LOGO_SIZE) {
                     $filename = 'logo_' . time() . '.' . $extension;
                     $uploadPath = $uploadDir . $filename;
                     

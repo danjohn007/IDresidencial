@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS password_resets (
     INDEX idx_token (token),
     INDEX idx_user_id (user_id),
     INDEX idx_expires (expires_at),
-    UNIQUE KEY unique_user_reset (user_id, used)
+    INDEX idx_user_used (user_id, used)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
