@@ -43,6 +43,7 @@ class AuthController extends Controller {
                     // Verificar estado del usuario
                     if ($user['status'] !== 'active') {
                         $data['error'] = 'Tu cuenta está inactiva. Contacta al administrador.';
+                        AuditController::log('login_failed', 'Intento de login con cuenta inactiva: ' . $username, 'users', $user['id']);
                     } else {
                         // Iniciar sesión
                         $_SESSION['user_id'] = $user['id'];
@@ -54,6 +55,9 @@ class AuthController extends Controller {
                         
                         // Actualizar último login
                         $this->userModel->updateLastLogin($user['id']);
+                        
+                        // Log successful login
+                        AuditController::log('login', 'Usuario inició sesión: ' . $user['username'], 'users', $user['id']);
                         
                         // Redirigir según rol
                         switch ($user['role']) {
@@ -67,6 +71,7 @@ class AuthController extends Controller {
                     }
                 } else {
                     $data['error'] = 'Usuario o contraseña incorrectos';
+                    AuditController::log('login_failed', 'Intento de login fallido con usuario: ' . $username, 'users', null);
                 }
             }
         }
@@ -78,6 +83,13 @@ class AuthController extends Controller {
      * Cerrar sesión
      */
     public function logout() {
+        $userId = $_SESSION['user_id'] ?? null;
+        $username = $_SESSION['username'] ?? 'unknown';
+        
+        if ($userId) {
+            AuditController::log('logout', 'Usuario cerró sesión: ' . $username, 'users', $userId);
+        }
+        
         session_destroy();
         $this->redirect('auth/login');
     }

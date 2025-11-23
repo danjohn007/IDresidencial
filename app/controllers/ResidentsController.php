@@ -125,6 +125,7 @@ class ResidentsController extends Controller {
                 ];
                 
                 if ($this->residentModel->create($residentData)) {
+                    AuditController::log('create', 'Residente creado: ' . $userData['first_name'] . ' ' . $userData['last_name'], 'residents', null);
                     $_SESSION['success_message'] = 'Residente creado exitosamente';
                     $this->redirect('residents');
                 } else {

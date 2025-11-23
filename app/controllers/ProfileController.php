@@ -68,6 +68,7 @@ class ProfileController extends Controller {
             $_SESSION['first_name'] = $data['first_name'];
             $_SESSION['last_name'] = $data['last_name'];
             
+            AuditController::log('update', 'Usuario actualizó su información de contacto', 'users', $userId);
             $_SESSION['success_message'] = 'Información actualizada exitosamente';
         } else {
             $_SESSION['error_message'] = 'Error al actualizar la información';
@@ -116,6 +117,7 @@ class ProfileController extends Controller {
         $stmt = $this->db->prepare("UPDATE users SET password = ? WHERE id = ?");
         
         if ($stmt->execute([$hashedPassword, $userId])) {
+            AuditController::log('update', 'Usuario cambió su contraseña', 'users', $userId);
             $_SESSION['success_message'] = 'Contraseña actualizada exitosamente';
         } else {
             $_SESSION['error_message'] = 'Error al actualizar la contraseña';
@@ -185,6 +187,7 @@ class ProfileController extends Controller {
                     unlink($uploadDir . '/' . $oldPhoto);
                 }
                 
+                AuditController::log('update', 'Usuario actualizó su foto de perfil', 'users', $userId);
                 $_SESSION['success_message'] = 'Foto de perfil actualizada exitosamente';
             } else {
                 $_SESSION['error_message'] = 'Error al actualizar la foto en la base de datos';

@@ -98,6 +98,7 @@ class FinancialController extends Controller {
             ];
             
             if ($this->financialModel->create($movementData)) {
+                AuditController::log('create', 'Movimiento financiero creado: ' . $movementData['description'], 'financial_movements', null);
                 $_SESSION['success_message'] = 'Movimiento financiero creado exitosamente';
                 $this->redirect('financial');
             } else {
@@ -184,6 +185,7 @@ class FinancialController extends Controller {
             ];
             
             if ($this->financialModel->update($id, $movementData)) {
+                AuditController::log('update', 'Movimiento financiero actualizado: ' . $movementData['description'], 'financial_movements', $id);
                 $_SESSION['success_message'] = 'Movimiento actualizado exitosamente';
                 $this->redirect('financial');
             } else {
@@ -212,6 +214,7 @@ class FinancialController extends Controller {
         }
         
         if ($this->financialModel->delete($id)) {
+            AuditController::log('delete', 'Movimiento financiero eliminado ID: ' . $id, 'financial_movements', $id);
             $_SESSION['success_message'] = 'Movimiento eliminado exitosamente';
         } else {
             $_SESSION['error_message'] = 'Error al eliminar el movimiento';
