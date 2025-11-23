@@ -87,7 +87,7 @@ class SubdivisionsController extends Controller {
     /**
      * Ver detalles de un fraccionamiento
      */
-    public function view($id) {
+    public function viewDetails($id) {
         $stmt = $this->db->prepare("SELECT * FROM subdivisions WHERE id = ?");
         $stmt->execute([$id]);
         $subdivision = $stmt->fetch();
