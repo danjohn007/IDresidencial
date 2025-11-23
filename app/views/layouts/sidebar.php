@@ -1,12 +1,42 @@
 <!-- Sidebar -->
 <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
     <div class="h-full flex flex-col">
+        <?php
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'site_logo'");
+        $logoRow = $stmt->fetch();
+        $siteLogo = $logoRow ? $logoRow['setting_value'] : null;
+        $stmt = $db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'site_name'");
+        $nameRow = $stmt->fetch();
+        $siteName = $nameRow ? $nameRow['setting_value'] : SITE_NAME;
+        ?>
+        
+        <!-- Logo (desktop) -->
+        <div class="p-4 border-b hidden lg:block">
+            <div class="flex flex-col items-center text-center">
+                <?php if ($siteLogo && file_exists($siteLogo)): ?>
+                    <img src="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($siteLogo); ?>" 
+                         alt="Logo" class="h-16 object-contain mb-2">
+                <?php else: ?>
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-2">
+                        <i class="fas fa-building text-white text-2xl"></i>
+                    </div>
+                <?php endif; ?>
+                <span class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($siteName); ?></span>
+            </div>
+        </div>
+        
         <!-- Logo (mobile) -->
         <div class="p-4 border-b lg:hidden">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
-                    <i class="fas fa-building text-blue-600 text-xl"></i>
-                    <span class="text-lg font-bold text-gray-800"><?php echo SITE_NAME; ?></span>
+                    <?php if ($siteLogo && file_exists($siteLogo)): ?>
+                        <img src="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($siteLogo); ?>" 
+                             alt="Logo" class="h-8 object-contain">
+                    <?php else: ?>
+                        <i class="fas fa-building text-blue-600 text-xl"></i>
+                    <?php endif; ?>
+                    <span class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($siteName); ?></span>
                 </div>
                 <button onclick="toggleMobileMenu()" class="text-gray-600 hover:text-gray-900">
                     <i class="fas fa-times text-xl"></i>
@@ -38,10 +68,27 @@
                 <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador'])): ?>
                 <!-- Administración de Predios -->
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/residents" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
-                        <i class="fas fa-users w-5"></i>
-                        <span>Residentes</span>
-                    </a>
+                    <button onclick="toggleSubmenu('residents-submenu')" class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-users w-5"></i>
+                            <span>Residentes</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm" id="residents-submenu-icon"></i>
+                    </button>
+                    <ul id="residents-submenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/residents" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-list w-5"></i>
+                                <span>Lista de Residentes</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/vehicles" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-car w-5"></i>
+                                <span>Vehículos Registrados</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                 
                 <!-- Módulo Financiero -->

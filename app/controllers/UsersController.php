@@ -51,6 +51,15 @@ class UsersController extends Controller {
         ];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $role = $this->post('role');
+            
+            // Prevent creating residents through this interface
+            if ($role === 'residente') {
+                $data['error'] = 'Los residentes deben crearse desde el módulo de Residentes.';
+                $this->view('users/create', $data);
+                return;
+            }
+            
             // Generate username from email
             $email = $this->post('email');
             $baseUsername = strstr($email, '@', true);
@@ -70,8 +79,7 @@ class UsersController extends Controller {
                 'first_name' => $this->post('first_name'),
                 'last_name' => $this->post('last_name'),
                 'phone' => $this->post('phone'),
-                'house_number' => $this->post('house_number'),
-                'role' => $this->post('role', 'residente'),
+                'role' => $role,
                 'status' => $this->post('status', 'active')
             ];
             

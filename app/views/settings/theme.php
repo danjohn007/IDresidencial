@@ -22,7 +22,7 @@
 
                 <!-- Form -->
                 <div class="bg-white rounded-lg shadow p-6">
-                    <form method="POST" action="<?php echo BASE_URL; ?>/settings/theme">
+                    <form method="POST" action="<?php echo BASE_URL; ?>/settings/theme" id="themeForm">
                         <!-- Theme Color -->
                         <div class="mb-6">
                             <label class="block text-sm font-medium text-gray-700 mb-4">
@@ -30,21 +30,27 @@
                             </label>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                                 <?php
+                                // Get current theme color
+                                $db = Database::getInstance()->getConnection();
+                                $stmt = $db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'theme_color'");
+                                $currentThemeRow = $stmt->fetch();
+                                $currentTheme = $currentThemeRow ? $currentThemeRow['setting_value'] : 'blue';
+                                
                                 $colors = [
-                                    'blue' => ['name' => 'Azul', 'class' => 'bg-blue-600'],
-                                    'green' => ['name' => 'Verde', 'class' => 'bg-green-600'],
-                                    'purple' => ['name' => 'Morado', 'class' => 'bg-purple-600'],
-                                    'red' => ['name' => 'Rojo', 'class' => 'bg-red-600'],
-                                    'orange' => ['name' => 'Naranja', 'class' => 'bg-orange-600'],
-                                    'indigo' => ['name' => 'Índigo', 'class' => 'bg-indigo-600']
+                                    'blue' => ['name' => 'Azul', 'class' => 'bg-blue-600', 'hover' => 'hover:bg-blue-700'],
+                                    'green' => ['name' => 'Verde', 'class' => 'bg-green-600', 'hover' => 'hover:bg-green-700'],
+                                    'purple' => ['name' => 'Morado', 'class' => 'bg-purple-600', 'hover' => 'hover:bg-purple-700'],
+                                    'red' => ['name' => 'Rojo', 'class' => 'bg-red-600', 'hover' => 'hover:bg-red-700'],
+                                    'orange' => ['name' => 'Naranja', 'class' => 'bg-orange-600', 'hover' => 'hover:bg-orange-700'],
+                                    'indigo' => ['name' => 'Índigo', 'class' => 'bg-indigo-600', 'hover' => 'hover:bg-indigo-700']
                                 ];
                                 foreach ($colors as $color => $info):
                                 ?>
                                     <label class="cursor-pointer">
                                         <input type="radio" name="theme_color" value="<?php echo $color; ?>" 
-                                               class="peer sr-only" 
-                                               <?php echo $color === 'blue' ? 'checked' : ''; ?>>
-                                        <div class="p-4 border-2 rounded-lg peer-checked:border-blue-600 peer-checked:bg-blue-50 hover:border-gray-400 transition">
+                                               class="peer sr-only theme-color-radio" 
+                                               <?php echo $color === $currentTheme ? 'checked' : ''; ?>>
+                                        <div class="p-4 border-2 rounded-lg peer-checked:border-<?php echo $color; ?>-600 peer-checked:bg-<?php echo $color; ?>-50 hover:border-gray-400 transition">
                                             <div class="flex items-center space-x-3">
                                                 <div class="w-8 h-8 <?php echo $info['class']; ?> rounded"></div>
                                                 <span class="font-medium"><?php echo $info['name']; ?></span>
@@ -58,9 +64,9 @@
                         <!-- Preview -->
                         <div class="mb-6 p-4 bg-gray-50 rounded-lg">
                             <h3 class="font-semibold text-gray-900 mb-3">Vista Previa</h3>
-                            <div class="space-y-2">
-                                <button type="button" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Botón Primario</button>
-                                <button type="button" class="px-4 py-2 bg-gray-600 text-white rounded-lg">Botón Secundario</button>
+                            <div class="space-y-2" id="previewButtons">
+                                <button type="button" id="previewPrimary" class="px-4 py-2 <?php echo $colors[$currentTheme]['class'] . ' ' . $colors[$currentTheme]['hover']; ?> text-white rounded-lg transition">Botón Primario</button>
+                                <button type="button" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">Botón Secundario</button>
                             </div>
                         </div>
 
@@ -93,5 +99,31 @@
         </main>
     </div>
 </div>
+
+<script>
+// Update preview when theme color changes
+document.querySelectorAll('.theme-color-radio').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const color = this.value;
+        const colorMap = {
+            'blue': { bg: 'bg-blue-600', hover: 'hover:bg-blue-700' },
+            'green': { bg: 'bg-green-600', hover: 'hover:bg-green-700' },
+            'purple': { bg: 'bg-purple-600', hover: 'hover:bg-purple-700' },
+            'red': { bg: 'bg-red-600', hover: 'hover:bg-red-700' },
+            'orange': { bg: 'bg-orange-600', hover: 'hover:bg-orange-700' },
+            'indigo': { bg: 'bg-indigo-600', hover: 'hover:bg-indigo-700' }
+        };
+        
+        const previewBtn = document.getElementById('previewPrimary');
+        // Remove all color classes
+        Object.values(colorMap).forEach(classes => {
+            previewBtn.classList.remove(classes.bg, classes.hover);
+        });
+        
+        // Add new color classes
+        previewBtn.classList.add(colorMap[color].bg, colorMap[color].hover);
+    });
+});
+</script>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>

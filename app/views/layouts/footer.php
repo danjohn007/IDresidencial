@@ -1,7 +1,14 @@
     <!-- Footer -->
     <footer class="bg-white border-t mt-auto py-4">
         <div class="container mx-auto px-4 text-center text-gray-600 text-sm">
-            <p>&copy; <?php echo date('Y'); ?> <?php echo SITE_NAME; ?>. Todos los derechos reservados.</p>
+            <?php
+            // Get copyright text from database
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'site_copyright'");
+            $copyrightRow = $stmt->fetch();
+            $copyright = $copyrightRow ? $copyrightRow['setting_value'] : ('© ' . date('Y') . ' ' . SITE_NAME . '. Todos los derechos reservados.');
+            ?>
+            <p><?php echo htmlspecialchars($copyright); ?></p>
         </div>
     </footer>
 
@@ -24,6 +31,22 @@
                 }
             }
         });
+        
+        // Toggle submenu
+        function toggleSubmenu(submenuId) {
+            const submenu = document.getElementById(submenuId);
+            const icon = document.getElementById(submenuId + '-icon');
+            
+            if (submenu.classList.contains('hidden')) {
+                submenu.classList.remove('hidden');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                submenu.classList.add('hidden');
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
 
         // Auto-hide alerts after 5 seconds
         setTimeout(function() {

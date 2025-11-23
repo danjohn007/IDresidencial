@@ -9,8 +9,23 @@
             
             <!-- Logo -->
             <div class="flex items-center space-x-3">
-                <i class="fas fa-building text-blue-600 text-2xl hidden lg:block"></i>
-                <span class="text-xl font-bold text-gray-800"><?php echo SITE_NAME; ?></span>
+                <?php
+                $db = Database::getInstance()->getConnection();
+                $stmt = $db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'site_logo'");
+                $logoRow = $stmt->fetch();
+                $siteLogo = $logoRow ? $logoRow['setting_value'] : null;
+                $stmt = $db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'site_name'");
+                $nameRow = $stmt->fetch();
+                $siteName = $nameRow ? $nameRow['setting_value'] : SITE_NAME;
+                
+                if ($siteLogo && file_exists($siteLogo)):
+                ?>
+                    <img src="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($siteLogo); ?>" 
+                         alt="Logo" class="h-10 object-contain hidden lg:block">
+                <?php else: ?>
+                    <i class="fas fa-building text-blue-600 text-2xl hidden lg:block"></i>
+                <?php endif; ?>
+                <span class="text-xl font-bold text-gray-800"><?php echo htmlspecialchars($siteName); ?></span>
             </div>
             
             <!-- Right side items -->

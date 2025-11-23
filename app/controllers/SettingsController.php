@@ -93,7 +93,8 @@ class SettingsController extends Controller {
                 'site_name' => $this->post('site_name'),
                 'site_email' => $this->post('site_email'),
                 'site_phone' => $this->post('site_phone'),
-                'maintenance_fee_default' => $this->post('maintenance_fee_default')
+                'maintenance_fee_default' => $this->post('maintenance_fee_default'),
+                'site_copyright' => $this->post('site_copyright')
             ];
             
             // Handle logo upload
@@ -130,7 +131,7 @@ class SettingsController extends Controller {
         }
         
         // Obtener configuración actual
-        $stmt = $this->db->query("SELECT * FROM system_settings WHERE setting_key LIKE 'site_%' OR setting_key = 'maintenance_fee_default'");
+        $stmt = $this->db->query("SELECT * FROM system_settings WHERE setting_key LIKE 'site_%' OR setting_key IN ('maintenance_fee_default')");
         $currentSettings = [];
         while ($row = $stmt->fetch()) {
             $currentSettings[$row['setting_key']] = $row['setting_value'];
