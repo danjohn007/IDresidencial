@@ -2,6 +2,9 @@
 -- Migration: System Improvements
 -- Date: 2024-11-23
 -- Description: Mejoras al sistema residencial
+-- NOTA: Este script usa 'erp_residencial' como nombre de BD
+--       Si tu base de datos tiene otro nombre (ej: janetzy_residencial),
+--       reemplaza 'erp_residencial' con tu nombre de BD antes de ejecutar
 -- ============================================
 
 USE erp_residencial;

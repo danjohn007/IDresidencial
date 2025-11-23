@@ -7,11 +7,17 @@ This directory contains SQL migration files for the IDresidencial database.
 Execute the migration files in order:
 
 ```bash
-# For MySQL command line
-mysql -u username -p database_name < 001_system_improvements.sql
+# For MySQL command line (ajusta el nombre de usuario y base de datos)
+mysql -u your_username -p your_database_name < 001_system_improvements.sql
+
+# Ejemplo con configuración por defecto:
+mysql -u janetzy_residencial -p janetzy_residencial < 001_system_improvements.sql
+
+# O simplemente:
+mysql -u root -p erp_residencial < 001_system_improvements.sql
 
 # Or via phpMyAdmin
-# 1. Select the database
+# 1. Select your database (erp_residencial or janetzy_residencial)
 # 2. Go to SQL tab
 # 3. Copy and paste the content of the migration file
 # 4. Execute
