@@ -248,12 +248,51 @@ class FinancialController extends Controller {
      * Catálogo de tipos de movimiento
      */
     public function movementTypes() {
-        $movementTypes = $this->financialModel->getMovementTypes();
-        
         $data = [
             'title' => 'Catálogo de Tipos de Movimiento',
-            'movementTypes' => $movementTypes
+            'movementTypes' => $this->financialModel->getMovementTypes(),
+            'error' => ''
         ];
+        
+        // Handle POST for creating new movement type
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create') {
+            $name = $this->post('name');
+            $description = $this->post('description');
+            $category = $this->post('category');
+            
+            if (empty($name) || empty($category)) {
+                $_SESSION['error_message'] = 'El nombre y la categoría son obligatorios';
+            } else {
+                try {
+                    $stmt = $this->db->prepare("
+                        INSERT INTO financial_movement_types (name, description, category, is_active)
+                        VALUES (?, ?, ?, 1)
+                    ");
+                    $stmt->execute([$name, $description, $category]);
+                    
+                    AuditController::log('create', 'Tipo de movimiento creado: ' . $name, 'financial_movement_types', $this->db->lastInsertId());
+                    $_SESSION['success_message'] = 'Tipo de movimiento creado exitosamente';
+                    $this->redirect('financial/movementTypes');
+                } catch (PDOException $e) {
+                    $_SESSION['error_message'] = 'Error al crear el tipo de movimiento: ' . $e->getMessage();
+                }
+            }
+        }
+        
+        // Handle toggle active status
+        if (isset($_GET['toggle']) && isset($_GET['id'])) {
+            $id = intval($_GET['id']);
+            $stmt = $this->db->prepare("
+                UPDATE financial_movement_types 
+                SET is_active = NOT is_active 
+                WHERE id = ?
+            ");
+            $stmt->execute([$id]);
+            
+            AuditController::log('update', 'Estado de tipo de movimiento actualizado', 'financial_movement_types', $id);
+            $_SESSION['success_message'] = 'Estado actualizado exitosamente';
+            $this->redirect('financial/movementTypes');
+        }
         
         $this->view('financial/movement_types', $data);
     }
