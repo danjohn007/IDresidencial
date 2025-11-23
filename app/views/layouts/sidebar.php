@@ -68,10 +68,27 @@
                 <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador'])): ?>
                 <!-- Administración de Predios -->
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/residents" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
-                        <i class="fas fa-users w-5"></i>
-                        <span>Residentes</span>
-                    </a>
+                    <button onclick="toggleSubmenu('residents-submenu')" class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-users w-5"></i>
+                            <span>Residentes</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm" id="residents-submenu-icon"></i>
+                    </button>
+                    <ul id="residents-submenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/residents" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-list w-5"></i>
+                                <span>Lista de Residentes</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/vehicles" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-car w-5"></i>
+                                <span>Vehículos Registrados</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                 
                 <!-- Módulo Financiero -->
