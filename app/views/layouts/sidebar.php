@@ -198,6 +198,16 @@
                 <?php endif; ?>
                 
                 <?php if ($_SESSION['role'] === 'superadmin'): ?>
+                <!-- Fraccionamientos -->
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/subdivisions" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fas fa-building w-5"></i>
+                        <span>Fraccionamientos</span>
+                    </a>
+                </li>
+                <?php endif; ?>
+                
+                <?php if ($_SESSION['role'] === 'superadmin'): ?>
                 <!-- Admin Modules -->
                 <li class="pt-4 pb-2">
                     <div class="border-t"></div>
