@@ -259,8 +259,9 @@ class AuthController extends Controller {
             } elseif ($this->userModel->findByEmail($email)) {
                 $data['error'] = 'El correo electrónico ya está registrado';
             } else {
-                // Generate username from email
-                $username = explode('@', $email)[0] . '_' . rand(1000, 9999);
+                // Generate unique username from email
+                $baseUsername = explode('@', $email)[0];
+                $username = $baseUsername . '_' . substr(md5(uniqid($email, true)), 0, 8);
                 
                 // Generate email verification token
                 $email_verification_token = bin2hex(random_bytes(32));
@@ -293,7 +294,7 @@ class AuthController extends Controller {
                     
                     // In production, send verification email here
                     // For now, show success message
-                    $verificationLink = BASE_URL . '/auth/verifyEmail?token=' . $email_verification_token;
+                    $verificationLink = BASE_URL . '/auth/verifyEmail?token=' . htmlspecialchars($email_verification_token, ENT_QUOTES, 'UTF-8');
                     
                     $data['success'] = 'Registro exitoso. Tu cuenta está pendiente de verificación de correo electrónico y aprobación del administrador. 
                                        <br><br>Por favor, verifica tu correo en: <a href="' . $verificationLink . '" class="underline font-medium">Verificar correo</a>';

@@ -147,9 +147,14 @@
                         Verificación <span class="text-red-500">*</span>
                     </label>
                     <?php
-                    $num1 = rand(1, 9);
-                    $num2 = rand(1, 9);
-                    $_SESSION['captcha_answer'] = $num1 + $num2;
+                    // Only generate CAPTCHA if not in session or if form was submitted incorrectly
+                    if (!isset($_SESSION['captcha_num1']) || !isset($_SESSION['captcha_num2']) || $_SERVER['REQUEST_METHOD'] === 'POST') {
+                        $_SESSION['captcha_num1'] = rand(1, 9);
+                        $_SESSION['captcha_num2'] = rand(1, 9);
+                        $_SESSION['captcha_answer'] = $_SESSION['captcha_num1'] + $_SESSION['captcha_num2'];
+                    }
+                    $num1 = $_SESSION['captcha_num1'];
+                    $num2 = $_SESSION['captcha_num2'];
                     ?>
                     <div class="flex items-center space-x-3">
                         <div class="bg-gray-100 px-4 py-3 rounded-lg border border-gray-300 font-mono text-lg">

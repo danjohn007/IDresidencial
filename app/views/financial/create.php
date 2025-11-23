@@ -179,37 +179,39 @@ document.getElementById('property_id').addEventListener('change', function() {
     const propertyId = this.value;
     const residentSelect = document.getElementById('resident_id');
     
-    // Show all residents if no property selected
+    // Save all options on first run
+    if (!residentSelect.dataset.allOptions) {
+        residentSelect.dataset.allOptions = residentSelect.innerHTML;
+    }
+    
     if (!propertyId) {
-        Array.from(residentSelect.options).forEach(option => {
-            option.style.display = '';
-        });
+        // Reset to show all residents
+        residentSelect.innerHTML = residentSelect.dataset.allOptions;
         residentSelect.value = '';
         return;
     }
     
-    // Filter residents by property
+    // Rebuild options showing only matching residents
+    const allOptions = residentSelect.dataset.allOptions;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = allOptions;
+    
+    residentSelect.innerHTML = '<option value="">Sin residente</option>';
+    
     let firstMatch = null;
-    Array.from(residentSelect.options).forEach(option => {
-        if (option.value === '') {
-            option.style.display = '';
-            return;
-        }
+    Array.from(tempDiv.querySelectorAll('option')).forEach(option => {
+        if (option.value === '') return; // Skip empty option
         
         const residentPropertyId = option.getAttribute('data-property-id');
         if (residentPropertyId === propertyId) {
-            option.style.display = '';
+            residentSelect.appendChild(option.cloneNode(true));
             if (!firstMatch) firstMatch = option.value;
-        } else {
-            option.style.display = 'none';
         }
     });
     
     // Auto-select first matching resident
     if (firstMatch) {
         residentSelect.value = firstMatch;
-    } else {
-        residentSelect.value = '';
     }
 });
 

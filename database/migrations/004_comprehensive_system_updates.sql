@@ -14,7 +14,7 @@ USE erp_residencial;
 
 -- Add email verification columns if they don't exist
 ALTER TABLE users 
-ADD COLUMN IF NOT EXISTS email_verification_token VARCHAR(255) UNIQUE AFTER email,
+ADD COLUMN IF NOT EXISTS email_verification_token VARCHAR(255) AFTER email,
 ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP NULL AFTER email_verification_token,
 ADD INDEX IF NOT EXISTS idx_email_verification_token (email_verification_token);
 
@@ -223,17 +223,18 @@ ADD INDEX IF NOT EXISTS idx_status_relationship (status, relationship);
 -- 12. Update existing data (safe updates)
 -- ============================================
 
--- Update residents table to link with subdivision based on property
-UPDATE residents r
-INNER JOIN properties p ON r.property_id = p.id
-SET r.subdivision_id = p.subdivision_id
-WHERE p.subdivision_id IS NOT NULL AND r.subdivision_id IS NULL;
+-- Note: These updates will only take effect after properties are assigned to subdivisions
+-- Run these manually after assigning subdivisions to properties:
 
--- Update users table to link with subdivision based on resident
-UPDATE users u
-INNER JOIN residents r ON u.id = r.user_id
-SET u.subdivision_id = r.subdivision_id
-WHERE r.subdivision_id IS NOT NULL AND u.subdivision_id IS NULL;
+-- UPDATE residents r
+-- INNER JOIN properties p ON r.property_id = p.id
+-- SET r.subdivision_id = p.subdivision_id
+-- WHERE p.subdivision_id IS NOT NULL AND r.subdivision_id IS NULL;
+
+-- UPDATE users u
+-- INNER JOIN residents r ON u.id = r.user_id
+-- SET u.subdivision_id = r.subdivision_id
+-- WHERE r.subdivision_id IS NOT NULL AND u.subdivision_id IS NULL;
 
 -- ============================================
 -- VERIFICATION QUERIES
