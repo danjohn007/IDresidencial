@@ -19,5 +19,8 @@ require_once __DIR__ . '/../config/database.php';
 require_once APP_PATH . '/core/Controller.php';
 require_once APP_PATH . '/core/Router.php';
 
+// Cargar controladores comunes que se usan estáticamente
+require_once APP_PATH . '/controllers/AuditController.php';
+
 // Inicializar el router
 $router = new Router();
