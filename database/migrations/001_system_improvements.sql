@@ -36,9 +36,9 @@ ON DUPLICATE KEY UPDATE name=name;
 -- ============================================
 -- 2. Agregar campo subdivision_id a propiedades
 -- ============================================
+ALTER TABLE properties ADD COLUMN subdivision_id INT DEFAULT NULL AFTER id;
 ALTER TABLE properties 
-ADD COLUMN IF NOT EXISTS subdivision_id INT DEFAULT NULL AFTER id,
-ADD CONSTRAINT fk_properties_subdivision 
+    ADD CONSTRAINT fk_properties_subdivision 
     FOREIGN KEY (subdivision_id) REFERENCES subdivisions(id) 
     ON DELETE SET NULL;
 
@@ -48,9 +48,9 @@ UPDATE properties SET subdivision_id = 1 WHERE subdivision_id IS NULL;
 -- ============================================
 -- 3. Agregar campo subdivision_id a residentes
 -- ============================================
+ALTER TABLE residents ADD COLUMN subdivision_id INT DEFAULT NULL AFTER id;
 ALTER TABLE residents 
-ADD COLUMN IF NOT EXISTS subdivision_id INT DEFAULT NULL AFTER id,
-ADD CONSTRAINT fk_residents_subdivision 
+    ADD CONSTRAINT fk_residents_subdivision 
     FOREIGN KEY (subdivision_id) REFERENCES subdivisions(id) 
     ON DELETE SET NULL;
 
@@ -60,9 +60,9 @@ UPDATE residents SET subdivision_id = 1 WHERE subdivision_id IS NULL;
 -- ============================================
 -- 4. Agregar campo subdivision_id a usuarios
 -- ============================================
+ALTER TABLE users ADD COLUMN subdivision_id INT DEFAULT NULL AFTER id;
 ALTER TABLE users 
-ADD COLUMN IF NOT EXISTS subdivision_id INT DEFAULT NULL AFTER id,
-ADD CONSTRAINT fk_users_subdivision 
+    ADD CONSTRAINT fk_users_subdivision 
     FOREIGN KEY (subdivision_id) REFERENCES subdivisions(id) 
     ON DELETE SET NULL;
 
@@ -72,9 +72,9 @@ UPDATE users SET subdivision_id = 1 WHERE subdivision_id IS NULL;
 -- ============================================
 -- 5. Agregar campo subdivision_id a vehículos
 -- ============================================
+ALTER TABLE vehicles ADD COLUMN subdivision_id INT DEFAULT NULL AFTER id;
 ALTER TABLE vehicles 
-ADD COLUMN IF NOT EXISTS subdivision_id INT DEFAULT NULL AFTER id,
-ADD CONSTRAINT fk_vehicles_subdivision 
+    ADD CONSTRAINT fk_vehicles_subdivision 
     FOREIGN KEY (subdivision_id) REFERENCES subdivisions(id) 
     ON DELETE SET NULL;
 
@@ -202,9 +202,8 @@ CREATE TABLE IF NOT EXISTS payment_reminders (
 -- ============================================
 -- 12. Actualizar tabla de mantenimiento de cuotas
 -- ============================================
-ALTER TABLE maintenance_fees 
-ADD COLUMN IF NOT EXISTS reminder_sent BOOLEAN DEFAULT FALSE AFTER status,
-ADD COLUMN IF NOT EXISTS payment_confirmation VARCHAR(255) AFTER payment_reference;
+ALTER TABLE maintenance_fees ADD COLUMN reminder_sent BOOLEAN DEFAULT FALSE AFTER status;
+ALTER TABLE maintenance_fees ADD COLUMN payment_confirmation VARCHAR(255) AFTER payment_reference;
 
 -- ============================================
 -- 13. Crear tabla de tokens de verificación de email
@@ -225,9 +224,8 @@ CREATE TABLE IF NOT EXISTS email_verifications (
 -- ============================================
 -- 14. Agregar campo email_verified a users
 -- ============================================
-ALTER TABLE users 
-ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE AFTER email,
-ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP NULL AFTER email_verified;
+ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE AFTER email;
+ALTER TABLE users ADD COLUMN email_verified_at TIMESTAMP NULL AFTER email_verified;
 
 -- Marcar emails existentes como verificados
 UPDATE users SET email_verified = TRUE, email_verified_at = NOW() WHERE email_verified IS NULL OR email_verified = FALSE;
@@ -257,10 +255,10 @@ GROUP BY r.id, u.id, rb.balance;
 -- ============================================
 -- 16. Actualizar índices para mejor rendimiento
 -- ============================================
-ALTER TABLE access_logs ADD INDEX IF NOT EXISTS idx_timestamp_type (timestamp, log_type);
-ALTER TABLE visits ADD INDEX IF NOT EXISTS idx_valid_dates (valid_from, valid_until);
-ALTER TABLE reservations ADD INDEX IF NOT EXISTS idx_date_status (reservation_date, status);
-ALTER TABLE maintenance_reports ADD INDEX IF NOT EXISTS idx_status_priority (status, priority);
+ALTER TABLE access_logs ADD INDEX idx_timestamp_type (timestamp, log_type);
+ALTER TABLE visits ADD INDEX idx_valid_dates (valid_from, valid_until);
+ALTER TABLE reservations ADD INDEX idx_date_status (reservation_date, status);
+ALTER TABLE maintenance_reports ADD INDEX idx_status_priority (status, priority);
 
 -- ============================================
 -- 17. Agregar configuración para soporte técnico
