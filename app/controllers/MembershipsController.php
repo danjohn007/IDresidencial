@@ -100,7 +100,7 @@ class MembershipsController extends Controller {
     /**
      * Ver detalle de membresía
      */
-    public function view($id) {
+    public function viewDetails($id) {
         $membership = $this->membershipModel->findById($id);
         
         if (!$membership) {

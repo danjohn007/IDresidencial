@@ -22,7 +22,23 @@
 
                 <!-- Form -->
                 <div class="bg-white rounded-lg shadow p-6">
-                    <form method="POST" action="<?php echo BASE_URL; ?>/settings/general">
+                    <form method="POST" action="<?php echo BASE_URL; ?>/settings/general" enctype="multipart/form-data">
+                        <!-- Site Logo -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Logo del Sitio
+                            </label>
+                            <?php if (!empty($current['site_logo'])): ?>
+                                <div class="mb-4">
+                                    <img src="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($current['site_logo']); ?>" 
+                                         alt="Logo" class="h-20 object-contain">
+                                </div>
+                            <?php endif; ?>
+                            <input type="file" name="site_logo" accept=".jpg,.jpeg,.png,.svg"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-sm text-gray-500 mt-1">Formatos aceptados: JPG, PNG, SVG. Tamaño máximo: 2MB. Validado en el servidor.</p>
+                        </div>
+                        
                         <!-- Site Name -->
                         <div class="mb-6">
                             <label class="block text-sm font-medium text-gray-700 mb-2">

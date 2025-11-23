@@ -88,10 +88,22 @@ class ResidentsController extends Controller {
         ];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Auto-generate username from email
+            $email = $this->post('email');
+            $baseUsername = strstr($email, '@', true);
+            
+            // Ensure username is unique by adding suffix if needed
+            $username = $baseUsername;
+            $counter = 1;
+            while ($this->userModel->findByUsername($username)) {
+                $username = $baseUsername . $counter;
+                $counter++;
+            }
+            
             // Crear usuario primero
             $userData = [
-                'username' => $this->post('username'),
-                'email' => $this->post('email'),
+                'username' => $username,
+                'email' => $email,
                 'password' => $this->post('password'),
                 'first_name' => $this->post('first_name'),
                 'last_name' => $this->post('last_name'),

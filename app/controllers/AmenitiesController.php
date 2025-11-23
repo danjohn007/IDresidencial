@@ -163,4 +163,105 @@ class AmenitiesController extends Controller {
         
         $this->view('amenities/manage', $data);
     }
+    
+    /**
+     * Crear nueva amenidad
+     */
+    public function create() {
+        $this->requireRole(['superadmin']);
+        
+        $data = [
+            'title' => 'Nueva Amenidad',
+            'error' => ''
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $amenityData = [
+                'name' => $this->post('name'),
+                'description' => $this->post('description'),
+                'amenity_type' => $this->post('amenity_type'),
+                'capacity' => $this->post('capacity'),
+                'hours_open' => $this->post('hours_open'),
+                'hours_close' => $this->post('hours_close'),
+                'requires_payment' => $this->post('requires_payment', 0),
+                'hourly_rate' => $this->post('hourly_rate', 0),
+                'status' => 'active'
+            ];
+            
+            if ($this->amenityModel->create($amenityData)) {
+                $_SESSION['success_message'] = 'Amenidad creada exitosamente';
+                $this->redirect('amenities/manage');
+            } else {
+                $data['error'] = 'Error al crear la amenidad';
+            }
+        }
+        
+        $this->view('amenities/create', $data);
+    }
+    
+    /**
+     * Editar amenidad
+     */
+    public function edit($id) {
+        $this->requireRole(['superadmin']);
+        
+        $amenity = $this->amenityModel->findById($id);
+        
+        if (!$amenity) {
+            $_SESSION['error_message'] = 'Amenidad no encontrada';
+            $this->redirect('amenities/manage');
+        }
+        
+        $data = [
+            'title' => 'Editar Amenidad',
+            'amenity' => $amenity,
+            'error' => ''
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $amenityData = [
+                'name' => $this->post('name'),
+                'description' => $this->post('description'),
+                'amenity_type' => $this->post('amenity_type'),
+                'capacity' => $this->post('capacity'),
+                'hours_open' => $this->post('hours_open'),
+                'hours_close' => $this->post('hours_close'),
+                'requires_payment' => $this->post('requires_payment', 0),
+                'hourly_rate' => $this->post('hourly_rate', 0)
+            ];
+            
+            if ($this->amenityModel->update($id, $amenityData)) {
+                $_SESSION['success_message'] = 'Amenidad actualizada exitosamente';
+                $this->redirect('amenities/manage');
+            } else {
+                $data['error'] = 'Error al actualizar la amenidad';
+            }
+        }
+        
+        $this->view('amenities/edit', $data);
+    }
+    
+    /**
+     * Cambiar estado de amenidad
+     */
+    public function toggleStatus($id) {
+        $this->requireRole(['superadmin']);
+        
+        $amenity = $this->amenityModel->findById($id);
+        
+        if (!$amenity) {
+            $_SESSION['error_message'] = 'Amenidad no encontrada';
+            $this->redirect('amenities/manage');
+        }
+        
+        $newStatus = $amenity['status'] === 'active' ? 'inactive' : 'active';
+        
+        if ($this->amenityModel->update($id, ['status' => $newStatus])) {
+            $_SESSION['success_message'] = 'Estado de la amenidad actualizado';
+        } else {
+            $_SESSION['error_message'] = 'Error al actualizar el estado';
+        }
+        
+        $this->redirect('amenities/manage');
+    }
 }

@@ -83,6 +83,116 @@ class AuthController extends Controller {
     }
     
     /**
+     * Mostrar formulario de recuperación de contraseña
+     */
+    public function forgotPassword() {
+        $data = [
+            'title' => 'Recuperar Contraseña',
+            'error' => '',
+            'success' => ''
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $email = $this->post('email');
+            
+            if (empty($email)) {
+                $data['error'] = 'Por favor, ingresa tu correo electrónico';
+            } else {
+                $user = $this->userModel->findByEmail($email);
+                
+                if ($user) {
+                    // Generar token de recuperación
+                    $token = bin2hex(random_bytes(32));
+                    $expiry = date('Y-m-d H:i:s', strtotime('+1 hour'));
+                    
+                    // Guardar token en la base de datos
+                    $db = Database::getInstance()->getConnection();
+                    $stmt = $db->prepare("
+                        INSERT INTO password_resets (user_id, token, expires_at) 
+                        VALUES (?, ?, ?)
+                        ON DUPLICATE KEY UPDATE token = ?, expires_at = ?
+                    ");
+                    $stmt->execute([$user['id'], $token, $expiry, $token, $expiry]);
+                    
+                    // En producción, aquí se enviaría un email con el link de recuperación
+                    // Por ahora, mostraremos el token en pantalla
+                    $resetLink = BASE_URL . '/auth/resetPassword?token=' . $token;
+                    $data['success'] = "Se ha generado un enlace de recuperación. Por favor, accede a: <a href='$resetLink' class='underline'>$resetLink</a>";
+                } else {
+                    // No revelar si el email existe o no por seguridad
+                    $data['success'] = 'Si el correo existe en nuestro sistema, recibirás un enlace de recuperación.';
+                }
+            }
+        }
+        
+        $this->view('auth/forgot_password', $data);
+    }
+    
+    /**
+     * Restablecer contraseña
+     */
+    public function resetPassword() {
+        $token = $this->get('token');
+        
+        $data = [
+            'title' => 'Restablecer Contraseña',
+            'error' => '',
+            'success' => '',
+            'token' => $token
+        ];
+        
+        if (!$token) {
+            $data['error'] = 'Token inválido';
+            $this->view('auth/reset_password', $data);
+            return;
+        }
+        
+        // Verificar token
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("
+            SELECT pr.*, u.email, u.username 
+            FROM password_resets pr
+            JOIN users u ON pr.user_id = u.id
+            WHERE pr.token = ? AND pr.expires_at > NOW() AND pr.used = 0
+        ");
+        $stmt->execute([$token]);
+        $reset = $stmt->fetch();
+        
+        if (!$reset) {
+            $data['error'] = 'Token inválido o expirado';
+            $this->view('auth/reset_password', $data);
+            return;
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $password = $this->post('password');
+            $confirmPassword = $this->post('confirm_password');
+            
+            if (empty($password) || empty($confirmPassword)) {
+                $data['error'] = 'Por favor, completa todos los campos';
+            } elseif ($password !== $confirmPassword) {
+                $data['error'] = 'Las contraseñas no coinciden';
+            } elseif (strlen($password) < 6) {
+                $data['error'] = 'La contraseña debe tener al menos 6 caracteres';
+            } else {
+                // Actualizar contraseña
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $db->prepare("UPDATE users SET password = ? WHERE id = ?");
+                $stmt->execute([$hashedPassword, $reset['user_id']]);
+                
+                // Marcar token como usado
+                $stmt = $db->prepare("UPDATE password_resets SET used = 1 WHERE token = ?");
+                $stmt->execute([$token]);
+                
+                $_SESSION['success_message'] = 'Contraseña restablecida exitosamente. Ahora puedes iniciar sesión.';
+                $this->redirect('auth/login');
+            }
+        }
+        
+        $this->view('auth/reset_password', $data);
+    }
+    
+    /**
      * Registro de nuevo usuario (solo para testing)
      */
     public function register() {

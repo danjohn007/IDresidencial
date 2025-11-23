@@ -7,6 +7,10 @@ class SettingsController extends Controller {
     
     private $db;
     
+    // Constants for file uploads
+    const MAX_LOGO_SIZE = 2097152; // 2MB in bytes
+    const ALLOWED_LOGO_EXTENSIONS = ['jpg', 'jpeg', 'png', 'svg'];
+    
     public function __construct() {
         $this->requireAuth();
         $this->requireRole(['superadmin', 'administrador']);
@@ -92,6 +96,26 @@ class SettingsController extends Controller {
                 'maintenance_fee_default' => $this->post('maintenance_fee_default')
             ];
             
+            // Handle logo upload
+            if (isset($_FILES['site_logo']) && $_FILES['site_logo']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = 'uploads/logos/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                $fileInfo = pathinfo($_FILES['site_logo']['name']);
+                $extension = strtolower($fileInfo['extension']);
+                
+                if (in_array($extension, self::ALLOWED_LOGO_EXTENSIONS) && $_FILES['site_logo']['size'] <= self::MAX_LOGO_SIZE) {
+                    $filename = 'logo_' . time() . '.' . $extension;
+                    $uploadPath = $uploadDir . $filename;
+                    
+                    if (move_uploaded_file($_FILES['site_logo']['tmp_name'], $uploadPath)) {
+                        $settings['site_logo'] = $uploadPath;
+                    }
+                }
+            }
+            
             foreach ($settings as $key => $value) {
                 $stmt = $this->db->prepare("
                     INSERT INTO system_settings (setting_key, setting_value) 
@@ -110,6 +134,11 @@ class SettingsController extends Controller {
         $currentSettings = [];
         while ($row = $stmt->fetch()) {
             $currentSettings[$row['setting_key']] = $row['setting_value'];
+        }
+        
+        // Create uploads directory if it doesn't exist
+        if (!is_dir('uploads/logos/')) {
+            mkdir('uploads/logos/', 0755, true);
         }
         
         $data['current'] = $currentSettings;
