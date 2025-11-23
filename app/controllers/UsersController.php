@@ -51,13 +51,18 @@ class UsersController extends Controller {
         ];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Generate username from email
+            $email = $this->post('email');
+            $username = strstr($email, '@', true);
+            
             $userData = [
-                'username' => $this->post('username'),
-                'email' => $this->post('email'),
+                'username' => $username,
+                'email' => $email,
                 'password' => $this->post('password'),
                 'first_name' => $this->post('first_name'),
                 'last_name' => $this->post('last_name'),
                 'phone' => $this->post('phone'),
+                'house_number' => $this->post('house_number'),
                 'role' => $this->post('role', 'residente'),
                 'status' => $this->post('status', 'active')
             ];
@@ -66,7 +71,7 @@ class UsersController extends Controller {
                 $_SESSION['success_message'] = 'Usuario creado exitosamente';
                 $this->redirect('users');
             } else {
-                $data['error'] = 'Error al crear el usuario. Verifique que el nombre de usuario y correo no existan.';
+                $data['error'] = 'Error al crear el usuario. Verifique que el correo no exista.';
             }
         }
         
