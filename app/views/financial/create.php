@@ -49,6 +49,7 @@
                                     Monto <span class="text-red-500">*</span>
                                 </label>
                                 <input type="number" name="amount" step="0.01" min="0" required 
+                                       value="<?php echo isset($_GET['amount']) ? htmlspecialchars($_GET['amount']) : ''; ?>"
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                             </div>
 
@@ -72,10 +73,11 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Propiedad
                                 </label>
-                                <select name="property_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                <select name="property_id" id="property_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                                     <option value="">Sin propiedad</option>
                                     <?php foreach ($properties as $property): ?>
-                                        <option value="<?php echo $property['id']; ?>">
+                                        <option value="<?php echo $property['id']; ?>" 
+                                            <?php echo (isset($_GET['property_id']) && $_GET['property_id'] == $property['id']) ? 'selected' : ''; ?>>
                                             <?php echo htmlspecialchars($property['property_number']); ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -86,10 +88,10 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Residente
                                 </label>
-                                <select name="resident_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                <select name="resident_id" id="resident_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                                     <option value="">Sin residente</option>
                                     <?php foreach ($residents as $resident): ?>
-                                        <option value="<?php echo $resident['id']; ?>">
+                                        <option value="<?php echo $resident['id']; ?>" data-property-id="<?php echo $resident['property_id']; ?>">
                                             <?php echo htmlspecialchars($resident['name']); ?> 
                                             (<?php echo htmlspecialchars($resident['property_number']); ?>)
                                         </option>
@@ -169,6 +171,53 @@ document.getElementById('transaction_type').addEventListener('change', function(
             option.textContent = type.name;
             movementTypeSelect.appendChild(option);
         });
+    }
+});
+
+// Auto-populate residents when property is selected
+document.getElementById('property_id').addEventListener('change', function() {
+    const propertyId = this.value;
+    const residentSelect = document.getElementById('resident_id');
+    
+    // Show all residents if no property selected
+    if (!propertyId) {
+        Array.from(residentSelect.options).forEach(option => {
+            option.style.display = '';
+        });
+        residentSelect.value = '';
+        return;
+    }
+    
+    // Filter residents by property
+    let firstMatch = null;
+    Array.from(residentSelect.options).forEach(option => {
+        if (option.value === '') {
+            option.style.display = '';
+            return;
+        }
+        
+        const residentPropertyId = option.getAttribute('data-property-id');
+        if (residentPropertyId === propertyId) {
+            option.style.display = '';
+            if (!firstMatch) firstMatch = option.value;
+        } else {
+            option.style.display = 'none';
+        }
+    });
+    
+    // Auto-select first matching resident
+    if (firstMatch) {
+        residentSelect.value = firstMatch;
+    } else {
+        residentSelect.value = '';
+    }
+});
+
+// Trigger on page load if property_id is in URL
+window.addEventListener('DOMContentLoaded', function() {
+    const propertySelect = document.getElementById('property_id');
+    if (propertySelect.value) {
+        propertySelect.dispatchEvent(new Event('change'));
     }
 });
 </script>

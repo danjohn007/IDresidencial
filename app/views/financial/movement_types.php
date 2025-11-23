@@ -75,21 +75,27 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <?php if ($type['transaction_type'] === 'ingreso'): ?>
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                    <i class="fas fa-arrow-up mr-1"></i> Ingreso
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                                    <i class="fas fa-arrow-down mr-1"></i> Egreso
-                                                </span>
+                                            <?php if (isset($type['category'])): ?>
+                                                <?php if ($type['category'] === 'ingreso'): ?>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                        <i class="fas fa-arrow-up mr-1"></i> Ingreso
+                                                    </span>
+                                                <?php elseif ($type['category'] === 'egreso'): ?>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                                        <i class="fas fa-arrow-down mr-1"></i> Egreso
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                        <i class="fas fa-arrows-alt-h mr-1"></i> Ambos
+                                                    </span>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </td>
                                         <td class="px-6 py-4 text-sm text-gray-500">
                                             <?php echo htmlspecialchars($type['description'] ?? 'Sin descripción'); ?>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <?php if ($type['status'] === 'active'): ?>
+                                            <?php if (isset($type['is_active']) && $type['is_active']): ?>
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                                     Activo
                                                 </span>

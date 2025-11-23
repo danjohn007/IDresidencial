@@ -12,9 +12,14 @@
                     <h1 class="text-3xl font-bold text-gray-900">💳 Pagos y Cuotas</h1>
                     <p class="text-gray-600 mt-1">Estado de pagos de mantenimiento</p>
                 </div>
-                <a href="<?php echo BASE_URL; ?>/residents" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
-                    <i class="fas fa-arrow-left mr-2"></i> Volver a Residentes
-                </a>
+                <div class="flex space-x-2">
+                    <a href="<?php echo BASE_URL; ?>/financial/create" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-plus mr-2"></i> Nuevo Pago
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>/residents" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                        <i class="fas fa-arrow-left mr-2"></i> Volver a Residentes
+                    </a>
+                </div>
             </div>
 
             <?php if (isset($_SESSION['success_message'])): ?>
@@ -139,8 +144,8 @@
                                             };
                                             ?>
                                         </span>
-                                        <?php if ($fee['paid_at']): ?>
-                                            <span class="text-xs text-gray-500 block mt-1"><?php echo date('d/m/Y', strtotime($fee['paid_at'])); ?></span>
+                                        <?php if (isset($fee['paid_date']) && $fee['paid_date']): ?>
+                                            <span class="text-xs text-gray-500 block mt-1"><?php echo date('d/m/Y', strtotime($fee['paid_date'])); ?></span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
