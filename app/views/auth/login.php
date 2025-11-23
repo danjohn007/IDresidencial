@@ -4,9 +4,16 @@
     <div class="max-w-md w-full">
         <!-- Logo and title -->
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-full mb-4">
-                <i class="fas fa-building text-white text-4xl"></i>
-            </div>
+            <?php if (!empty($settings['site_logo'])): ?>
+                <div class="mb-4">
+                    <img src="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($settings['site_logo']); ?>" 
+                         alt="Logo" class="h-20 mx-auto object-contain">
+                </div>
+            <?php else: ?>
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-full mb-4">
+                    <i class="fas fa-building text-white text-4xl"></i>
+                </div>
+            <?php endif; ?>
             <h1 class="text-3xl font-bold text-gray-900 mb-2"><?php echo SITE_NAME; ?></h1>
             <p class="text-gray-600">Sistema de Gestión Residencial</p>
         </div>
@@ -99,11 +106,26 @@
         <!-- Footer -->
         <div class="mt-8 text-center text-sm text-gray-500">
             <p>&copy; <?php echo date('Y'); ?> <?php echo SITE_NAME; ?>. Todos los derechos reservados.</p>
-            <p class="mt-1">
-                <a href="<?php echo BASE_URL; ?>/test_connection.php" class="text-blue-600 hover:text-blue-700">
-                    <i class="fas fa-plug mr-1"></i> Probar conexión
-                </a>
-            </p>
+            <?php if (!empty($settings['site_email']) || !empty($settings['site_phone'])): ?>
+                <div class="mt-2 space-y-1">
+                    <?php if (!empty($settings['site_email'])): ?>
+                        <p>
+                            <i class="fas fa-envelope mr-1"></i>
+                            <a href="mailto:<?php echo htmlspecialchars($settings['site_email']); ?>" class="text-blue-600 hover:text-blue-700">
+                                <?php echo htmlspecialchars($settings['site_email']); ?>
+                            </a>
+                        </p>
+                    <?php endif; ?>
+                    <?php if (!empty($settings['site_phone'])): ?>
+                        <p>
+                            <i class="fas fa-phone mr-1"></i>
+                            <a href="tel:<?php echo htmlspecialchars($settings['site_phone']); ?>" class="text-blue-600 hover:text-blue-700">
+                                <?php echo htmlspecialchars($settings['site_phone']); ?>
+                            </a>
+                        </p>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>

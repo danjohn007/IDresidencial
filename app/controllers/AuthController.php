@@ -20,9 +20,18 @@ class AuthController extends Controller {
             $this->redirect('dashboard');
         }
         
+        // Load system settings for contact info
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->query("SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('site_logo', 'site_email', 'site_phone')");
+        $settings = [];
+        while ($row = $stmt->fetch()) {
+            $settings[$row['setting_key']] = $row['setting_value'];
+        }
+        
         $data = [
             'title' => 'Iniciar Sesión',
-            'error' => ''
+            'error' => '',
+            'settings' => $settings
         ];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -92,6 +92,22 @@ class SettingsController extends Controller {
                 'maintenance_fee_default' => $this->post('maintenance_fee_default')
             ];
             
+            // Handle logo upload
+            if (isset($_FILES['site_logo']) && $_FILES['site_logo']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = PUBLIC_PATH . '/uploads/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                $extension = pathinfo($_FILES['site_logo']['name'], PATHINFO_EXTENSION);
+                $filename = 'logo_' . time() . '.' . $extension;
+                $uploadPath = $uploadDir . $filename;
+                
+                if (move_uploaded_file($_FILES['site_logo']['tmp_name'], $uploadPath)) {
+                    $settings['site_logo'] = 'uploads/' . $filename;
+                }
+            }
+            
             foreach ($settings as $key => $value) {
                 $stmt = $this->db->prepare("
                     INSERT INTO system_settings (setting_key, setting_value) 
