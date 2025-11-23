@@ -12,9 +12,14 @@
                     <h1 class="text-3xl font-bold text-gray-900">🏠 Propiedades</h1>
                     <p class="text-gray-600 mt-1">Gestión de propiedades del residencial</p>
                 </div>
-                <a href="<?php echo BASE_URL; ?>/residents" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
-                    <i class="fas fa-arrow-left mr-2"></i> Volver a Residentes
-                </a>
+                <div class="flex space-x-3">
+                    <a href="<?php echo BASE_URL; ?>/residents/createProperty" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-plus mr-2"></i> Nueva Propiedad
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>/residents" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                        <i class="fas fa-arrow-left mr-2"></i> Volver a Residentes
+                    </a>
+                </div>
             </div>
 
             <?php if (isset($_SESSION['success_message'])): ?>
@@ -35,6 +40,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Área (m²)</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Residentes</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -80,6 +86,23 @@
                                     ?>">
                                         <?php echo ucfirst(str_replace('_', ' ', $property['status'])); ?>
                                     </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
+                                    <a href="<?php echo BASE_URL; ?>/residents/editProperty/<?php echo $property['id']; ?>" 
+                                       class="text-blue-600 hover:text-blue-900 mr-3" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <?php if ($property['resident_count'] == 0): ?>
+                                        <a href="<?php echo BASE_URL; ?>/residents/deleteProperty/<?php echo $property['id']; ?>" 
+                                           onclick="return confirm('¿Está seguro de eliminar esta propiedad?')"
+                                           class="text-red-600 hover:text-red-900" title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-gray-300" title="No se puede eliminar una propiedad con residentes">
+                                            <i class="fas fa-trash"></i>
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

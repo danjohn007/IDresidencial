@@ -223,4 +223,136 @@ class ResidentsController extends Controller {
         
         $this->view('residents/payments', $data);
     }
+    
+    /**
+     * Create new property
+     */
+    public function createProperty() {
+        $data = [
+            'title' => 'Nueva Propiedad',
+            'error' => ''
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $propertyData = [
+                'property_number' => $this->post('property_number'),
+                'street' => $this->post('street'),
+                'section' => $this->post('section'),
+                'tower' => $this->post('tower'),
+                'property_type' => $this->post('property_type'),
+                'bedrooms' => $this->post('bedrooms', 0),
+                'bathrooms' => $this->post('bathrooms', 0),
+                'area_m2' => $this->post('area_m2'),
+                'status' => $this->post('status', 'desocupada')
+            ];
+            
+            // Check if property number exists
+            $stmt = $this->db->prepare("SELECT id FROM properties WHERE property_number = ?");
+            $stmt->execute([$propertyData['property_number']]);
+            if ($stmt->fetch()) {
+                $data['error'] = 'Ya existe una propiedad con este número.';
+                $this->view('residents/create_property', $data);
+                return;
+            }
+            
+            $stmt = $this->db->prepare("
+                INSERT INTO properties (property_number, street, section, tower, property_type, bedrooms, bathrooms, area_m2, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            
+            if ($stmt->execute(array_values($propertyData))) {
+                $_SESSION['success_message'] = 'Propiedad creada exitosamente';
+                $this->redirect('residents/properties');
+            } else {
+                $data['error'] = 'Error al crear la propiedad';
+            }
+        }
+        
+        $this->view('residents/create_property', $data);
+    }
+    
+    /**
+     * Edit property
+     */
+    public function editProperty($id) {
+        $stmt = $this->db->prepare("SELECT * FROM properties WHERE id = ?");
+        $stmt->execute([$id]);
+        $property = $stmt->fetch();
+        
+        if (!$property) {
+            $_SESSION['error_message'] = 'Propiedad no encontrada';
+            $this->redirect('residents/properties');
+            return;
+        }
+        
+        $data = [
+            'title' => 'Editar Propiedad',
+            'property' => $property,
+            'error' => ''
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $propertyData = [
+                'property_number' => $this->post('property_number'),
+                'street' => $this->post('street'),
+                'section' => $this->post('section'),
+                'tower' => $this->post('tower'),
+                'property_type' => $this->post('property_type'),
+                'bedrooms' => $this->post('bedrooms', 0),
+                'bathrooms' => $this->post('bathrooms', 0),
+                'area_m2' => $this->post('area_m2'),
+                'status' => $this->post('status')
+            ];
+            
+            // Check if property number exists (excluding current property)
+            $stmt = $this->db->prepare("SELECT id FROM properties WHERE property_number = ? AND id != ?");
+            $stmt->execute([$propertyData['property_number'], $id]);
+            if ($stmt->fetch()) {
+                $data['error'] = 'Ya existe una propiedad con este número.';
+                $this->view('residents/edit_property', $data);
+                return;
+            }
+            
+            $stmt = $this->db->prepare("
+                UPDATE properties 
+                SET property_number = ?, street = ?, section = ?, tower = ?, property_type = ?, 
+                    bedrooms = ?, bathrooms = ?, area_m2 = ?, status = ?
+                WHERE id = ?
+            ");
+            
+            if ($stmt->execute([...array_values($propertyData), $id])) {
+                $_SESSION['success_message'] = 'Propiedad actualizada exitosamente';
+                $this->redirect('residents/properties');
+            } else {
+                $data['error'] = 'Error al actualizar la propiedad';
+            }
+        }
+        
+        $this->view('residents/edit_property', $data);
+    }
+    
+    /**
+     * Delete property
+     */
+    public function deleteProperty($id) {
+        // Check if property has residents
+        $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM residents WHERE property_id = ? AND status = 'active'");
+        $stmt->execute([$id]);
+        $result = $stmt->fetch();
+        
+        if ($result['count'] > 0) {
+            $_SESSION['error_message'] = 'No se puede eliminar una propiedad con residentes activos';
+            $this->redirect('residents/properties');
+            return;
+        }
+        
+        $stmt = $this->db->prepare("DELETE FROM properties WHERE id = ?");
+        if ($stmt->execute([$id])) {
+            $_SESSION['success_message'] = 'Propiedad eliminada exitosamente';
+        } else {
+            $_SESSION['error_message'] = 'Error al eliminar la propiedad';
+        }
+        
+        $this->redirect('residents/properties');
+    }
 }

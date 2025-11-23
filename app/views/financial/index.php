@@ -84,12 +84,16 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Movimientos por Mes</h3>
-                    <canvas id="monthlyChart" height="250"></canvas>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
                 </div>
 
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Movimientos por Tipo</h3>
-                    <canvas id="typeChart" height="250"></canvas>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="typeChart"></canvas>
+                    </div>
                 </div>
             </div>
 
