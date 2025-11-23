@@ -103,6 +103,14 @@
                     <div class="border-t"></div>
                 </li>
                 
+                <!-- Dispositivos -->
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/devices" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fas fa-microchip w-5"></i>
+                        <span>Dispositivos</span>
+                    </a>
+                </li>
+                
                 <!-- Configuración -->
                 <li>
                     <a href="<?php echo BASE_URL; ?>/settings" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
