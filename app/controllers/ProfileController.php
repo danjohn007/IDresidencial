@@ -123,4 +123,80 @@ class ProfileController extends Controller {
         
         $this->redirect('profile');
     }
+    
+    /**
+     * Actualizar foto de perfil
+     */
+    public function updatePhoto() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('profile');
+            return;
+        }
+        
+        $userId = $_SESSION['user_id'];
+        
+        // Verificar que se subió un archivo
+        if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
+            $_SESSION['error_message'] = 'Error al subir la foto. Por favor, intenta de nuevo.';
+            $this->redirect('profile');
+            return;
+        }
+        
+        $file = $_FILES['photo'];
+        
+        // Validar tipo de archivo
+        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!in_array($file['type'], $allowedTypes)) {
+            $_SESSION['error_message'] = 'Tipo de archivo no permitido. Solo se aceptan imágenes JPG, PNG o GIF.';
+            $this->redirect('profile');
+            return;
+        }
+        
+        // Validar tamaño (máximo 5MB)
+        if ($file['size'] > 5 * 1024 * 1024) {
+            $_SESSION['error_message'] = 'La imagen es demasiado grande. El tamaño máximo es 5MB.';
+            $this->redirect('profile');
+            return;
+        }
+        
+        // Crear directorio si no existe
+        $uploadDir = PUBLIC_PATH . '/uploads/profiles';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        // Generar nombre único para el archivo
+        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = 'user_' . $userId . '_' . time() . '.' . $extension;
+        $filepath = $uploadDir . '/' . $filename;
+        
+        // Obtener foto actual para eliminarla
+        $user = $this->userModel->findById($userId);
+        $oldPhoto = $user['photo'];
+        
+        // Mover archivo subido
+        if (move_uploaded_file($file['tmp_name'], $filepath)) {
+            // Actualizar base de datos
+            $stmt = $this->db->prepare("UPDATE users SET photo = ? WHERE id = ?");
+            
+            if ($stmt->execute([$filename, $userId])) {
+                // Eliminar foto antigua si existe
+                if ($oldPhoto && file_exists($uploadDir . '/' . $oldPhoto)) {
+                    unlink($uploadDir . '/' . $oldPhoto);
+                }
+                
+                $_SESSION['success_message'] = 'Foto de perfil actualizada exitosamente';
+            } else {
+                $_SESSION['error_message'] = 'Error al actualizar la foto en la base de datos';
+                // Eliminar archivo subido si falla la actualización
+                if (file_exists($filepath)) {
+                    unlink($filepath);
+                }
+            }
+        } else {
+            $_SESSION['error_message'] = 'Error al guardar la foto. Por favor, intenta de nuevo.';
+        }
+        
+        $this->redirect('profile');
+    }
 }

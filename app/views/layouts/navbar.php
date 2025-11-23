@@ -41,9 +41,25 @@
                 <!-- User menu -->
                 <div class="relative group">
                     <button class="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
-                        <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                            <?php echo strtoupper(substr($_SESSION['first_name'] ?? 'U', 0, 1)); ?>
-                        </div>
+                        <?php
+                        $userId = $_SESSION['user_id'] ?? null;
+                        $userPhoto = null;
+                        if ($userId) {
+                            $stmt = $db->prepare("SELECT photo FROM users WHERE id = ?");
+                            $stmt->execute([$userId]);
+                            $userRow = $stmt->fetch();
+                            $userPhoto = $userRow ? $userRow['photo'] : null;
+                        }
+                        ?>
+                        <?php if ($userPhoto && file_exists(PUBLIC_PATH . '/uploads/profiles/' . $userPhoto)): ?>
+                            <img src="<?php echo PUBLIC_URL . '/uploads/profiles/' . htmlspecialchars($userPhoto); ?>" 
+                                 alt="Foto de perfil" 
+                                 class="w-8 h-8 rounded-full object-cover border-2 border-blue-500">
+                        <?php else: ?>
+                            <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                <?php echo strtoupper(substr($_SESSION['first_name'] ?? 'U', 0, 1)); ?>
+                            </div>
+                        <?php endif; ?>
                         <span class="hidden md:block"><?php echo $_SESSION['first_name'] ?? 'Usuario'; ?></span>
                         <i class="fas fa-chevron-down text-sm"></i>
                     </button>

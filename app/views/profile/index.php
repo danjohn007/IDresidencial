@@ -33,12 +33,27 @@
                     <div class="md:col-span-1">
                         <div class="bg-white rounded-lg shadow p-6">
                             <div class="text-center">
-                                <div class="inline-flex items-center justify-center w-24 h-24 bg-blue-600 rounded-full mb-4">
-                                    <span class="text-4xl font-bold text-white">
-                                        <?php echo strtoupper(substr($user['first_name'], 0, 1) . substr($user['last_name'], 0, 1)); ?>
-                                    </span>
+                                <div class="relative inline-block">
+                                    <?php if (!empty($user['photo'])): ?>
+                                        <img src="<?php echo PUBLIC_URL . '/uploads/profiles/' . htmlspecialchars($user['photo']); ?>" 
+                                             alt="Foto de perfil" 
+                                             class="w-24 h-24 rounded-full object-cover border-4 border-blue-500">
+                                    <?php else: ?>
+                                        <div class="inline-flex items-center justify-center w-24 h-24 bg-blue-600 rounded-full">
+                                            <span class="text-4xl font-bold text-white">
+                                                <?php echo strtoupper(substr($user['first_name'], 0, 1) . substr($user['last_name'], 0, 1)); ?>
+                                            </span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <button onclick="document.getElementById('photoInput').click()" 
+                                            class="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700 transition shadow-lg">
+                                        <i class="fas fa-camera text-xs"></i>
+                                    </button>
                                 </div>
-                                <h3 class="text-xl font-bold text-gray-900"><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></h3>
+                                <form id="photoForm" method="POST" action="<?php echo BASE_URL; ?>/profile/updatePhoto" enctype="multipart/form-data" class="hidden">
+                                    <input type="file" id="photoInput" name="photo" accept="image/*" onchange="document.getElementById('photoForm').submit()">
+                                </form>
+                                <h3 class="text-xl font-bold text-gray-900 mt-4"><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></h3>
                                 <p class="text-gray-600 text-sm mt-1">@<?php echo htmlspecialchars($user['username']); ?></p>
                                 <span class="inline-block px-3 py-1 mt-3 text-xs rounded-full <?php 
                                     echo match($user['role']) {
