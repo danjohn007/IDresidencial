@@ -3,6 +3,8 @@
  * Controlador de Autenticación
  */
 
+require_once APP_PATH . '/controllers/AuditController.php';
+
 class AuthController extends Controller {
     
     private $userModel;

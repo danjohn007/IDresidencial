@@ -3,6 +3,8 @@
  * Controlador de Residentes
  */
 
+require_once APP_PATH . '/controllers/AuditController.php';
+
 class ResidentsController extends Controller {
     
     private $residentModel;

@@ -3,6 +3,8 @@
  * Controlador de Perfil de Usuario
  */
 
+require_once APP_PATH . '/controllers/AuditController.php';
+
 class ProfileController extends Controller {
     
     private $userModel;

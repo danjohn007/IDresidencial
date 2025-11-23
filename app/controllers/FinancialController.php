@@ -3,6 +3,8 @@
  * Controlador de Módulo Financiero
  */
 
+require_once APP_PATH . '/controllers/AuditController.php';
+
 class FinancialController extends Controller {
     
     private $financialModel;

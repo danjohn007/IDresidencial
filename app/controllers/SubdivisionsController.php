@@ -3,6 +3,8 @@
  * Controlador de Fraccionamientos/Subdivisiones
  */
 
+require_once APP_PATH . '/controllers/AuditController.php';
+
 class SubdivisionsController extends Controller {
     
     private $db;

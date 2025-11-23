@@ -3,6 +3,8 @@
  * Controlador de Amenidades
  */
 
+require_once APP_PATH . '/controllers/AuditController.php';
+
 class AmenitiesController extends Controller {
     
     private $amenityModel;
