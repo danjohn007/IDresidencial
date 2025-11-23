@@ -1,12 +1,42 @@
 <!-- Sidebar -->
 <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
     <div class="h-full flex flex-col">
+        <?php
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'site_logo'");
+        $logoRow = $stmt->fetch();
+        $siteLogo = $logoRow ? $logoRow['setting_value'] : null;
+        $stmt = $db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'site_name'");
+        $nameRow = $stmt->fetch();
+        $siteName = $nameRow ? $nameRow['setting_value'] : SITE_NAME;
+        ?>
+        
+        <!-- Logo (desktop) -->
+        <div class="p-4 border-b hidden lg:block">
+            <div class="flex flex-col items-center text-center">
+                <?php if ($siteLogo && file_exists($siteLogo)): ?>
+                    <img src="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($siteLogo); ?>" 
+                         alt="Logo" class="h-16 object-contain mb-2">
+                <?php else: ?>
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-2">
+                        <i class="fas fa-building text-white text-2xl"></i>
+                    </div>
+                <?php endif; ?>
+                <span class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($siteName); ?></span>
+            </div>
+        </div>
+        
         <!-- Logo (mobile) -->
         <div class="p-4 border-b lg:hidden">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
-                    <i class="fas fa-building text-blue-600 text-xl"></i>
-                    <span class="text-lg font-bold text-gray-800"><?php echo SITE_NAME; ?></span>
+                    <?php if ($siteLogo && file_exists($siteLogo)): ?>
+                        <img src="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($siteLogo); ?>" 
+                             alt="Logo" class="h-8 object-contain">
+                    <?php else: ?>
+                        <i class="fas fa-building text-blue-600 text-xl"></i>
+                    <?php endif; ?>
+                    <span class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($siteName); ?></span>
                 </div>
                 <button onclick="toggleMobileMenu()" class="text-gray-600 hover:text-gray-900">
                     <i class="fas fa-times text-xl"></i>

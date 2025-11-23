@@ -74,19 +74,11 @@
                                     Rol <span class="text-red-500">*</span>
                                 </label>
                                 <select name="role" id="role" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="residente">Residente</option>
                                     <option value="guardia">Guardia</option>
                                     <option value="administrador">Administrador</option>
                                     <option value="superadmin">Super Admin</option>
                                 </select>
-                            </div>
-                            
-                            <div id="house_number_field" style="display: none;">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Número de Casa <span class="text-red-500">*</span>
-                                </label>
-                                <input type="text" name="house_number" id="house_number"
-                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <p class="text-xs text-gray-500 mt-1">Los residentes se crean desde el módulo de Residentes</p>
                             </div>
                             
                             <div>
@@ -118,27 +110,5 @@
         </main>
     </div>
 </div>
-
-<script>
-// Show/hide house number field based on role
-document.getElementById('role').addEventListener('change', function() {
-    const houseNumberField = document.getElementById('house_number_field');
-    const houseNumberInput = document.getElementById('house_number');
-    
-    if (this.value === 'residente') {
-        houseNumberField.style.display = 'block';
-        houseNumberInput.required = true;
-    } else {
-        houseNumberField.style.display = 'none';
-        houseNumberInput.required = false;
-    }
-});
-
-// Trigger on page load if residente is selected
-if (document.getElementById('role').value === 'residente') {
-    document.getElementById('house_number_field').style.display = 'block';
-    document.getElementById('house_number').required = true;
-}
-</script>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
