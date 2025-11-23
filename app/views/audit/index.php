@@ -138,6 +138,41 @@
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Pagination -->
+            <?php if ($totalPages > 1): ?>
+                <div class="bg-white rounded-lg shadow p-4 mt-4">
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-gray-700">
+                            Mostrando página <?php echo $page; ?> de <?php echo $totalPages; ?> 
+                            (<?php echo $totalLogs; ?> registros totales)
+                        </div>
+                        <div class="flex space-x-2">
+                            <?php if ($page > 1): ?>
+                                <a href="<?php echo BASE_URL; ?>/audit?page=<?php echo $page - 1; ?><?php 
+                                    echo $filters['user_id'] ? '&user_id=' . $filters['user_id'] : '';
+                                    echo $filters['action'] ? '&action=' . $filters['action'] : '';
+                                    echo $filters['date_from'] ? '&date_from=' . $filters['date_from'] : '';
+                                    echo $filters['date_to'] ? '&date_to=' . $filters['date_to'] : '';
+                                ?>" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                                    <i class="fas fa-chevron-left"></i> Anterior
+                                </a>
+                            <?php endif; ?>
+                            
+                            <?php if ($page < $totalPages): ?>
+                                <a href="<?php echo BASE_URL; ?>/audit?page=<?php echo $page + 1; ?><?php 
+                                    echo $filters['user_id'] ? '&user_id=' . $filters['user_id'] : '';
+                                    echo $filters['action'] ? '&action=' . $filters['action'] : '';
+                                    echo $filters['date_from'] ? '&date_from=' . $filters['date_from'] : '';
+                                    echo $filters['date_to'] ? '&date_to=' . $filters['date_to'] : '';
+                                ?>" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                                    Siguiente <i class="fas fa-chevron-right"></i>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
         </main>
     </div>
 </div>

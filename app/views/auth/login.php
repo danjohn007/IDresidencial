@@ -72,7 +72,7 @@
                         <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                         <span class="ml-2 text-sm text-gray-600">Recordarme</span>
                     </label>
-                    <a href="#" class="text-sm text-blue-600 hover:text-blue-700">
+                    <a href="<?php echo BASE_URL; ?>/auth/forgotPassword" class="text-sm text-blue-600 hover:text-blue-700">
                         ¿Olvidaste tu contraseña?
                     </a>
                 </div>
@@ -93,18 +93,6 @@
                 <a href="<?php echo BASE_URL; ?>/auth/register" class="text-blue-600 hover:text-blue-700 font-medium">
                     Regístrate aquí
                 </a>
-            </div>
-        </div>
-        
-        <!-- Test credentials info -->
-        <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <p class="text-sm font-semibold text-yellow-800 mb-2">
-                <i class="fas fa-info-circle mr-1"></i> Credenciales de prueba:
-            </p>
-            <div class="text-xs text-yellow-700 space-y-1">
-                <p><strong>Administrador:</strong> admin / password</p>
-                <p><strong>Guardia:</strong> guardia1 / password</p>
-                <p><strong>Residente:</strong> residente1 / password</p>
             </div>
         </div>
         

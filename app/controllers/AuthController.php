@@ -83,6 +83,38 @@ class AuthController extends Controller {
     }
     
     /**
+     * Forgot password page
+     */
+    public function forgotPassword() {
+        $data = [
+            'title' => 'Recuperar Contraseña',
+            'error' => '',
+            'success' => ''
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $email = $this->post('email');
+            
+            if (empty($email)) {
+                $data['error'] = 'Por favor, ingresa tu correo electrónico';
+            } else {
+                $user = $this->userModel->findByEmail($email);
+                
+                if ($user) {
+                    // En producción, aquí se enviaría un email con el token de recuperación
+                    // Por ahora, solo mostramos un mensaje de éxito
+                    $data['success'] = 'Se ha enviado un correo con instrucciones para recuperar tu contraseña. Por favor, contacta al administrador.';
+                } else {
+                    // Por seguridad, no revelamos si el email existe o no
+                    $data['success'] = 'Si el correo existe en el sistema, recibirás instrucciones para recuperar tu contraseña. Por favor, contacta al administrador.';
+                }
+            }
+        }
+        
+        $this->view('auth/forgot_password', $data);
+    }
+    
+    /**
      * Registro de nuevo usuario (solo para testing)
      */
     public function register() {

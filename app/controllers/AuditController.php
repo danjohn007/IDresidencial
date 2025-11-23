@@ -24,6 +24,11 @@ class AuditController extends Controller {
             'date_to' => $this->get('date_to')
         ];
         
+        // Pagination
+        $page = $this->get('page', 1);
+        $perPage = 20;
+        $offset = ($page - 1) * $perPage;
+        
         $where = [];
         $params = [];
         
@@ -49,16 +54,27 @@ class AuditController extends Controller {
         
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
-        // Obtener logs
+        // Get total count
+        $countStmt = $this->db->prepare("
+            SELECT COUNT(*) as total
+            FROM audit_logs al
+            LEFT JOIN users u ON al.user_id = u.id
+            $whereClause
+        ");
+        $countStmt->execute($params);
+        $totalLogs = $countStmt->fetch()['total'];
+        $totalPages = ceil($totalLogs / $perPage);
+        
+        // Obtener logs con paginación
         $stmt = $this->db->prepare("
             SELECT al.*, u.username, u.first_name, u.last_name, u.role
             FROM audit_logs al
             LEFT JOIN users u ON al.user_id = u.id
             $whereClause
             ORDER BY al.created_at DESC
-            LIMIT 100
+            LIMIT ? OFFSET ?
         ");
-        $stmt->execute($params);
+        $stmt->execute(array_merge($params, [$perPage, $offset]));
         $logs = $stmt->fetchAll();
         
         // Obtener todos los usuarios para el filtro
@@ -86,7 +102,10 @@ class AuditController extends Controller {
             'logs' => $logs,
             'users' => $users,
             'filters' => $filters,
-            'stats' => $stats
+            'stats' => $stats,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalLogs' => $totalLogs
         ];
         
         $this->view('audit/index', $data);

@@ -56,4 +56,9 @@ class Amenity {
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($values);
     }
+    
+    public function delete($id) {
+        $stmt = $this->db->prepare("DELETE FROM amenities WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
 }
