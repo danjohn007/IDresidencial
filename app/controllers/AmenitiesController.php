@@ -96,23 +96,41 @@ class AmenitiesController extends Controller {
      * Mis reservaciones
      */
     public function myReservations() {
-        $resident = $this->residentModel->findByUserId($_SESSION['user_id']);
-        
-        if (!$resident) {
-            $_SESSION['error_message'] = 'No se encontró información de residente';
-            $this->redirect('dashboard');
-        }
-        
         $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare("
-            SELECT r.*, a.name as amenity_name
-            FROM reservations r
-            JOIN amenities a ON r.amenity_id = a.id
-            WHERE r.resident_id = ?
-            ORDER BY r.reservation_date DESC, r.start_time DESC
-        ");
-        $stmt->execute([$resident['id']]);
-        $reservations = $stmt->fetchAll();
+        
+        // For residents, show only their reservations
+        // For superadmin/admin, show all reservations
+        if (in_array($_SESSION['role'], ['superadmin', 'administrador'])) {
+            $stmt = $db->query("
+                SELECT r.*, a.name as amenity_name, 
+                       u.first_name, u.last_name, p.property_number
+                FROM reservations r
+                JOIN amenities a ON r.amenity_id = a.id
+                JOIN residents res ON r.resident_id = res.id
+                JOIN users u ON res.user_id = u.id
+                LEFT JOIN properties p ON res.property_id = p.id
+                ORDER BY r.reservation_date DESC, r.start_time DESC
+            ");
+            $reservations = $stmt->fetchAll();
+        } else {
+            $resident = $this->residentModel->findByUserId($_SESSION['user_id']);
+            
+            if (!$resident) {
+                $_SESSION['error_message'] = 'No se encontró información de residente';
+                $this->redirect('dashboard');
+                return;
+            }
+            
+            $stmt = $db->prepare("
+                SELECT r.*, a.name as amenity_name
+                FROM reservations r
+                JOIN amenities a ON r.amenity_id = a.id
+                WHERE r.resident_id = ?
+                ORDER BY r.reservation_date DESC, r.start_time DESC
+            ");
+            $stmt->execute([$resident['id']]);
+            $reservations = $stmt->fetchAll();
+        }
         
         $data = [
             'title' => 'Mis Reservaciones',
