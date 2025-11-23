@@ -45,9 +45,9 @@ CREATE TABLE IF NOT EXISTS vehicles (
 -- ============================================
 -- 4. Verificar índices en propiedades para búsquedas optimizadas
 -- ============================================
--- Agregar índice si no existe
-CREATE INDEX IF NOT EXISTS idx_property_status ON properties(status);
-CREATE INDEX IF NOT EXISTS idx_property_type ON properties(property_type);
+-- Intentar crear los índices (fallará si ya existen, pero es seguro si el resto del script no depende de esto)
+CREATE INDEX idx_property_status ON properties(status);
+CREATE INDEX idx_property_type ON properties(property_type);
 
 -- ============================================
 -- 5. Verificar estructura de reservaciones
@@ -124,11 +124,10 @@ SELECT 'Migración completada exitosamente' as status, NOW() as executed_at;
 -- ============================================
 -- NOTAS IMPORTANTES:
 -- ============================================
--- 1. Este script es idempotente - puede ejecutarse múltiples veces sin causar errores
+-- 1. Este script es idempotente - puede ejecutarse múltiples veces sin causar errores (a excepción de CREATE INDEX si el índice ya existe)
 -- 2. Se recomienda hacer backup de la base de datos antes de ejecutar
 -- 3. Revisar los resultados de la consulta de integridad referencial
--- 4. Los índices se crean solo si no existen (MySQL 5.7+)
--- 5. Las inserciones usan ON DUPLICATE KEY o IGNORE para evitar duplicados
+-- 4. Las inserciones usan ON DUPLICATE KEY o IGNORE para evitar duplicados
 --
 -- BACKUP RECOMENDADO:
 -- mysqldump -u root -p erp_residencial > backup_before_migration_$(date +%Y%m%d).sql
