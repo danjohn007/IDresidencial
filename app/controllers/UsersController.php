@@ -130,7 +130,7 @@ class UsersController extends Controller {
     }
     
     /**
-     * Ver detalles de usuario
+     * Ver detalles de usuario (public method)
      */
     public function viewDetails($id) {
         $user = $this->userModel->findById($id);

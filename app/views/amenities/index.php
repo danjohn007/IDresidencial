@@ -12,10 +12,18 @@
                     <h1 class="text-3xl font-bold text-gray-900">Amenidades</h1>
                     <p class="text-gray-600 mt-1">Reserva las amenidades del residencial</p>
                 </div>
-                <a href="<?php echo BASE_URL; ?>/amenities/myReservations" 
-                   class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                    <i class="fas fa-calendar-check mr-2"></i> Mis Reservaciones
-                </a>
+                <div class="flex space-x-2">
+                    <?php if ($_SESSION['role'] === 'superadmin'): ?>
+                        <a href="<?php echo BASE_URL; ?>/amenities/manage" 
+                           class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                            <i class="fas fa-cog mr-2"></i> Gestionar Amenidades
+                        </a>
+                    <?php endif; ?>
+                    <a href="<?php echo BASE_URL; ?>/amenities/myReservations" 
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-calendar-check mr-2"></i> Mis Reservaciones
+                    </a>
+                </div>
             </div>
 
             <?php if (isset($_SESSION['success_message'])): ?>

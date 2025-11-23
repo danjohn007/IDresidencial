@@ -62,7 +62,7 @@
                 
                 <!-- Pagos -->
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/payments" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                    <a href="<?php echo BASE_URL; ?>/residents/payments" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
                         <i class="fas fa-credit-card w-5"></i>
                         <span>Pagos</span>
                     </a>
@@ -71,7 +71,7 @@
                 <!-- Reportes -->
                 <li>
                     <a href="<?php echo BASE_URL; ?>/reports" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
-                        <i class="fas fa-file-chart-line w-5"></i>
+                        <i class="fas fa-chart-bar w-5"></i>
                         <span>Reportes</span>
                     </a>
                 </li>
