@@ -92,14 +92,42 @@ class SettingsController extends Controller {
                 'maintenance_fee_default' => $this->post('maintenance_fee_default')
             ];
             
-            // Handle logo upload
+            // Handle logo upload with security validation
             if (isset($_FILES['site_logo']) && $_FILES['site_logo']['error'] === UPLOAD_ERR_OK) {
+                // Validate file size (max 2MB)
+                $maxFileSize = 2 * 1024 * 1024; // 2MB
+                if ($_FILES['site_logo']['size'] > $maxFileSize) {
+                    $_SESSION['error_message'] = 'El archivo es demasiado grande. Máximo 2MB.';
+                    $this->redirect('settings/general');
+                    return;
+                }
+                
+                // Validate file type
+                $allowedTypes = ['image/jpeg', 'image/png', 'image/svg+xml', 'image/gif'];
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeType = finfo_file($finfo, $_FILES['site_logo']['tmp_name']);
+                finfo_close($finfo);
+                
+                if (!in_array($mimeType, $allowedTypes)) {
+                    $_SESSION['error_message'] = 'Tipo de archivo no permitido. Use JPG, PNG, SVG o GIF.';
+                    $this->redirect('settings/general');
+                    return;
+                }
+                
+                // Validate and sanitize extension
+                $extension = strtolower(pathinfo($_FILES['site_logo']['name'], PATHINFO_EXTENSION));
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'svg', 'gif'];
+                if (!in_array($extension, $allowedExtensions)) {
+                    $_SESSION['error_message'] = 'Extensión de archivo no permitida.';
+                    $this->redirect('settings/general');
+                    return;
+                }
+                
                 $uploadDir = PUBLIC_PATH . '/uploads/';
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0755, true);
                 }
                 
-                $extension = pathinfo($_FILES['site_logo']['name'], PATHINFO_EXTENSION);
                 $filename = 'logo_' . time() . '.' . $extension;
                 $uploadPath = $uploadDir . $filename;
                 

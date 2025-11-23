@@ -24,8 +24,8 @@ class AuditController extends Controller {
             'date_to' => $this->get('date_to')
         ];
         
-        // Pagination
-        $page = $this->get('page', 1);
+        // Pagination with validation
+        $page = max(1, (int)$this->get('page', 1));
         $perPage = 20;
         $offset = ($page - 1) * $perPage;
         

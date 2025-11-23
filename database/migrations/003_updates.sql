@@ -34,7 +34,7 @@ VALUES
 ('site_name', 'Residencial', 'text', 'Nombre del sitio'),
 ('site_email', 'contacto@residencial.com', 'text', 'Email principal del sistema'),
 ('site_phone', '+52 442 123 4567', 'text', 'Teléfono de contacto')
-ON DUPLICATE KEY UPDATE setting_key=setting_key;
+ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value);
 
 -- ============================================
 -- Notas sobre la actualización

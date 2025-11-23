@@ -90,7 +90,21 @@ class ResidentsController extends Controller {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Generar username desde el email
             $email = $this->post('email');
-            $username = explode('@', $email)[0]; // Usar la parte antes del @ como username
+            
+            // Validar email y generar username
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $data['error'] = 'Email inválido';
+                $this->view('residents/create', $data);
+                return;
+            }
+            
+            $emailParts = explode('@', $email);
+            $username = $emailParts[0];
+            
+            // Asegurar que el username no esté vacío
+            if (empty($username)) {
+                $username = 'user_' . time();
+            }
             
             // Crear usuario primero
             $userData = [
