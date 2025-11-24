@@ -96,6 +96,32 @@
                         </div>
                     </div>
                 </a>
+
+                <!-- Support Settings -->
+                <a href="<?php echo BASE_URL; ?>/settings/support" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-teal-100 p-4 rounded-lg">
+                            <i class="fas fa-life-ring text-teal-600 text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-900">Soporte Técnico</h3>
+                            <p class="text-sm text-gray-600">Contacto y ayuda</p>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Optimization Settings -->
+                <a href="<?php echo BASE_URL; ?>/settings/optimization" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-orange-100 p-4 rounded-lg">
+                            <i class="fas fa-tachometer-alt text-orange-600 text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-900">Auto-Optimización</h3>
+                            <p class="text-sm text-gray-600">Rendimiento del sistema</p>
+                        </div>
+                    </div>
+                </a>
             </div>
 
             <!-- Current Settings Overview -->

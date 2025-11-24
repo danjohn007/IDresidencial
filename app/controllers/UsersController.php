@@ -19,23 +19,63 @@ class UsersController extends Controller {
      * Vista principal de usuarios
      */
     public function index() {
-        $users = $this->userModel->getAll();
+        // Get filter parameters
+        $filters = [
+            'role' => $this->get('role'),
+            'status' => $this->get('status'),
+            'search' => $this->get('search', '')
+        ];
         
-        // Obtener estadísticas
+        // Build query
+        $where = [];
+        $params = [];
+        
+        if ($filters['role']) {
+            $where[] = "role = ?";
+            $params[] = $filters['role'];
+        }
+        
+        if ($filters['status']) {
+            $where[] = "status = ?";
+            $params[] = $filters['status'];
+        }
+        
+        if (!empty($filters['search'])) {
+            $where[] = "(first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+        
+        $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+        
+        // Get filtered users
+        $stmt = $this->db->prepare("
+            SELECT * FROM users 
+            $whereClause
+            ORDER BY created_at DESC
+        ");
+        $stmt->execute($params);
+        $users = $stmt->fetchAll();
+        
+        // Obtener estadísticas (sin filtros para mostrar totales reales)
         $stats = [
-            'total' => count($users),
-            'superadmin' => count(array_filter($users, fn($u) => $u['role'] === 'superadmin')),
-            'administrador' => count(array_filter($users, fn($u) => $u['role'] === 'administrador')),
-            'guardia' => count(array_filter($users, fn($u) => $u['role'] === 'guardia')),
-            'residente' => count(array_filter($users, fn($u) => $u['role'] === 'residente')),
-            'active' => count(array_filter($users, fn($u) => $u['status'] === 'active')),
-            'inactive' => count(array_filter($users, fn($u) => $u['status'] === 'inactive'))
+            'total' => $this->userModel->count([]),
+            'superadmin' => $this->userModel->count(['role' => 'superadmin']),
+            'administrador' => $this->userModel->count(['role' => 'administrador']),
+            'guardia' => $this->userModel->count(['role' => 'guardia']),
+            'residente' => $this->userModel->count(['role' => 'residente']),
+            'active' => $this->userModel->count(['status' => 'active']),
+            'inactive' => $this->userModel->count(['status' => 'inactive'])
         ];
         
         $data = [
             'title' => 'Gestión de Usuarios',
             'users' => $users,
-            'stats' => $stats
+            'stats' => $stats,
+            'filters' => $filters
         ];
         
         $this->view('users/index', $data);
