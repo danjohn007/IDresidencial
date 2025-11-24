@@ -24,6 +24,9 @@ session_start();
 
 echo "[" . date('Y-m-d H:i:s') . "] Iniciando envío de recordatorios de pago...\n";
 
+// Configurable delay between emails (seconds) - can be adjusted based on email volume
+define('EMAIL_SEND_DELAY', 1);
+
 try {
     $db = Database::getInstance()->getConnection();
     
@@ -108,8 +111,8 @@ try {
                 echo "[" . date('Y-m-d H:i:s') . "] ✗ Error al enviar recordatorio.\n";
             }
             
-            // Pequeña pausa para no saturar el servidor de email
-            sleep(1);
+            // Pausa configurable para no saturar el servidor de email
+            sleep(EMAIL_SEND_DELAY);
         }
     }
     

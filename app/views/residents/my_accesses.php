@@ -54,8 +54,15 @@
                                 <!-- QR Code -->
                                 <div class="flex justify-center mb-4">
                                     <div class="bg-gray-100 p-4 rounded-lg">
-                                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?php echo urlencode($pass['qr_code']); ?>" 
-                                             alt="QR Code" class="w-32 h-32">
+                                        <?php
+                                        // Check if local QR library is available, otherwise use external service
+                                        $qrImageUrl = BASE_URL . '/api/qr?data=' . urlencode($pass['qr_code']);
+                                        // Fallback to external service if local not available
+                                        $qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode($pass['qr_code']);
+                                        ?>
+                                        <img src="<?php echo $qrImageUrl; ?>" 
+                                             alt="QR Code" class="w-32 h-32"
+                                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22150%22%3E%3Crect width=%22150%22 height=%22150%22 fill=%22%23ddd%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3EQR Code%3C/text%3E%3C/svg%3E'">
                                     </div>
                                 </div>
 

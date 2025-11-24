@@ -846,12 +846,12 @@ class ResidentsController extends Controller {
     }
     
     /**
-     * Eliminar residente
+     * Eliminar residente (soft delete para mantener integridad de datos)
      */
     public function delete($id) {
         try {
             // Check if resident exists
-            $stmt = $this->db->prepare("SELECT r.*, u.id as user_id FROM residents r JOIN users u ON r.user_id = u.id WHERE r.id = ?");
+            $stmt = $this->db->prepare("SELECT r.*, u.id as user_id, u.email FROM residents r JOIN users u ON r.user_id = u.id WHERE r.id = ?");
             $stmt->execute([$id]);
             $resident = $stmt->fetch();
             
@@ -861,31 +861,59 @@ class ResidentsController extends Controller {
                 return;
             }
             
+            // Check if resident has unpaid fees
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as unpaid_count, SUM(amount) as unpaid_amount
+                FROM maintenance_fees
+                WHERE property_id = ? AND status IN ('pending', 'overdue')
+            ");
+            $stmt->execute([$resident['property_id']]);
+            $feeCheck = $stmt->fetch();
+            
+            if ($feeCheck['unpaid_count'] > 0) {
+                $_SESSION['warning_message'] = 'Este residente tiene ' . $feeCheck['unpaid_count'] . 
+                    ' pagos pendientes por $' . number_format($feeCheck['unpaid_amount'], 2) . 
+                    '. Se recomienda resolver estos pagos antes de eliminar.';
+            }
+            
             $this->db->beginTransaction();
             
-            // Delete related records first
-            $stmt = $this->db->prepare("DELETE FROM vehicles WHERE resident_id = ?");
+            // Soft delete: Update status to 'deleted' instead of removing records
+            // This preserves audit trail and referential integrity
+            $stmt = $this->db->prepare("UPDATE residents SET status = 'deleted', updated_at = NOW() WHERE id = ?");
             $stmt->execute([$id]);
             
-            $stmt = $this->db->prepare("DELETE FROM resident_access_passes WHERE resident_id = ?");
-            $stmt->execute([$id]);
-            
-            // Delete resident record
-            $stmt = $this->db->prepare("DELETE FROM residents WHERE id = ?");
-            $stmt->execute([$id]);
-            
-            // Delete user account
-            $stmt = $this->db->prepare("DELETE FROM users WHERE id = ?");
+            // Also mark user as deleted
+            $stmt = $this->db->prepare("
+                UPDATE users 
+                SET status = 'deleted', 
+                    email = CONCAT(email, '.deleted.', UNIX_TIMESTAMP()),
+                    username = CONCAT(username, '.deleted.', UNIX_TIMESTAMP())
+                WHERE id = ?
+            ");
             $stmt->execute([$resident['user_id']]);
+            
+            // Cancel active access passes
+            $stmt = $this->db->prepare("
+                UPDATE resident_access_passes 
+                SET status = 'cancelled' 
+                WHERE resident_id = ? AND status = 'active'
+            ");
+            $stmt->execute([$id]);
+            
+            // Mark vehicles as inactive
+            $stmt = $this->db->prepare("UPDATE vehicles SET status = 'inactive' WHERE resident_id = ?");
+            $stmt->execute([$id]);
             
             $this->db->commit();
             
-            AuditController::log('delete', 'Residente eliminado', 'residents', $id);
+            AuditController::log('delete', 'Residente marcado como eliminado (soft delete): ' . $resident['email'], 'residents', $id);
             $_SESSION['success_message'] = 'Residente eliminado exitosamente';
             
         } catch (PDOException $e) {
             $this->db->rollBack();
-            $_SESSION['error_message'] = 'Error al eliminar el residente: ' . $e->getMessage();
+            error_log('Error deleting resident: ' . $e->getMessage());
+            $_SESSION['error_message'] = 'Error al eliminar el residente. Por favor, contacte al administrador.';
         }
         
         $this->redirect('residents');

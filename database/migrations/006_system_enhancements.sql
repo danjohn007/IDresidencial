@@ -56,11 +56,18 @@ UPDATE system_settings SET setting_value = '465' WHERE setting_key = 'email_port
 UPDATE system_settings SET setting_value = 'hola@janetzy.shop' WHERE setting_key = 'email_user';
 UPDATE system_settings SET setting_value = 'hola@janetzy.shop' WHERE setting_key = 'email_from';
 
--- Nota: La contraseña de email debe establecerse desde la interfaz de configuración
--- por razones de seguridad, o ejecutar manualmente:
--- UPDATE system_settings SET setting_value = 'Danjohn007' WHERE setting_key = 'email_password';
+-- IMPORTANTE: La contraseña de email debe establecerse desde la interfaz de configuración
+-- en Configuración > Email por razones de seguridad.
+-- NO incluir contraseñas en scripts de migración bajo ninguna circunstancia.
 
--- 6. Agregar índices para optimización de consultas (si no existen)
+-- 6. Agregar soporte para soft delete (si no existe)
+ALTER TABLE residents 
+MODIFY COLUMN status ENUM('active', 'inactive', 'pending', 'deleted') DEFAULT 'active';
+
+ALTER TABLE users 
+MODIFY COLUMN status ENUM('active', 'inactive', 'pending', 'deleted') DEFAULT 'active';
+
+-- 7. Agregar índices para optimización de consultas (si no existen)
 CREATE INDEX IF NOT EXISTS idx_residents_user_id ON residents(user_id);
 CREATE INDEX IF NOT EXISTS idx_residents_property_id ON residents(property_id);
 CREATE INDEX IF NOT EXISTS idx_residents_status ON residents(status);
@@ -71,7 +78,7 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 
--- 7. Crear tabla de programación de recordatorios de pago (si no existe)
+-- 8. Crear tabla de programación de recordatorios de pago (si no existe)
 CREATE TABLE IF NOT EXISTS payment_reminders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     maintenance_fee_id INT NOT NULL,
@@ -86,7 +93,7 @@ CREATE TABLE IF NOT EXISTS payment_reminders (
     INDEX idx_status (status, sent)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 8. Procedimiento para generar recordatorios automáticos de pago
+-- 9. Procedimiento para generar recordatorios automáticos de pago
 DELIMITER //
 CREATE PROCEDURE IF NOT EXISTS generate_payment_reminders()
 BEGIN
@@ -111,12 +118,12 @@ BEGIN
 END//
 DELIMITER ;
 
--- 9. Actualizar estructura de maintenance_fees para soportar acumulación de adeudos
+-- 10. Actualizar estructura de maintenance_fees para soportar acumulación de adeudos
 ALTER TABLE maintenance_fees 
 ADD COLUMN IF NOT EXISTS accumulated_debt DECIMAL(10,2) DEFAULT 0.00 AFTER amount,
 ADD COLUMN IF NOT EXISTS late_fee DECIMAL(10,2) DEFAULT 0.00 AFTER accumulated_debt;
 
--- 10. Crear vista para resumen de adeudos por propiedad
+-- 11. Crear vista para resumen de adeudos por propiedad
 CREATE OR REPLACE VIEW property_debt_summary AS
 SELECT 
     p.id as property_id,
@@ -136,7 +143,7 @@ LEFT JOIN users u ON r.user_id = u.id
 LEFT JOIN maintenance_fees mf ON mf.property_id = p.id
 GROUP BY p.id, p.property_number, p.section, r.id, u.first_name, u.last_name, u.email, u.phone;
 
--- 11. Optimizar tablas existentes
+-- 12. Optimizar tablas existentes
 OPTIMIZE TABLE users;
 OPTIMIZE TABLE residents;
 OPTIMIZE TABLE properties;
@@ -144,7 +151,7 @@ OPTIMIZE TABLE maintenance_fees;
 OPTIMIZE TABLE access_logs;
 OPTIMIZE TABLE audit_logs;
 
--- 12. Limpiar datos antiguos (opcional - comentado por seguridad)
+-- 13. Limpiar datos antiguos (opcional - comentado por seguridad)
 -- DELETE FROM audit_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 365 DAY);
 -- DELETE FROM password_resets WHERE expires_at < NOW() OR used = 1;
 

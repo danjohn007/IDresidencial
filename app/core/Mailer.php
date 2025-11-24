@@ -60,9 +60,18 @@ class Mailer {
             $recipients = is_array($to) ? $to : [$to];
             
             // Connect to SMTP server
-            $socket = fsockopen($host, $port, $errno, $errstr, 30);
+            $socket = @fsockopen($host, $port, $errno, $errstr, 30);
             if (!$socket) {
-                error_log("SMTP connection failed: $errstr ($errno)");
+                $errorDetails = "SMTP connection to {$host}:{$port} failed";
+                if ($errno) {
+                    $errorDetails .= " - Error {$errno}: {$errstr}";
+                }
+                if ($port == 465) {
+                    $errorDetails .= " (SSL/TLS). Verify that SSL is enabled and port 465 is open.";
+                } elseif ($port == 587) {
+                    $errorDetails .= " (STARTTLS). Verify that port 587 is open.";
+                }
+                error_log($errorDetails);
                 return false;
             }
             
