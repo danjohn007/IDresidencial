@@ -216,7 +216,7 @@
                                         $<?php echo number_format($movement['amount'], 2); ?>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
-                                        <a href="<?php echo BASE_URL; ?>/financial/view/<?php echo $movement['id']; ?>" 
+                                        <a href="<?php echo BASE_URL; ?>/financial/viewDetails/<?php echo $movement['id']; ?>" 
                                            class="text-blue-600 hover:text-blue-900 mr-3">
                                             <i class="fas fa-eye"></i>
                                         </a>
