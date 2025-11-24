@@ -127,4 +127,23 @@ class User {
         $result = $stmt->fetch();
         return $result['total'];
     }
+    
+    /**
+     * Contar usuarios con filtros opcionales
+     */
+    public function count($filters = []) {
+        $where = [];
+        $params = [];
+        
+        foreach ($filters as $key => $value) {
+            $where[] = "$key = ?";
+            $params[] = $value;
+        }
+        
+        $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+        $stmt = $this->db->prepare("SELECT COUNT(*) as total FROM users $whereClause");
+        $stmt->execute($params);
+        $result = $stmt->fetch();
+        return $result['total'];
+    }
 }

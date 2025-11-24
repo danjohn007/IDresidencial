@@ -115,8 +115,15 @@ class ResidentsController extends Controller {
                 'first_name' => $this->post('first_name'),
                 'last_name' => $this->post('last_name'),
                 'phone' => $this->post('phone'),
-                'email' => $this->post('email')
+                'email' => filter_var($this->post('email'), FILTER_SANITIZE_EMAIL)
             ];
+            
+            // Validate email format
+            if (!filter_var($userData['email'], FILTER_VALIDATE_EMAIL)) {
+                $data['error'] = 'El formato del correo electrónico no es válido';
+                $this->view('residents/edit', $data);
+                return;
+            }
             
             // Check if email is unique (excluding current user)
             $stmt = $this->db->prepare("SELECT id FROM users WHERE email = ? AND id != ?");

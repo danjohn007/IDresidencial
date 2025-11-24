@@ -244,12 +244,15 @@ class AuditController extends Controller {
      */
     private function runOptimizations() {
         try {
-            // Optimizar tablas
-            $tables = ['users', 'residents', 'properties', 'visits', 'access_logs', 
-                      'maintenance_fees', 'financial_movements', 'reservations', 'audit_logs'];
+            // Optimizar tablas - Whitelist de tablas permitidas
+            $allowedTables = ['users', 'residents', 'properties', 'visits', 'access_logs', 
+                             'maintenance_fees', 'financial_movements', 'reservations', 'audit_logs'];
             
-            foreach ($tables as $table) {
-                $this->db->exec("OPTIMIZE TABLE {$table}");
+            foreach ($allowedTables as $table) {
+                // Validar que el nombre de tabla solo contiene caracteres permitidos
+                if (preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+                    $this->db->exec("OPTIMIZE TABLE `{$table}`");
+                }
             }
             
             // Limpiar logs antiguos

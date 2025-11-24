@@ -111,33 +111,33 @@ let calendar;
 document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
     
-    const events = [
-        <?php foreach ($reservations as $index => $reservation): ?>
-        {
-            id: '<?php echo $reservation['id']; ?>',
-            title: '<?php echo addslashes($reservation['amenity_name']); ?>',
-            start: '<?php echo $reservation['reservation_date']; ?>T<?php echo $reservation['start_time']; ?>',
-            end: '<?php echo $reservation['reservation_date']; ?>T<?php echo $reservation['end_time']; ?>',
-            backgroundColor: '<?php 
-                echo match($reservation['status']) {
+    const events = <?php 
+        $eventsData = [];
+        foreach ($reservations as $reservation) {
+            $eventsData[] = [
+                'id' => $reservation['id'],
+                'title' => $reservation['amenity_name'],
+                'start' => $reservation['reservation_date'] . 'T' . $reservation['start_time'],
+                'end' => $reservation['reservation_date'] . 'T' . $reservation['end_time'],
+                'backgroundColor' => match($reservation['status']) {
                     'confirmed' => '#3B82F6',
                     'pending' => '#EAB308',
                     'completed' => '#10B981',
                     'no_show' => '#EF4444',
                     default => '#6B7280'
-                };
-            ?>',
-            extendedProps: {
-                amenity: '<?php echo addslashes($reservation['amenity_name']); ?>',
-                resident: '<?php echo addslashes($reservation['first_name'] . ' ' . $reservation['last_name']); ?>',
-                property: '<?php echo addslashes($reservation['property_number'] ?? 'N/A'); ?>',
-                status: '<?php echo $reservation['status']; ?>',
-                guests: '<?php echo $reservation['guests_count']; ?>',
-                amount: '<?php echo $reservation['amount']; ?>'
-            }
-        }<?php echo ($index < count($reservations) - 1) ? ',' : ''; ?>
-        <?php endforeach; ?>
-    ];
+                },
+                'extendedProps' => [
+                    'amenity' => $reservation['amenity_name'],
+                    'resident' => $reservation['first_name'] . ' ' . $reservation['last_name'],
+                    'property' => $reservation['property_number'] ?? 'N/A',
+                    'status' => $reservation['status'],
+                    'guests' => $reservation['guests_count'],
+                    'amount' => $reservation['amount']
+                ]
+            ];
+        }
+        echo json_encode($eventsData);
+    ?>;
     
     calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
