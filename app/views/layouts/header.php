@@ -51,20 +51,62 @@
         }
         
         /* Apply theme color to primary buttons and elements */
-        .btn-primary {
+        .btn-primary, 
+        .bg-blue-600, 
+        .bg-blue-500 {
             background-color: <?php echo $currentColor['hex']; ?> !important;
         }
-        .btn-primary:hover {
+        .btn-primary:hover, 
+        .bg-blue-700:hover,
+        .hover\:bg-blue-700:hover,
+        .hover\:bg-blue-600:hover {
             background-color: <?php echo $currentColor['hover']; ?> !important;
         }
-        .text-primary {
+        .text-primary,
+        .text-blue-600,
+        .text-blue-500 {
             color: <?php echo $currentColor['hex']; ?> !important;
+        }
+        .hover\:text-blue-700:hover,
+        .hover\:text-blue-800:hover,
+        .hover\:text-blue-600:hover {
+            color: <?php echo $currentColor['hover']; ?> !important;
         }
         .bg-primary {
             background-color: <?php echo $currentColor['hex']; ?> !important;
         }
-        .border-primary {
+        .border-primary,
+        .border-blue-500 {
             border-color: <?php echo $currentColor['hex']; ?> !important;
+        }
+        .ring-blue-500,
+        .focus\:ring-blue-500:focus {
+            --tw-ring-color: <?php echo $currentColor['hex']; ?> !important;
+        }
+        .focus\:border-blue-500:focus {
+            border-color: <?php echo $currentColor['hex']; ?> !important;
+        }
+        
+        /* Background variants */
+        .bg-blue-50 {
+            background-color: rgba(<?php echo $currentColor['rgb']; ?>, 0.05) !important;
+        }
+        .bg-blue-100 {
+            background-color: rgba(<?php echo $currentColor['rgb']; ?>, 0.1) !important;
+        }
+        .hover\:bg-blue-50:hover {
+            background-color: rgba(<?php echo $currentColor['rgb']; ?>, 0.05) !important;
+        }
+        
+        /* Gradient backgrounds */
+        .bg-gradient-to-br.from-blue-50 {
+            background-image: linear-gradient(to bottom right, rgba(<?php echo $currentColor['rgb']; ?>, 0.05), rgba(<?php echo $currentColor['rgb']; ?>, 0.15)) !important;
+        }
+        
+        /* Badge and status colors */
+        .bg-blue-100.text-blue-800 {
+            background-color: rgba(<?php echo $currentColor['rgb']; ?>, 0.1) !important;
+            color: <?php echo $currentColor['hex']; ?> !important;
         }
     </style>
 </head>

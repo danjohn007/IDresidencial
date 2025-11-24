@@ -24,6 +24,56 @@
                 </div>
             <?php endif; ?>
 
+            <!-- Form to create new movement type -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-plus-circle mr-2 text-blue-600"></i>Agregar Nuevo Tipo de Movimiento
+                </h2>
+                <form method="POST" action="<?php echo BASE_URL; ?>/financial/movementTypes" class="space-y-4">
+                    <input type="hidden" name="action" value="create">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Nombre <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" name="name" required 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                   placeholder="Ej: Cuota Extraordinaria">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Categoría <span class="text-red-500">*</span>
+                            </label>
+                            <select name="category" required 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">Seleccionar...</option>
+                                <option value="ingreso">Ingreso</option>
+                                <option value="egreso">Egreso</option>
+                                <option value="ambos">Ambos</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Descripción
+                            </label>
+                            <input type="text" name="description" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                   placeholder="Descripción opcional">
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <button type="submit" 
+                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-save mr-2"></i>Guardar Tipo de Movimiento
+                        </button>
+                    </div>
+                </form>
+            </div>
+
             <div class="bg-white rounded-lg shadow-md overflow-hidden">
                 <div class="p-6 border-b border-gray-200">
                     <div class="flex justify-between items-center">
@@ -75,21 +125,27 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <?php if ($type['transaction_type'] === 'ingreso'): ?>
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                    <i class="fas fa-arrow-up mr-1"></i> Ingreso
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                                    <i class="fas fa-arrow-down mr-1"></i> Egreso
-                                                </span>
+                                            <?php if (isset($type['category'])): ?>
+                                                <?php if ($type['category'] === 'ingreso'): ?>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                        <i class="fas fa-arrow-up mr-1"></i> Ingreso
+                                                    </span>
+                                                <?php elseif ($type['category'] === 'egreso'): ?>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                                        <i class="fas fa-arrow-down mr-1"></i> Egreso
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                        <i class="fas fa-arrows-alt-h mr-1"></i> Ambos
+                                                    </span>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </td>
                                         <td class="px-6 py-4 text-sm text-gray-500">
                                             <?php echo htmlspecialchars($type['description'] ?? 'Sin descripción'); ?>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <?php if ($type['status'] === 'active'): ?>
+                                            <?php if (isset($type['is_active']) && $type['is_active']): ?>
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                                     Activo
                                                 </span>
