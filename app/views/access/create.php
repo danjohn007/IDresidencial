@@ -92,7 +92,7 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
                                         Placa del Vehículo
                                     </label>
-                                    <input type="text" name="vehicle_plate" 
+                                    <input type="text" name="vehicle_plate" id="vehicle_plate"
                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                            placeholder="ABC-123-D">
                                 </div>
@@ -107,6 +107,26 @@
                                         <option value="delivery">Delivery</option>
                                         <option value="otro">Otro</option>
                                     </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Placa del Residente (Oculto inicialmente) -->
+                            <div id="plate-comparison-container" class="mt-4 hidden">
+                                <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg shadow-md p-4 border border-blue-200">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-car text-blue-600 text-xl mr-3"></i>
+                                            <div>
+                                                <p class="text-xs font-medium text-gray-600">PLACA REGISTRADA</p>
+                                                <p id="saved-plate" class="text-2xl font-bold text-gray-900">-</p>
+                                            </div>
+                                        </div>
+                                        <button type="button" id="detect-plate-btn" 
+                                                class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition flex items-center">
+                                            <i class="fas fa-sync-alt mr-2"></i>
+                                            Actualizar
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -178,5 +198,83 @@
         </main>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const residentSelect = document.querySelector('select[name="resident_id"]');
+    const plateInput = document.getElementById('vehicle_plate');
+    const comparisonContainer = document.getElementById('plate-comparison-container');
+    const detectPlateBtn = document.getElementById('detect-plate-btn');
+    
+    // Cuando se selecciona un residente
+    if (residentSelect) {
+        residentSelect.addEventListener('change', function() {
+            const residentId = this.value;
+            
+            if (residentId) {
+                // Obtener placas del residente y placas detectadas
+                fetchPlateComparison(residentId);
+            } else {
+                // Ocultar comparación si no hay residente seleccionado
+                comparisonContainer.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Botón para detectar placa nuevamente
+    if (detectPlateBtn) {
+        detectPlateBtn.addEventListener('click', function() {
+            const residentId = residentSelect ? residentSelect.value : null;
+            if (residentId) {
+                this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Detectando...';
+                this.disabled = true;
+                
+                fetchPlateComparison(residentId);
+                
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Detectar Placa Nuevamente';
+                    this.disabled = false;
+                }, 1500);
+            }
+        });
+    }
+    
+    function fetchPlateComparison(residentId) {
+        console.log('Buscando placas para residente ID:', residentId);
+        
+        fetch('<?php echo BASE_URL; ?>/api/getPlateComparison/' + residentId)
+            .then(response => {
+                console.log('Respuesta recibida:', response);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Datos recibidos:', data);
+                
+                if (data.success) {
+                    // Mostrar el contenedor solo si hay placa registrada
+                    if (data.saved_plate) {
+                        comparisonContainer.classList.remove('hidden');
+                        
+                        // Actualizar placa registrada
+                        const savedPlateEl = document.getElementById('saved-plate');
+                        savedPlateEl.textContent = data.saved_plate;
+                        
+                        // Auto-llenar el campo de placa
+                        if (plateInput) {
+                            plateInput.value = data.saved_plate;
+                        }
+                    } else {
+                        comparisonContainer.classList.add('hidden');
+                    }
+                } else {
+                    console.error('Error en respuesta:', data.error || 'Error desconocido');
+                }
+            })
+            .catch(error => {
+                console.error('Error en fetch:', error);
+            });
+    }
+});
+</script>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
