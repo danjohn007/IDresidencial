@@ -167,10 +167,27 @@
                 
                 <!-- Amenidades -->
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/amenities" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
-                        <i class="fas fa-swimming-pool w-5"></i>
-                        <span>Amenidades</span>
-                    </a>
+                    <button onclick="toggleSubmenu('amenities-submenu')" class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-swimming-pool w-5"></i>
+                            <span>Amenidades</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm" id="amenities-submenu-icon"></i>
+                    </button>
+                    <ul id="amenities-submenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/amenities" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-list w-5"></i>
+                                <span>Ver Amenidades</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/amenities/calendar" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-calendar-alt w-5"></i>
+                                <span>Calendario</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                 
                 <!-- Mantenimiento -->
@@ -258,10 +275,27 @@
                 
                 <!-- Auditoría -->
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/audit" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
-                        <i class="fas fa-clipboard-list w-5"></i>
-                        <span>Auditoría</span>
-                    </a>
+                    <button onclick="toggleSubmenu('audit-submenu')" class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-clipboard-list w-5"></i>
+                            <span>Auditoría</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm" id="audit-submenu-icon"></i>
+                    </button>
+                    <ul id="audit-submenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/audit" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-list w-5"></i>
+                                <span>Registro de Auditoría</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/audit/optimization" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-tachometer-alt w-5"></i>
+                                <span>Auto-Optimización</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                 <?php endif; ?>
             </ul>

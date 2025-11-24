@@ -13,7 +13,19 @@ class ResidentsController extends Controller {
     
     public function __construct() {
         $this->requireAuth();
-        $this->requireRole(['superadmin', 'administrador']);
+        
+        // Get current action
+        $url = isset($_GET['url']) ? explode('/', filter_var(rtrim($_GET['url'], '/'), FILTER_SANITIZE_URL)) : [];
+        $action = isset($url[1]) ? $url[1] : 'index';
+        
+        // Methods that residents can access
+        $residentMethods = ['myPayments', 'generateAccess', 'myAccesses', 'cancelPass', 'makePayment', 'processPayment'];
+        
+        // If not a resident method, require admin roles
+        if (!in_array($action, $residentMethods)) {
+            $this->requireRole(['superadmin', 'administrador']);
+        }
+        
         $this->residentModel = $this->model('Resident');
         $this->userModel = $this->model('User');
         $this->db = Database::getInstance()->getConnection();

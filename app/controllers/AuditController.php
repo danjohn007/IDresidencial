@@ -184,4 +184,124 @@ class AuditController extends Controller {
         $_SESSION['success_message'] = "Se eliminaron {$deleted} registros antiguos";
         $this->redirect('audit');
     }
+    
+    /**
+     * Auto-Optimización del Sistema
+     */
+    public function optimization() {
+        $data = [
+            'title' => 'Auto-Optimización del Sistema'
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $optimizationSettings = [
+                'cache_enabled' => $this->post('cache_enabled', '1'),
+                'cache_ttl' => $this->post('cache_ttl', '3600'),
+                'query_cache_enabled' => $this->post('query_cache_enabled', '1'),
+                'max_records_per_page' => $this->post('max_records_per_page', '50'),
+                'image_optimization' => $this->post('image_optimization', '1'),
+                'lazy_loading' => $this->post('lazy_loading', '1'),
+                'minify_assets' => $this->post('minify_assets', '0'),
+                'session_timeout' => $this->post('session_timeout', '3600')
+            ];
+            
+            foreach ($optimizationSettings as $key => $value) {
+                $stmt = $this->db->prepare("
+                    INSERT INTO system_settings (setting_key, setting_value) 
+                    VALUES (?, ?) 
+                    ON DUPLICATE KEY UPDATE setting_value = ?
+                ");
+                $stmt->execute([$key, $value, $value]);
+            }
+            
+            // Ejecutar optimizaciones inmediatas si se solicita
+            if ($this->post('run_optimization')) {
+                $this->runOptimizations();
+            }
+            
+            self::log('update', 'Configuración de optimización actualizada', 'system_settings', null);
+            $_SESSION['success_message'] = 'Configuración de optimización actualizada';
+            $this->redirect('audit/optimization');
+        }
+        
+        // Obtener configuración actual
+        $stmt = $this->db->query("SELECT * FROM system_settings WHERE setting_key LIKE 'cache_%' OR setting_key LIKE '%_optimization' OR setting_key LIKE 'lazy_%' OR setting_key LIKE 'max_%' OR setting_key = 'session_timeout' OR setting_key LIKE 'query_%' OR setting_key LIKE 'minify_%'");
+        $currentSettings = [];
+        while ($row = $stmt->fetch()) {
+            $currentSettings[$row['setting_key']] = $row['setting_value'];
+        }
+        
+        // Estadísticas del sistema
+        $stats = $this->getSystemStats();
+        
+        $data['current'] = $currentSettings;
+        $data['stats'] = $stats;
+        $this->view('audit/optimization', $data);
+    }
+    
+    /**
+     * Ejecutar optimizaciones del sistema
+     */
+    private function runOptimizations() {
+        try {
+            // Optimizar tablas
+            $tables = ['users', 'residents', 'properties', 'visits', 'access_logs', 
+                      'maintenance_fees', 'financial_movements', 'reservations', 'audit_logs'];
+            
+            foreach ($tables as $table) {
+                $this->db->exec("OPTIMIZE TABLE {$table}");
+            }
+            
+            // Limpiar logs antiguos
+            $this->db->exec("DELETE FROM audit_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 180 DAY)");
+            
+            // Limpiar sesiones expiradas
+            $stmt = $this->db->query("SHOW TABLES LIKE 'password_resets'");
+            if ($stmt->rowCount() > 0) {
+                $this->db->exec("DELETE FROM password_resets WHERE expires_at < NOW() OR used = 1");
+            }
+            
+            return true;
+        } catch (PDOException $e) {
+            error_log("Optimization error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Obtener estadísticas del sistema
+     */
+    private function getSystemStats() {
+        $stats = [];
+        
+        try {
+            // Tamaño de la base de datos
+            $stmt = $this->db->query("
+                SELECT 
+                    ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS db_size_mb
+                FROM information_schema.tables
+                WHERE table_schema = DATABASE()
+            ");
+            $result = $stmt->fetch();
+            $stats['db_size'] = $result['db_size_mb'] . ' MB';
+            
+            // Número de registros en tablas principales
+            $stmt = $this->db->query("SELECT COUNT(*) as total FROM users");
+            $stats['total_users'] = $stmt->fetch()['total'];
+            
+            $stmt = $this->db->query("SELECT COUNT(*) as total FROM residents");
+            $stats['total_residents'] = $stmt->fetch()['total'];
+            
+            $stmt = $this->db->query("SELECT COUNT(*) as total FROM visits");
+            $stats['total_visits'] = $stmt->fetch()['total'];
+            
+            $stmt = $this->db->query("SELECT COUNT(*) as total FROM audit_logs");
+            $stats['total_logs'] = $stmt->fetch()['total'];
+            
+        } catch (PDOException $e) {
+            error_log("Stats error: " . $e->getMessage());
+        }
+        
+        return $stats;
+    }
 }
