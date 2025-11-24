@@ -67,16 +67,151 @@ MODIFY COLUMN status ENUM('active', 'inactive', 'pending', 'deleted') DEFAULT 'a
 ALTER TABLE users 
 MODIFY COLUMN status ENUM('active', 'inactive', 'pending', 'deleted') DEFAULT 'active';
 
--- 7. Agregar índices para optimización de consultas (si no existen)
-CREATE INDEX IF NOT EXISTS idx_residents_user_id ON residents(user_id);
-CREATE INDEX IF NOT EXISTS idx_residents_property_id ON residents(property_id);
-CREATE INDEX IF NOT EXISTS idx_residents_status ON residents(status);
-CREATE INDEX IF NOT EXISTS idx_maintenance_fees_property ON maintenance_fees(property_id);
-CREATE INDEX IF NOT EXISTS idx_maintenance_fees_status ON maintenance_fees(status);
-CREATE INDEX IF NOT EXISTS idx_maintenance_fees_due_date ON maintenance_fees(due_date);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+-- 7. Agregar índices para optimización de consultas (idempotente recomendado en MySQL)
+
+-- residents(user_id)
+SET @idx_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE table_schema = DATABASE()
+    AND table_name = 'residents'
+    AND index_name = 'idx_residents_user_id'
+);
+SET @sql := IF(@idx_exists = 0,
+  'CREATE INDEX idx_residents_user_id ON residents(user_id);',
+  'SELECT "idx_residents_user_id ya existe";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- residents(property_id)
+SET @idx_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE table_schema = DATABASE()
+    AND table_name = 'residents'
+    AND index_name = 'idx_residents_property_id'
+);
+SET @sql := IF(@idx_exists = 0,
+  'CREATE INDEX idx_residents_property_id ON residents(property_id);',
+  'SELECT "idx_residents_property_id ya existe";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- residents(status)
+SET @idx_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE table_schema = DATABASE()
+    AND table_name = 'residents'
+    AND index_name = 'idx_residents_status'
+);
+SET @sql := IF(@idx_exists = 0,
+  'CREATE INDEX idx_residents_status ON residents(status);',
+  'SELECT "idx_residents_status ya existe";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- maintenance_fees(property_id)
+SET @idx_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE table_schema = DATABASE()
+    AND table_name = 'maintenance_fees'
+    AND index_name = 'idx_maintenance_fees_property'
+);
+SET @sql := IF(@idx_exists = 0,
+  'CREATE INDEX idx_maintenance_fees_property ON maintenance_fees(property_id);',
+  'SELECT "idx_maintenance_fees_property ya existe";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- maintenance_fees(status)
+SET @idx_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE table_schema = DATABASE()
+    AND table_name = 'maintenance_fees'
+    AND index_name = 'idx_maintenance_fees_status'
+);
+SET @sql := IF(@idx_exists = 0,
+  'CREATE INDEX idx_maintenance_fees_status ON maintenance_fees(status);',
+  'SELECT "idx_maintenance_fees_status ya existe";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- maintenance_fees(due_date)
+SET @idx_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE table_schema = DATABASE()
+    AND table_name = 'maintenance_fees'
+    AND index_name = 'idx_maintenance_fees_due_date'
+);
+SET @sql := IF(@idx_exists = 0,
+  'CREATE INDEX idx_maintenance_fees_due_date ON maintenance_fees(due_date);',
+  'SELECT "idx_maintenance_fees_due_date ya existe";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- users(email)
+SET @idx_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE table_schema = DATABASE()
+    AND table_name = 'users'
+    AND index_name = 'idx_users_email'
+);
+SET @sql := IF(@idx_exists = 0,
+  'CREATE INDEX idx_users_email ON users(email);',
+  'SELECT "idx_users_email ya existe";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- users(role)
+SET @idx_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE table_schema = DATABASE()
+    AND table_name = 'users'
+    AND index_name = 'idx_users_role'
+);
+SET @sql := IF(@idx_exists = 0,
+  'CREATE INDEX idx_users_role ON users(role);',
+  'SELECT "idx_users_role ya existe";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- users(status)
+SET @idx_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE table_schema = DATABASE()
+    AND table_name = 'users'
+    AND index_name = 'idx_users_status'
+);
+SET @sql := IF(@idx_exists = 0,
+  'CREATE INDEX idx_users_status ON users(status);',
+  'SELECT "idx_users_status ya existe";'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- 8. Crear tabla de programación de recordatorios de pago (si no existe)
 CREATE TABLE IF NOT EXISTS payment_reminders (
@@ -95,7 +230,8 @@ CREATE TABLE IF NOT EXISTS payment_reminders (
 
 -- 9. Procedimiento para generar recordatorios automáticos de pago
 DELIMITER //
-CREATE PROCEDURE IF NOT EXISTS generate_payment_reminders()
+
+CREATE PROCEDURE generate_payment_reminders()
 BEGIN
     -- Generar recordatorios para pagos que vencen mañana y no tienen recordatorio
     INSERT INTO payment_reminders (maintenance_fee_id, reminder_date, email_to)
@@ -116,12 +252,17 @@ BEGIN
             AND pr.reminder_date = DATE_SUB(mf.due_date, INTERVAL 1 DAY)
         );
 END//
+
 DELIMITER ;
 
 -- 10. Actualizar estructura de maintenance_fees para soportar acumulación de adeudos
+-- MySQL no permite IF NOT EXISTS en ADD COLUMN; necesitas comprobar manualmente antes de agregar nuevas columnas si ejecutas varias veces este script en la misma base.
+-- Si no existen, deberás agregarlas manualmente (o vía script/procedimiento); aquí lo dejamos plano para simple migraciones.
 ALTER TABLE maintenance_fees 
-ADD COLUMN IF NOT EXISTS accumulated_debt DECIMAL(10,2) DEFAULT 0.00 AFTER amount,
-ADD COLUMN IF NOT EXISTS late_fee DECIMAL(10,2) DEFAULT 0.00 AFTER accumulated_debt;
+ADD COLUMN accumulated_debt DECIMAL(10,2) DEFAULT 0.00 AFTER amount;
+
+ALTER TABLE maintenance_fees 
+ADD COLUMN late_fee DECIMAL(10,2) DEFAULT 0.00 AFTER accumulated_debt;
 
 -- 11. Crear vista para resumen de adeudos por propiedad
 CREATE OR REPLACE VIEW property_debt_summary AS
