@@ -59,8 +59,8 @@ class Mailer {
             // Handle multiple recipients
             $recipients = is_array($to) ? $to : [$to];
             
-            // Connect to SMTP server
-            $socket = @fsockopen($host, $port, $errno, $errstr, 30);
+            // Connect to SMTP server (without @ to allow proper error capture)
+            $socket = fsockopen($host, $port, $errno, $errstr, 30);
             if (!$socket) {
                 $errorDetails = "SMTP connection to {$host}:{$port} failed";
                 if ($errno) {
@@ -85,8 +85,22 @@ class Mailer {
             // TLS/SSL for port 465 or STARTTLS for port 587
             if ($port == 587) {
                 $this->smtpWrite($socket, "STARTTLS\r\n");
-                $this->smtpRead($socket);
-                stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+                $starttlsResponse = $this->smtpRead($socket);
+                
+                // Verify STARTTLS was accepted (220 response)
+                if (strpos($starttlsResponse, '220') === false) {
+                    error_log("STARTTLS failed: {$starttlsResponse}");
+                    fclose($socket);
+                    return false;
+                }
+                
+                // Enable TLS encryption
+                if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                    error_log("Failed to enable TLS encryption");
+                    fclose($socket);
+                    return false;
+                }
+                
                 $this->smtpWrite($socket, "EHLO " . $host . "\r\n");
                 $this->smtpRead($socket);
             }

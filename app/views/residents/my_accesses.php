@@ -55,9 +55,8 @@
                                 <div class="flex justify-center mb-4">
                                     <div class="bg-gray-100 p-4 rounded-lg">
                                         <?php
-                                        // Check if local QR library is available, otherwise use external service
-                                        $qrImageUrl = BASE_URL . '/api/qr?data=' . urlencode($pass['qr_code']);
-                                        // Fallback to external service if local not available
+                                        // TODO: Implement local QR generation for better privacy
+                                        // For now, use external service with error fallback
                                         $qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode($pass['qr_code']);
                                         ?>
                                         <img src="<?php echo $qrImageUrl; ?>" 

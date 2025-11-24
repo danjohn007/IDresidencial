@@ -884,6 +884,8 @@ class ResidentsController extends Controller {
             $stmt->execute([$id]);
             
             // Also mark user as deleted
+            // Append .deleted with timestamp to allow future re-registration with same email/username
+            // Format: original@email.com.deleted.1234567890
             $stmt = $this->db->prepare("
                 UPDATE users 
                 SET status = 'deleted', 

@@ -24,7 +24,12 @@ session_start();
 
 echo "[" . date('Y-m-d H:i:s') . "] Iniciando envío de recordatorios de pago...\n";
 
-// Configurable delay between emails (seconds) - can be adjusted based on email volume
+// Configurable delay between emails in seconds
+// Default: 1 second to prevent overloading email server
+// Adjust based on your email server's rate limits and volume:
+// - For low volume (<100/day): 1 second is sufficient
+// - For medium volume (100-500/day): consider 0.5 seconds
+// - For high volume (>500/day): consider queue-based system
 define('EMAIL_SEND_DELAY', 1);
 
 try {
