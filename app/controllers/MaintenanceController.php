@@ -91,4 +91,27 @@ class MaintenanceController extends Controller {
         
         $this->view('maintenance/view', $data);
     }
+    
+    /**
+     * Cambiar estado del reporte
+     */
+    public function updateStatus($id) {
+        $this->requireRole(['superadmin', 'administrador']);
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $newStatus = $this->post('status');
+            
+            if (in_array($newStatus, ['pendiente', 'en_proceso', 'completado', 'cancelado'])) {
+                if ($this->maintenanceModel->updateStatus($id, $newStatus)) {
+                    $_SESSION['success_message'] = 'Estado actualizado exitosamente';
+                } else {
+                    $_SESSION['error_message'] = 'Error al actualizar el estado';
+                }
+            } else {
+                $_SESSION['error_message'] = 'Estado inválido';
+            }
+        }
+        
+        $this->redirect('maintenance');
+    }
 }

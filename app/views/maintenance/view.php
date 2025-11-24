@@ -134,6 +134,27 @@
                         </div>
                     </div>
                     <?php endif; ?>
+                    
+                    <!-- Change Status (Admin Only) -->
+                    <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador'])): ?>
+                    <div class="mt-6 pt-6 border-t border-gray-200">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Cambiar Estado del Reporte</label>
+                        <form method="POST" action="<?php echo BASE_URL; ?>/maintenance/updateStatus/<?php echo $report['id']; ?>" class="flex items-center space-x-3">
+                            <select name="status" required 
+                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">Seleccionar nuevo estado...</option>
+                                <option value="pendiente" <?php echo $report['status'] === 'pendiente' ? 'selected' : ''; ?>>Pendiente</option>
+                                <option value="en_proceso" <?php echo $report['status'] === 'en_proceso' ? 'selected' : ''; ?>>En Proceso</option>
+                                <option value="completado" <?php echo $report['status'] === 'completado' ? 'selected' : ''; ?>>Completado</option>
+                                <option value="cancelado" <?php echo $report['status'] === 'cancelado' ? 'selected' : ''; ?>>Cancelado</option>
+                            </select>
+                            <button type="submit" 
+                                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                <i class="fas fa-save mr-2"></i> Actualizar Estado
+                            </button>
+                        </form>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </main>

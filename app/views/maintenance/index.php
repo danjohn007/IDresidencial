@@ -86,10 +86,24 @@
                                     <span><i class="fas fa-calendar mr-1"></i> <?php echo date('d/m/Y', strtotime($report['created_at'])); ?></span>
                                 </div>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/maintenance/viewDetails/<?php echo $report['id']; ?>" 
-                               class="ml-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
-                                Ver Detalles
-                            </a>
+                            <div class="ml-4 flex flex-col space-y-2">
+                                <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador'])): ?>
+                                    <form method="POST" action="<?php echo BASE_URL; ?>/maintenance/updateStatus/<?php echo $report['id']; ?>" class="inline-block">
+                                        <select name="status" onchange="this.form.submit()" 
+                                                class="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                            <option value="">Cambiar estado...</option>
+                                            <option value="pendiente" <?php echo $report['status'] === 'pendiente' ? 'selected' : ''; ?>>Pendiente</option>
+                                            <option value="en_proceso" <?php echo $report['status'] === 'en_proceso' ? 'selected' : ''; ?>>En Proceso</option>
+                                            <option value="completado" <?php echo $report['status'] === 'completado' ? 'selected' : ''; ?>>Completado</option>
+                                            <option value="cancelado" <?php echo $report['status'] === 'cancelado' ? 'selected' : ''; ?>>Cancelado</option>
+                                        </select>
+                                    </form>
+                                <?php endif; ?>
+                                <a href="<?php echo BASE_URL; ?>/maintenance/viewDetails/<?php echo $report['id']; ?>" 
+                                   class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-center">
+                                    Ver Detalles
+                                </a>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>

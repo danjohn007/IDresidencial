@@ -67,7 +67,7 @@ class FinancialController extends Controller {
         
         // Obtener residentes
         $stmt = $this->db->query("
-            SELECT r.id, CONCAT(u.first_name, ' ', u.last_name) as name, p.property_number
+            SELECT r.id, CONCAT(u.first_name, ' ', u.last_name) as name, p.property_number, r.property_id
             FROM residents r
             INNER JOIN users u ON r.user_id = u.id
             INNER JOIN properties p ON r.property_id = p.id
@@ -155,7 +155,7 @@ class FinancialController extends Controller {
         
         // Obtener residentes
         $stmt = $this->db->query("
-            SELECT r.id, CONCAT(u.first_name, ' ', u.last_name) as name
+            SELECT r.id, CONCAT(u.first_name, ' ', u.last_name) as name, r.property_id
             FROM residents r
             INNER JOIN users u ON r.user_id = u.id
             WHERE r.status = 'active'
@@ -248,12 +248,6 @@ class FinancialController extends Controller {
      * Catálogo de tipos de movimiento
      */
     public function movementTypes() {
-        $data = [
-            'title' => 'Catálogo de Tipos de Movimiento',
-            'movementTypes' => $this->financialModel->getMovementTypes(),
-            'error' => ''
-        ];
-        
         // Handle POST for creating new movement type
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create') {
             $name = $this->post('name');
@@ -279,6 +273,33 @@ class FinancialController extends Controller {
             }
         }
         
+        // Handle POST for editing movement type
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'edit') {
+            $id = intval($this->post('id'));
+            $name = $this->post('name');
+            $description = $this->post('description');
+            $category = $this->post('category');
+            
+            if (empty($name) || empty($category)) {
+                $_SESSION['error_message'] = 'El nombre y la categoría son obligatorios';
+            } else {
+                try {
+                    $stmt = $this->db->prepare("
+                        UPDATE financial_movement_types 
+                        SET name = ?, description = ?, category = ? 
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$name, $description, $category, $id]);
+                    
+                    AuditController::log('update', 'Tipo de movimiento actualizado: ' . $name, 'financial_movement_types', $id);
+                    $_SESSION['success_message'] = 'Tipo de movimiento actualizado exitosamente';
+                    $this->redirect('financial/movementTypes');
+                } catch (PDOException $e) {
+                    $_SESSION['error_message'] = 'Error al actualizar el tipo de movimiento: ' . $e->getMessage();
+                }
+            }
+        }
+        
         // Handle toggle active status
         if (isset($_GET['toggle']) && isset($_GET['id'])) {
             $id = intval($_GET['id']);
@@ -293,6 +314,72 @@ class FinancialController extends Controller {
             $_SESSION['success_message'] = 'Estado actualizado exitosamente';
             $this->redirect('financial/movementTypes');
         }
+        
+        // Handle delete
+        if (isset($_GET['delete']) && isset($_GET['id'])) {
+            $id = intval($_GET['id']);
+            
+            // Check if type is in use
+            $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM financial_movements WHERE movement_type_id = ?");
+            $stmt->execute([$id]);
+            $result = $stmt->fetch();
+            
+            if ($result['count'] > 0) {
+                $_SESSION['error_message'] = 'No se puede eliminar el tipo de movimiento porque está en uso';
+            } else {
+                $stmt = $this->db->prepare("DELETE FROM financial_movement_types WHERE id = ?");
+                $stmt->execute([$id]);
+                
+                AuditController::log('delete', 'Tipo de movimiento eliminado', 'financial_movement_types', $id);
+                $_SESSION['success_message'] = 'Tipo de movimiento eliminado exitosamente';
+            }
+            $this->redirect('financial/movementTypes');
+        }
+        
+        // Filtros y paginación
+        $category_filter = $this->get('category');
+        $page = max(1, intval($this->get('page', 1)));
+        $per_page = 20;
+        $offset = ($page - 1) * $per_page;
+        
+        // Construir query con filtros
+        $where = [];
+        $params = [];
+        
+        if (!empty($category_filter)) {
+            $where[] = "category = ?";
+            $params[] = $category_filter;
+        }
+        
+        $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+        
+        // Obtener total de registros
+        $stmt = $this->db->prepare("SELECT COUNT(*) as total FROM financial_movement_types $whereClause");
+        $stmt->execute($params);
+        $total = $stmt->fetch()['total'];
+        $total_pages = ceil($total / $per_page);
+        
+        // Obtener registros paginados
+        $params[] = $per_page;
+        $params[] = $offset;
+        $stmt = $this->db->prepare("
+            SELECT * FROM financial_movement_types 
+            $whereClause 
+            ORDER BY category, name 
+            LIMIT ? OFFSET ?
+        ");
+        $stmt->execute($params);
+        $movementTypes = $stmt->fetchAll();
+        
+        $data = [
+            'title' => 'Catálogo de Tipos de Movimiento',
+            'movementTypes' => $movementTypes,
+            'category_filter' => $category_filter,
+            'page' => $page,
+            'total_pages' => $total_pages,
+            'total' => $total,
+            'error' => ''
+        ];
         
         $this->view('financial/movement_types', $data);
     }
