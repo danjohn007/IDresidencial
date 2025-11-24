@@ -10,7 +10,6 @@ USE janetzy_residencial;
 -- 1. EXISTING TABLES - Verify they exist
 -- ============================================
 
--- Financial Movement Types (should already exist from migration 001)
 CREATE TABLE IF NOT EXISTS financial_movement_types (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -23,7 +22,6 @@ CREATE TABLE IF NOT EXISTS financial_movement_types (
     INDEX idx_is_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Financial Movements (should already exist from migration 001)
 CREATE TABLE IF NOT EXISTS financial_movements (
     id INT AUTO_INCREMENT PRIMARY KEY,
     movement_type_id INT NOT NULL,
@@ -52,7 +50,6 @@ CREATE TABLE IF NOT EXISTS financial_movements (
     INDEX idx_reference (reference_type, reference_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Password Resets (should already exist from migration 003)
 CREATE TABLE IF NOT EXISTS password_resets (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -71,7 +68,6 @@ CREATE TABLE IF NOT EXISTS password_resets (
 -- 2. NEW TABLES for Resident Portal Features
 -- ============================================
 
--- Payment Reminders (may already exist from migration 004)
 CREATE TABLE IF NOT EXISTS payment_reminders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     resident_id INT NOT NULL,
@@ -89,7 +85,6 @@ CREATE TABLE IF NOT EXISTS payment_reminders (
     INDEX idx_sent_at (sent_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Resident Access Passes (may already exist from migration 004)
 CREATE TABLE IF NOT EXISTS resident_access_passes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     resident_id INT NOT NULL,
@@ -109,7 +104,6 @@ CREATE TABLE IF NOT EXISTS resident_access_passes (
     INDEX idx_valid_dates (valid_from, valid_until)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Support Tickets (may already exist from migration 004)
 CREATE TABLE IF NOT EXISTS support_tickets (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
@@ -135,7 +129,6 @@ CREATE TABLE IF NOT EXISTS support_tickets (
 -- 3. INSERT DEFAULT DATA
 -- ============================================
 
--- Insert default financial movement types if not exist
 INSERT IGNORE INTO financial_movement_types (id, name, description, category) VALUES
 (1, 'Cuota de Mantenimiento', 'Pago mensual de cuota de mantenimiento', 'ingreso'),
 (2, 'Cuota Extraordinaria', 'Cuota especial para gastos no recurrentes', 'ingreso'),
@@ -148,8 +141,6 @@ INSERT IGNORE INTO financial_movement_types (id, name, description, category) VA
 (9, 'Otros Ingresos', 'Ingresos diversos', 'ingreso'),
 (10, 'Otros Egresos', 'Gastos diversos', 'egreso');
 
--- Insert/Update system settings for email and PayPal
--- Note: Email password should be configured through the Settings UI, not hardcoded here
 INSERT INTO system_settings (setting_key, setting_value, setting_type, description) VALUES
 ('email_host', 'janetzy.shop', 'text', 'Servidor SMTP para envío de correos'),
 ('email_port', '465', 'number', 'Puerto SMTP'),
@@ -173,7 +164,6 @@ ON DUPLICATE KEY UPDATE
 -- 4. CREATE VIEWS for Reporting
 -- ============================================
 
--- Drop and recreate views to ensure they're up to date
 DROP VIEW IF EXISTS resident_payment_history;
 CREATE OR REPLACE VIEW resident_payment_history AS
 SELECT 
@@ -222,12 +212,15 @@ GROUP BY r.id, u.id, u.first_name, u.last_name, u.email, u.phone, p.property_num
 -- 5. OPTIMIZE TABLES with Additional Indexes
 -- ============================================
 
--- Add composite indexes for better query performance
-CREATE INDEX IF NOT EXISTS idx_users_role_status ON users(role, status);
-CREATE INDEX IF NOT EXISTS idx_residents_status_primary ON residents(status, is_primary);
-CREATE INDEX IF NOT EXISTS idx_maintenance_fees_status_due ON maintenance_fees(status, due_date);
-CREATE INDEX IF NOT EXISTS idx_financial_movements_date_type ON financial_movements(transaction_date, transaction_type);
-CREATE INDEX IF NOT EXISTS idx_visits_created_date ON visits(created_at);
+-- SEGURIDAD: Comenta las instrucciones para evitar errores si los índices ya existen.
+-- Si tu base es limpia y seguro los índices NO existen, puedes descomentar y ejecutar sólo una vez estos comandos.
+-- Si el índice ya existe, la instrucción CREATE INDEX dará error (que puedes ignorar).
+
+-- CREATE INDEX idx_users_role_status ON users(role, status);
+-- CREATE INDEX idx_residents_status_primary ON residents(status, is_primary);
+-- CREATE INDEX idx_maintenance_fees_status_due ON maintenance_fees(status, due_date);
+-- CREATE INDEX idx_financial_movements_date_type ON financial_movements(transaction_date, transaction_type);
+-- CREATE INDEX idx_visits_created_date ON visits(created_at);
 
 -- ============================================
 -- 6. CREATE STORED PROCEDURE for Payment Reminders
@@ -243,14 +236,6 @@ BEGIN
     DECLARE v_fee_id INT;
     DECLARE v_due_date DATE;
     DECLARE reminder_days INT;
-    
-    -- Get reminder days setting
-    SELECT CAST(setting_value AS UNSIGNED) INTO reminder_days 
-    FROM system_settings 
-    WHERE setting_key = 'payment_reminder_days' 
-    LIMIT 1;
-    
-    -- Cursor for fees that need reminders
     DECLARE fee_cursor CURSOR FOR
         SELECT DISTINCT r.id as resident_id, mf.id as fee_id, mf.due_date
         FROM maintenance_fees mf
@@ -262,22 +247,22 @@ BEGIN
               SELECT 1 FROM payment_reminders pr 
               WHERE pr.fee_id = mf.id AND pr.status = 'sent'
           );
-    
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
     
-    OPEN fee_cursor;
+    SELECT CAST(setting_value AS UNSIGNED) INTO reminder_days 
+    FROM system_settings 
+    WHERE setting_key = 'payment_reminder_days' 
+    LIMIT 1;
     
+    OPEN fee_cursor;
     read_loop: LOOP
         FETCH fee_cursor INTO v_resident_id, v_fee_id, v_due_date;
         IF done THEN
             LEAVE read_loop;
         END IF;
-        
-        -- Insert reminder
         INSERT INTO payment_reminders (resident_id, fee_id, reminder_type, status)
         VALUES (v_resident_id, v_fee_id, 'email', 'pending');
     END LOOP;
-    
     CLOSE fee_cursor;
 END$$
 
@@ -287,13 +272,11 @@ DELIMITER ;
 -- 7. CREATE EVENT for Automated Payment Reminders
 -- ============================================
 
--- Enable event scheduler if not already enabled
-SET GLOBAL event_scheduler = ON;
+-- Se eliminó SET GLOBAL event_scheduler = ON; porque requiere privilegios SUPER.
+-- Antes de crear el evento, asegúrate con el DBA que event_scheduler esté activo.
 
--- Drop existing event if exists
 DROP EVENT IF EXISTS daily_payment_reminders;
 
--- Create event to run daily at 9:00 AM
 CREATE EVENT daily_payment_reminders
 ON SCHEDULE EVERY 1 DAY
 STARTS (TIMESTAMP(CURRENT_DATE) + INTERVAL 9 HOUR)
