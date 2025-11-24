@@ -59,8 +59,15 @@ class Mailer {
             // Handle multiple recipients
             $recipients = is_array($to) ? $to : [$to];
             
-            // Connect to SMTP server (without @ to allow proper error capture)
-            $socket = fsockopen($host, $port, $errno, $errstr, 30);
+            // Connect to SMTP server
+            // Port 465 requires SSL/TLS from the start (implicit SSL)
+            // Port 587 uses STARTTLS (explicit SSL after connection)
+            if ($port == 465) {
+                $socket = @fsockopen("ssl://{$host}", $port, $errno, $errstr, 30);
+            } else {
+                $socket = @fsockopen($host, $port, $errno, $errstr, 30);
+            }
+            
             if (!$socket) {
                 $errorDetails = "SMTP connection to {$host}:{$port} failed";
                 if ($errno) {
@@ -75,16 +82,25 @@ class Mailer {
                 return false;
             }
             
+            // Set timeout for socket operations
+            stream_set_timeout($socket, 30);
+            
             // Read server response
             $this->smtpRead($socket);
             
             // Send EHLO/HELO
-            $this->smtpWrite($socket, "EHLO " . $host . "\r\n");
+            if (!$this->smtpWrite($socket, "EHLO " . $host . "\r\n")) {
+                fclose($socket);
+                return false;
+            }
             $this->smtpRead($socket);
             
             // TLS/SSL for port 465 or STARTTLS for port 587
             if ($port == 587) {
-                $this->smtpWrite($socket, "STARTTLS\r\n");
+                if (!$this->smtpWrite($socket, "STARTTLS\r\n")) {
+                    fclose($socket);
+                    return false;
+                }
                 $starttlsResponse = $this->smtpRead($socket);
                 
                 // Verify STARTTLS was accepted (220 response)
@@ -101,16 +117,30 @@ class Mailer {
                     return false;
                 }
                 
-                $this->smtpWrite($socket, "EHLO " . $host . "\r\n");
+                if (!$this->smtpWrite($socket, "EHLO " . $host . "\r\n")) {
+                    fclose($socket);
+                    return false;
+                }
                 $this->smtpRead($socket);
             }
             
             // Authenticate
-            $this->smtpWrite($socket, "AUTH LOGIN\r\n");
+            if (!$this->smtpWrite($socket, "AUTH LOGIN\r\n")) {
+                fclose($socket);
+                return false;
+            }
             $this->smtpRead($socket);
-            $this->smtpWrite($socket, base64_encode($user) . "\r\n");
+            
+            if (!$this->smtpWrite($socket, base64_encode($user) . "\r\n")) {
+                fclose($socket);
+                return false;
+            }
             $this->smtpRead($socket);
-            $this->smtpWrite($socket, base64_encode($pass) . "\r\n");
+            
+            if (!$this->smtpWrite($socket, base64_encode($pass) . "\r\n")) {
+                fclose($socket);
+                return false;
+            }
             $authResponse = $this->smtpRead($socket);
             
             if (strpos($authResponse, '235') === false) {
@@ -120,17 +150,26 @@ class Mailer {
             }
             
             // Send MAIL FROM
-            $this->smtpWrite($socket, "MAIL FROM: <{$from}>\r\n");
+            if (!$this->smtpWrite($socket, "MAIL FROM: <{$from}>\r\n")) {
+                fclose($socket);
+                return false;
+            }
             $this->smtpRead($socket);
             
             // Send RCPT TO for each recipient
             foreach ($recipients as $recipient) {
-                $this->smtpWrite($socket, "RCPT TO: <{$recipient}>\r\n");
+                if (!$this->smtpWrite($socket, "RCPT TO: <{$recipient}>\r\n")) {
+                    fclose($socket);
+                    return false;
+                }
                 $this->smtpRead($socket);
             }
             
             // Send DATA command
-            $this->smtpWrite($socket, "DATA\r\n");
+            if (!$this->smtpWrite($socket, "DATA\r\n")) {
+                fclose($socket);
+                return false;
+            }
             $this->smtpRead($socket);
             
             // Prepare email headers and body
@@ -157,7 +196,10 @@ class Mailer {
             $message .= "--{$boundary}--\r\n";
             
             // Send message
-            $this->smtpWrite($socket, $headers . $message . "\r\n.\r\n");
+            if (!$this->smtpWrite($socket, $headers . $message . "\r\n.\r\n")) {
+                fclose($socket);
+                return false;
+            }
             $dataResponse = $this->smtpRead($socket);
             
             // Quit
@@ -180,10 +222,34 @@ class Mailer {
     }
     
     /**
-     * Write to SMTP socket
+     * Write to SMTP socket with error handling
      */
     private function smtpWrite($socket, $data) {
-        fputs($socket, $data);
+        // Check if socket is still valid
+        if (!is_resource($socket)) {
+            error_log("SMTP socket is not a valid resource");
+            return false;
+        }
+        
+        // Check socket status
+        $status = stream_get_meta_data($socket);
+        if ($status['timed_out']) {
+            error_log("SMTP socket timed out");
+            return false;
+        }
+        if ($status['eof']) {
+            error_log("SMTP socket reached end of file");
+            return false;
+        }
+        
+        // Write data with error checking
+        $result = @fputs($socket, $data);
+        if ($result === false) {
+            error_log("Failed to write to SMTP socket: " . error_get_last()['message']);
+            return false;
+        }
+        
+        return true;
     }
     
     /**
