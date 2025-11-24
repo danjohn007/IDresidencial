@@ -114,7 +114,7 @@ class FinancialController extends Controller {
     /**
      * Ver detalle de un movimiento
      */
-    public function viewDetails($id) {
+    public function view($id) {
         $movement = $this->financialModel->findById($id);
         
         if (!$movement) {
