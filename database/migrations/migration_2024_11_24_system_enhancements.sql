@@ -149,24 +149,52 @@ ALTER TABLE users
     MODIFY COLUMN status ENUM('active', 'inactive', 'blocked', 'pending', 'deleted') DEFAULT 'active';
 
 -- ============================================
--- Add indexes for better performance
+-- Add indexes for better performance, eliminando si existen previamente
 -- ============================================
--- Users table
+
+-- USERS TABLE
+SET @idx_exists := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS WHERE table_schema = DATABASE() AND table_name = 'users' AND index_name = 'idx_first_name');
+SET @q := IF(@idx_exists > 0, 'DROP INDEX idx_first_name ON users', 'SELECT 1');
+PREPARE stmt FROM @q; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 ALTER TABLE users ADD INDEX idx_first_name (first_name);
+
+SET @idx_exists := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS WHERE table_schema = DATABASE() AND table_name = 'users' AND index_name = 'idx_last_name');
+SET @q := IF(@idx_exists > 0, 'DROP INDEX idx_last_name ON users', 'SELECT 1');
+PREPARE stmt FROM @q; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 ALTER TABLE users ADD INDEX idx_last_name (last_name);
+
+SET @idx_exists := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS WHERE table_schema = DATABASE() AND table_name = 'users' AND index_name = 'idx_phone');
+SET @q := IF(@idx_exists > 0, 'DROP INDEX idx_phone ON users', 'SELECT 1');
+PREPARE stmt FROM @q; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 ALTER TABLE users ADD INDEX idx_phone (phone);
 
--- Residents table  
+-- RESIDENTS TABLE
+SET @idx_exists := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS WHERE table_schema = DATABASE() AND table_name = 'residents' AND index_name = 'idx_status');
+SET @q := IF(@idx_exists > 0, 'DROP INDEX idx_status ON residents', 'SELECT 1');
+PREPARE stmt FROM @q; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 ALTER TABLE residents ADD INDEX idx_status (status);
 
--- Properties table
+-- PROPERTIES TABLE
+SET @idx_exists := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS WHERE table_schema = DATABASE() AND table_name = 'properties' AND index_name = 'idx_status');
+SET @q := IF(@idx_exists > 0, 'DROP INDEX idx_status ON properties', 'SELECT 1');
+PREPARE stmt FROM @q; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 ALTER TABLE properties ADD INDEX idx_status (status);
 
--- Amenities table
+-- AMENITIES TABLE
+SET @idx_exists := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS WHERE table_schema = DATABASE() AND table_name = 'amenities' AND index_name = 'idx_status');
+SET @q := IF(@idx_exists > 0, 'DROP INDEX idx_status ON amenities', 'SELECT 1');
+PREPARE stmt FROM @q; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 ALTER TABLE amenities ADD INDEX idx_status (status);
 
--- Reservations table
+-- RESERVATIONS TABLE
+SET @idx_exists := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS WHERE table_schema = DATABASE() AND table_name = 'reservations' AND index_name = 'idx_payment_status');
+SET @q := IF(@idx_exists > 0, 'DROP INDEX idx_payment_status ON reservations', 'SELECT 1');
+PREPARE stmt FROM @q; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 ALTER TABLE reservations ADD INDEX idx_payment_status (payment_status);
+
+SET @idx_exists := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS WHERE table_schema = DATABASE() AND table_name = 'reservations' AND index_name = 'idx_reservation_date_status');
+SET @q := IF(@idx_exists > 0, 'DROP INDEX idx_reservation_date_status ON reservations', 'SELECT 1');
+PREPARE stmt FROM @q; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 ALTER TABLE reservations ADD INDEX idx_reservation_date_status (reservation_date, status);
 
 -- ============================================
