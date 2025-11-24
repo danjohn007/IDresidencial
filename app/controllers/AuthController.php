@@ -135,14 +135,20 @@ class AuthController extends Controller {
                     require_once APP_PATH . '/core/Mailer.php';
                     $mailer = new Mailer();
                     
-                    if ($mailer->isConfigured() && $mailer->sendPasswordReset($email, $token, $user)) {
-                        $data['success'] = 'Se ha enviado un enlace de recuperación a tu correo electrónico. Por favor, revisa tu bandeja de entrada.';
-                        AuditController::log('password_reset_request', 'Solicitud de recuperación de contraseña enviada por email: ' . $email, 'users', $user['id']);
+                    if ($mailer->isConfigured()) {
+                        $emailSent = $mailer->sendPasswordReset($email, $token, $user);
+                        
+                        if ($emailSent) {
+                            $data['success'] = 'Se ha enviado un enlace de recuperación a tu correo electrónico. Por favor, revisa tu bandeja de entrada.';
+                            AuditController::log('password_reset_request', 'Solicitud de recuperación de contraseña enviada por email: ' . $email, 'users', $user['id']);
+                        } else {
+                            $data['error'] = 'No se pudo enviar el correo electrónico. Por favor, contacta al administrador del sistema.';
+                            error_log("Failed to send password reset email to: {$email}");
+                            AuditController::log('password_reset_failed', 'Error al enviar correo de recuperación: ' . $email, 'users', $user['id']);
+                        }
                     } else {
-                        // Fallback: mostrar enlace si el email no se puede enviar
-                        $resetLink = BASE_URL . '/auth/resetPassword?token=' . $token;
-                        $data['success'] = "No se pudo enviar el correo. Usa este enlace para restablecer tu contraseña: <a href='$resetLink' class='underline'>$resetLink</a>";
-                        error_log("Failed to send password reset email to: {$email}");
+                        $data['error'] = 'El sistema de correo no está configurado correctamente. Por favor, contacta al administrador.';
+                        error_log("Email system not configured for password reset");
                     }
                 } else {
                     // No revelar si el email existe o no por seguridad

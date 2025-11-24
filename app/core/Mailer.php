@@ -29,16 +29,12 @@ class Mailer {
      * Configurar SMTP para envío de correos
      */
     private function configureSMTP() {
-        // Configure SMTP settings in ini for mail() function
-        $host = $this->settings['email_host'] ?? 'localhost';
-        $port = $this->settings['email_port'] ?? 587;
-        
-        ini_set('SMTP', $host);
-        ini_set('smtp_port', $port);
+        // Configure SMTP settings - will use fsockopen for SMTP
+        // Settings are stored in $this->settings for use in send()
     }
     
     /**
-     * Enviar correo electrónico
+     * Enviar correo electrónico usando SMTP
      * 
      * @param string|array $to Dirección(es) de destino
      * @param string $subject Asunto del correo
@@ -48,35 +44,137 @@ class Mailer {
      */
     public function send($to, $subject, $body, $altBody = '') {
         try {
-            $from = $this->settings['email_from'] ?? $this->settings['email_user'] ?? 'noreply@residencial.com';
-            $fromName = $this->settings['site_name'] ?? 'ERP Residencial';
-            
-            // Headers
-            $headers = [];
-            $headers[] = 'MIME-Version: 1.0';
-            $headers[] = 'Content-type: text/html; charset=UTF-8';
-            $headers[] = "From: {$fromName} <{$from}>";
-            $headers[] = "Reply-To: {$from}";
-            $headers[] = 'X-Mailer: PHP/' . phpversion();
-            
-            // Handle multiple recipients
-            $recipients = is_array($to) ? implode(', ', $to) : $to;
-            
-            // Send email
-            $result = mail($recipients, $subject, $body, implode("\r\n", $headers));
-            
-            if ($result) {
-                error_log("Email sent successfully to: {$recipients}");
-            } else {
-                error_log("Email sending failed to: {$recipients}");
+            if (!$this->isConfigured()) {
+                error_log("Email configuration incomplete");
+                return false;
             }
             
-            return $result;
+            $host = $this->settings['email_host'];
+            $port = intval($this->settings['email_port'] ?? 465);
+            $user = $this->settings['email_user'];
+            $pass = $this->settings['email_password'];
+            $from = $this->settings['email_from'] ?? $user;
+            $fromName = $this->settings['site_name'] ?? 'ERP Residencial';
+            
+            // Handle multiple recipients
+            $recipients = is_array($to) ? $to : [$to];
+            
+            // Connect to SMTP server
+            $socket = fsockopen($host, $port, $errno, $errstr, 30);
+            if (!$socket) {
+                error_log("SMTP connection failed: $errstr ($errno)");
+                return false;
+            }
+            
+            // Read server response
+            $this->smtpRead($socket);
+            
+            // Send EHLO/HELO
+            $this->smtpWrite($socket, "EHLO " . $host . "\r\n");
+            $this->smtpRead($socket);
+            
+            // TLS/SSL for port 465 or STARTTLS for port 587
+            if ($port == 587) {
+                $this->smtpWrite($socket, "STARTTLS\r\n");
+                $this->smtpRead($socket);
+                stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+                $this->smtpWrite($socket, "EHLO " . $host . "\r\n");
+                $this->smtpRead($socket);
+            }
+            
+            // Authenticate
+            $this->smtpWrite($socket, "AUTH LOGIN\r\n");
+            $this->smtpRead($socket);
+            $this->smtpWrite($socket, base64_encode($user) . "\r\n");
+            $this->smtpRead($socket);
+            $this->smtpWrite($socket, base64_encode($pass) . "\r\n");
+            $authResponse = $this->smtpRead($socket);
+            
+            if (strpos($authResponse, '235') === false) {
+                error_log("SMTP authentication failed: $authResponse");
+                fclose($socket);
+                return false;
+            }
+            
+            // Send MAIL FROM
+            $this->smtpWrite($socket, "MAIL FROM: <{$from}>\r\n");
+            $this->smtpRead($socket);
+            
+            // Send RCPT TO for each recipient
+            foreach ($recipients as $recipient) {
+                $this->smtpWrite($socket, "RCPT TO: <{$recipient}>\r\n");
+                $this->smtpRead($socket);
+            }
+            
+            // Send DATA command
+            $this->smtpWrite($socket, "DATA\r\n");
+            $this->smtpRead($socket);
+            
+            // Prepare email headers and body
+            $boundary = md5(uniqid(time()));
+            $headers = "From: {$fromName} <{$from}>\r\n";
+            $headers .= "Reply-To: {$from}\r\n";
+            $headers .= "MIME-Version: 1.0\r\n";
+            $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
+            $headers .= "To: " . implode(', ', $recipients) . "\r\n";
+            $headers .= "Subject: {$subject}\r\n";
+            $headers .= "\r\n";
+            
+            // Plain text version
+            $message = "--{$boundary}\r\n";
+            $message .= "Content-Type: text/plain; charset=UTF-8\r\n";
+            $message .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
+            $message .= strip_tags($body) . "\r\n";
+            
+            // HTML version
+            $message .= "--{$boundary}\r\n";
+            $message .= "Content-Type: text/html; charset=UTF-8\r\n";
+            $message .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
+            $message .= $body . "\r\n";
+            $message .= "--{$boundary}--\r\n";
+            
+            // Send message
+            $this->smtpWrite($socket, $headers . $message . "\r\n.\r\n");
+            $dataResponse = $this->smtpRead($socket);
+            
+            // Quit
+            $this->smtpWrite($socket, "QUIT\r\n");
+            $this->smtpRead($socket);
+            fclose($socket);
+            
+            if (strpos($dataResponse, '250') !== false) {
+                error_log("Email sent successfully to: " . implode(', ', $recipients));
+                return true;
+            } else {
+                error_log("Email sending failed. Server response: $dataResponse");
+                return false;
+            }
             
         } catch (Exception $e) {
             error_log("Email sending error: {$e->getMessage()}");
             return false;
         }
+    }
+    
+    /**
+     * Write to SMTP socket
+     */
+    private function smtpWrite($socket, $data) {
+        fputs($socket, $data);
+    }
+    
+    /**
+     * Read from SMTP socket
+     */
+    private function smtpRead($socket) {
+        $response = '';
+        while ($line = fgets($socket, 515)) {
+            $response .= $line;
+            if (substr($line, 3, 1) == ' ') {
+                break;
+            }
+        }
+        return $response;
     }
     
     /**

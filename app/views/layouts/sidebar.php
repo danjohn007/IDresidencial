@@ -138,6 +138,33 @@
                 </li>
                 <?php endif; ?>
                 
+                <!-- Resident-specific menu items -->
+                <?php if ($_SESSION['role'] === 'residente'): ?>
+                <!-- Mis Pagos -->
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/residents/myPayments" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fas fa-credit-card w-5"></i>
+                        <span>Mis Pagos</span>
+                    </a>
+                </li>
+                
+                <!-- Generar Accesos -->
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/residents/generateAccess" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fas fa-qrcode w-5"></i>
+                        <span>Generar Accesos</span>
+                    </a>
+                </li>
+                
+                <!-- Mis Accesos -->
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/residents/myAccesses" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fas fa-list-alt w-5"></i>
+                        <span>Mis Accesos</span>
+                    </a>
+                </li>
+                <?php endif; ?>
+                
                 <!-- Amenidades -->
                 <li>
                     <a href="<?php echo BASE_URL; ?>/amenities" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
