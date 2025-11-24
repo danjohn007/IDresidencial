@@ -642,6 +642,44 @@ class ResidentsController extends Controller {
     }
     
     /**
+     * Cancelar pase de acceso
+     */
+    public function cancelPass($passId) {
+        // Solo para residentes
+        if ($_SESSION['role'] !== 'residente') {
+            $_SESSION['error_message'] = 'Acceso denegado';
+            $this->redirect('dashboard');
+        }
+        
+        $userId = $_SESSION['user_id'];
+        
+        // Verify pass belongs to resident
+        $stmt = $this->db->prepare("
+            SELECT rap.* 
+            FROM resident_access_passes rap
+            JOIN residents r ON rap.resident_id = r.id
+            WHERE rap.id = ? AND r.user_id = ?
+        ");
+        $stmt->execute([$passId, $userId]);
+        $pass = $stmt->fetch();
+        
+        if (!$pass) {
+            $_SESSION['error_message'] = 'Pase no encontrado';
+            $this->redirect('residents/myAccesses');
+            return;
+        }
+        
+        // Cancel pass
+        $stmt = $this->db->prepare("UPDATE resident_access_passes SET status = 'cancelled' WHERE id = ?");
+        $stmt->execute([$passId]);
+        
+        AuditController::log('cancel', 'Pase de acceso cancelado', 'resident_access_passes', $passId);
+        $_SESSION['success_message'] = 'Pase de acceso cancelado exitosamente';
+        
+        $this->redirect('residents/myAccesses');
+    }
+    
+    /**
      * Ver pases de acceso del residente
      */
     public function myAccesses() {
@@ -739,6 +777,148 @@ class ResidentsController extends Controller {
         ];
         
         $this->view('residents/make_payment', $data);
+    }
+    
+    /**
+     * Suspender residente
+     */
+    public function suspend($id) {
+        try {
+            $this->db->beginTransaction();
+            
+            // Update resident status
+            $stmt = $this->db->prepare("UPDATE residents SET status = 'inactive' WHERE id = ?");
+            $stmt->execute([$id]);
+            
+            // Update user status
+            $stmt = $this->db->prepare("
+                UPDATE users u
+                JOIN residents r ON u.id = r.user_id
+                SET u.status = 'inactive'
+                WHERE r.id = ?
+            ");
+            $stmt->execute([$id]);
+            
+            $this->db->commit();
+            
+            AuditController::log('suspend', 'Residente suspendido', 'residents', $id);
+            $_SESSION['success_message'] = 'Residente suspendido exitosamente';
+            
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            $_SESSION['error_message'] = 'Error al suspender el residente: ' . $e->getMessage();
+        }
+        
+        $this->redirect('residents');
+    }
+    
+    /**
+     * Activar residente
+     */
+    public function activate($id) {
+        try {
+            $this->db->beginTransaction();
+            
+            // Update resident status
+            $stmt = $this->db->prepare("UPDATE residents SET status = 'active' WHERE id = ?");
+            $stmt->execute([$id]);
+            
+            // Update user status
+            $stmt = $this->db->prepare("
+                UPDATE users u
+                JOIN residents r ON u.id = r.user_id
+                SET u.status = 'active'
+                WHERE r.id = ?
+            ");
+            $stmt->execute([$id]);
+            
+            $this->db->commit();
+            
+            AuditController::log('activate', 'Residente activado', 'residents', $id);
+            $_SESSION['success_message'] = 'Residente activado exitosamente';
+            
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            $_SESSION['error_message'] = 'Error al activar el residente: ' . $e->getMessage();
+        }
+        
+        $this->redirect('residents');
+    }
+    
+    /**
+     * Eliminar residente (soft delete para mantener integridad de datos)
+     */
+    public function delete($id) {
+        try {
+            // Check if resident exists
+            $stmt = $this->db->prepare("SELECT r.*, u.id as user_id, u.email FROM residents r JOIN users u ON r.user_id = u.id WHERE r.id = ?");
+            $stmt->execute([$id]);
+            $resident = $stmt->fetch();
+            
+            if (!$resident) {
+                $_SESSION['error_message'] = 'Residente no encontrado';
+                $this->redirect('residents');
+                return;
+            }
+            
+            // Check if resident has unpaid fees
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as unpaid_count, SUM(amount) as unpaid_amount
+                FROM maintenance_fees
+                WHERE property_id = ? AND status IN ('pending', 'overdue')
+            ");
+            $stmt->execute([$resident['property_id']]);
+            $feeCheck = $stmt->fetch();
+            
+            if ($feeCheck['unpaid_count'] > 0) {
+                $_SESSION['warning_message'] = 'Este residente tiene ' . $feeCheck['unpaid_count'] . 
+                    ' pagos pendientes por $' . number_format($feeCheck['unpaid_amount'], 2) . 
+                    '. Se recomienda resolver estos pagos antes de eliminar.';
+            }
+            
+            $this->db->beginTransaction();
+            
+            // Soft delete: Update status to 'deleted' instead of removing records
+            // This preserves audit trail and referential integrity
+            $stmt = $this->db->prepare("UPDATE residents SET status = 'deleted', updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$id]);
+            
+            // Also mark user as deleted
+            // Append .deleted with timestamp to allow future re-registration with same email/username
+            // Format: original@email.com.deleted.1234567890
+            $stmt = $this->db->prepare("
+                UPDATE users 
+                SET status = 'deleted', 
+                    email = CONCAT(email, '.deleted.', UNIX_TIMESTAMP()),
+                    username = CONCAT(username, '.deleted.', UNIX_TIMESTAMP())
+                WHERE id = ?
+            ");
+            $stmt->execute([$resident['user_id']]);
+            
+            // Cancel active access passes
+            $stmt = $this->db->prepare("
+                UPDATE resident_access_passes 
+                SET status = 'cancelled' 
+                WHERE resident_id = ? AND status = 'active'
+            ");
+            $stmt->execute([$id]);
+            
+            // Mark vehicles as inactive
+            $stmt = $this->db->prepare("UPDATE vehicles SET status = 'inactive' WHERE resident_id = ?");
+            $stmt->execute([$id]);
+            
+            $this->db->commit();
+            
+            AuditController::log('delete', 'Residente marcado como eliminado (soft delete): ' . $resident['email'], 'residents', $id);
+            $_SESSION['success_message'] = 'Residente eliminado exitosamente';
+            
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            error_log('Error deleting resident: ' . $e->getMessage());
+            $_SESSION['error_message'] = 'Error al eliminar el residente. Por favor, contacte al administrador.';
+        }
+        
+        $this->redirect('residents');
     }
     
     /**

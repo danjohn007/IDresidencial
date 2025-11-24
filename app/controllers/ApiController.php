@@ -41,13 +41,12 @@ class ApiController extends Controller {
         // Search residents (for admin and superadmin)
         if (in_array($role, ['superadmin', 'administrador'])) {
             $stmt = $this->db->prepare("
-                SELECT u.id, u.first_name, u.last_name, u.email, u.phone, p.property_number,
-                       r.id as resident_id
-                FROM users u
-                INNER JOIN residents r ON u.id = r.user_id
+                SELECT r.id, u.first_name, u.last_name, u.email, u.phone, p.property_number
+                FROM residents r
+                INNER JOIN users u ON r.user_id = u.id
                 LEFT JOIN properties p ON r.property_id = p.id
                 WHERE u.role = 'residente' 
-                  AND u.status = 'active'
+                  AND r.status = 'active'
                   AND (
                       u.first_name LIKE ? OR 
                       u.last_name LIKE ? OR 

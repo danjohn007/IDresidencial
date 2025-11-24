@@ -64,10 +64,10 @@ class Resident {
     }
     
     /**
-     * Obtener todos los residentes
+     * Obtener todos los residentes (excluye eliminados por defecto)
      */
     public function getAll($filters = []) {
-        $where = [];
+        $where = ["r.status != 'deleted'"]; // Exclude soft-deleted residents by default
         $params = [];
         
         if (!empty($filters['property_id'])) {
@@ -83,6 +83,11 @@ class Resident {
         if (!empty($filters['status'])) {
             $where[] = "r.status = ?";
             $params[] = $filters['status'];
+        }
+        
+        if (isset($filters['include_deleted']) && $filters['include_deleted'] === true) {
+            // Remove the deleted filter if explicitly requested
+            $where = array_filter($where, fn($w) => !str_contains($w, 'deleted'));
         }
         
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';

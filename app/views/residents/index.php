@@ -102,10 +102,27 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                    <a href="<?php echo BASE_URL; ?>/residents/viewDetails/<?php echo $resident['id']; ?>" 
-                                       class="text-blue-600 hover:text-blue-900">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
+                                    <div class="flex items-center space-x-2">
+                                        <a href="<?php echo BASE_URL; ?>/residents/viewDetails/<?php echo $resident['id']; ?>" 
+                                           class="text-blue-600 hover:text-blue-900" title="Ver detalles">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <?php if ($resident['status'] === 'active'): ?>
+                                        <button onclick="confirmSuspend(<?php echo $resident['id']; ?>, '<?php echo addslashes($resident['first_name'] . ' ' . $resident['last_name']); ?>')" 
+                                                class="text-yellow-600 hover:text-yellow-900" title="Suspender">
+                                            <i class="fas fa-user-slash"></i>
+                                        </button>
+                                        <?php else: ?>
+                                        <button onclick="confirmActivate(<?php echo $resident['id']; ?>, '<?php echo addslashes($resident['first_name'] . ' ' . $resident['last_name']); ?>')" 
+                                                class="text-green-600 hover:text-green-900" title="Activar">
+                                            <i class="fas fa-user-check"></i>
+                                        </button>
+                                        <?php endif; ?>
+                                        <button onclick="confirmDelete(<?php echo $resident['id']; ?>, '<?php echo addslashes($resident['first_name'] . ' ' . $resident['last_name']); ?>')" 
+                                                class="text-red-600 hover:text-red-900" title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -115,5 +132,25 @@
         </main>
     </div>
 </div>
+
+<script>
+function confirmSuspend(residentId, residentName) {
+    if (confirm(`¿Está seguro que desea suspender al residente ${residentName}?`)) {
+        window.location.href = `<?php echo BASE_URL; ?>/residents/suspend/${residentId}`;
+    }
+}
+
+function confirmActivate(residentId, residentName) {
+    if (confirm(`¿Está seguro que desea activar al residente ${residentName}?`)) {
+        window.location.href = `<?php echo BASE_URL; ?>/residents/activate/${residentId}`;
+    }
+}
+
+function confirmDelete(residentId, residentName) {
+    if (confirm(`¿Está seguro que desea eliminar al residente ${residentName}?\n\nEsta acción no se puede deshacer.`)) {
+        window.location.href = `<?php echo BASE_URL; ?>/residents/delete/${residentId}`;
+    }
+}
+</script>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
