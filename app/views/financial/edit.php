@@ -152,8 +152,8 @@
 
 <script>
 // Tipos de movimiento por categoría
-const movementTypes = <?php echo json_encode($movementTypes); ?>;
-const currentMovementTypeId = '<?php echo $movement['movement_type_id']; ?>';
+const movementTypes = <?php echo json_encode($movementTypes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+const currentMovementTypeId = <?php echo json_encode($movement['movement_type_id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
 document.getElementById('transaction_type').addEventListener('change', function() {
     const transactionType = this.value;

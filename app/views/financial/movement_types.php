@@ -330,10 +330,15 @@ function closeEditModal() {
     document.getElementById('editModal').classList.add('hidden');
 }
 
-// Close modal when clicking outside
-document.getElementById('editModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeEditModal();
+// Close modal when clicking outside (ensure DOM is ready)
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('editModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEditModal();
+            }
+        });
     }
 });
 </script>

@@ -259,6 +259,9 @@ class ResidentsController extends Controller {
         $fees = $stmt->fetchAll();
         
         // Calculate statistics (for all results, not just current page)
+        // Use the same where clause but without LIMIT/OFFSET
+        $statsParams = array_slice($params, 0, -2); // Remove LIMIT and OFFSET params
+        
         $statsStmt = $this->db->prepare("
             SELECT 
                 COUNT(*) as total,
@@ -272,9 +275,9 @@ class ResidentsController extends Controller {
             JOIN properties p ON mf.property_id = p.id
             LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1
             LEFT JOIN users u ON r.user_id = u.id
-            " . str_replace(['LIMIT ? OFFSET ?'], [''], $whereClause) . "
+            $whereClause
         ");
-        $statsStmt->execute(array_slice($params, 0, -2));
+        $statsStmt->execute($statsParams);
         $stats = $statsStmt->fetch();
         
         $data = [
