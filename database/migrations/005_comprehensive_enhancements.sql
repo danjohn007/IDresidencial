@@ -149,11 +149,12 @@ INSERT IGNORE INTO financial_movement_types (id, name, description, category) VA
 (10, 'Otros Egresos', 'Gastos diversos', 'egreso');
 
 -- Insert/Update system settings for email and PayPal
+-- Note: Email password should be configured through the Settings UI, not hardcoded here
 INSERT INTO system_settings (setting_key, setting_value, setting_type, description) VALUES
 ('email_host', 'janetzy.shop', 'text', 'Servidor SMTP para envío de correos'),
 ('email_port', '465', 'number', 'Puerto SMTP'),
 ('email_user', 'hola@janetzy.shop', 'text', 'Usuario SMTP'),
-('email_password', 'Danjohn007', 'password', 'Contraseña SMTP'),
+('email_password', '', 'password', 'Contraseña SMTP (configurar en Settings)'),
 ('email_from', 'hola@janetzy.shop', 'text', 'Dirección de remitente'),
 ('paypal_enabled', '1', 'boolean', 'Habilitar pagos con PayPal'),
 ('paypal_client_id', '', 'text', 'PayPal Client ID'),
