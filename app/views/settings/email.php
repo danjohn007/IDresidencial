@@ -29,6 +29,7 @@
                                 Servidor SMTP (Host) <span class="text-red-500">*</span>
                             </label>
                             <input type="text" name="email_host" required 
+                                   value="<?php echo htmlspecialchars($current['email_host'] ?? ''); ?>"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                    placeholder="smtp.gmail.com">
                         </div>
@@ -39,6 +40,7 @@
                                 Puerto SMTP <span class="text-red-500">*</span>
                             </label>
                             <input type="number" name="email_port" required 
+                                   value="<?php echo htmlspecialchars($current['email_port'] ?? ''); ?>"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                    placeholder="587">
                         </div>
@@ -49,6 +51,7 @@
                                 Usuario SMTP <span class="text-red-500">*</span>
                             </label>
                             <input type="text" name="email_user" required 
+                                   value="<?php echo htmlspecialchars($current['email_user'] ?? ''); ?>"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                    placeholder="usuario@gmail.com">
                         </div>
@@ -58,9 +61,13 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                 Contraseña SMTP <span class="text-red-500">*</span>
                             </label>
-                            <input type="password" name="email_password" required 
+                            <input type="password" name="email_password" 
+                                   value="<?php echo htmlspecialchars($current['email_password'] ?? ''); ?>"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                    placeholder="********">
+                            <?php if (!empty($current['email_password'])): ?>
+                                <p class="text-xs text-gray-500 mt-1">Dejar en blanco para mantener la contraseña actual</p>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Email From -->
@@ -69,6 +76,7 @@
                                 Remitente (From) <span class="text-red-500">*</span>
                             </label>
                             <input type="email" name="email_from" required 
+                                   value="<?php echo htmlspecialchars($current['email_from'] ?? ''); ?>"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                    placeholder="noreply@residencial.com">
                         </div>

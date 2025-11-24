@@ -180,11 +180,21 @@ class ResidentsController extends Controller {
      * Ver estado de cuenta
      */
     public function payments() {
+        // Default to current month date range
+        $defaultDateFrom = date('Y-m-01'); // First day of current month
+        $defaultDateTo = date('Y-m-t');     // Last day of current month
+        
         $filters = [
             'status' => $this->get('status'),
-            'month' => $this->get('month', date('Y-m')),
+            'date_from' => $this->get('date_from', $defaultDateFrom),
+            'date_to' => $this->get('date_to', $defaultDateTo),
             'search' => $this->get('search', '')
         ];
+        
+        // Pagination
+        $page = max(1, intval($this->get('page', 1)));
+        $per_page = 20;
+        $offset = ($page - 1) * $per_page;
         
         $where = [];
         $params = [];
@@ -194,9 +204,15 @@ class ResidentsController extends Controller {
             $params[] = $filters['status'];
         }
         
-        if ($filters['month']) {
-            $where[] = "mf.period = ?";
-            $params[] = $filters['month'];
+        // Use date range instead of month
+        if ($filters['date_from']) {
+            $where[] = "mf.due_date >= ?";
+            $params[] = $filters['date_from'];
+        }
+        
+        if ($filters['date_to']) {
+            $where[] = "mf.due_date <= ?";
+            $params[] = $filters['date_to'];
         }
         
         // Search by resident name or phone
@@ -211,6 +227,23 @@ class ResidentsController extends Controller {
         
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
+        // Get total count for pagination
+        $countStmt = $this->db->prepare("
+            SELECT COUNT(*) as total
+            FROM maintenance_fees mf
+            JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1
+            LEFT JOIN users u ON r.user_id = u.id
+            $whereClause
+        ");
+        $countStmt->execute($params);
+        $total = $countStmt->fetch()['total'];
+        $total_pages = ceil($total / $per_page);
+        
+        // Get paginated results
+        $params[] = $per_page;
+        $params[] = $offset;
+        
         $stmt = $this->db->prepare("
             SELECT mf.*, p.property_number, p.section,
                    u.first_name, u.last_name, u.phone
@@ -220,22 +253,41 @@ class ResidentsController extends Controller {
             LEFT JOIN users u ON r.user_id = u.id
             $whereClause
             ORDER BY mf.due_date DESC, p.property_number
+            LIMIT ? OFFSET ?
         ");
         $stmt->execute($params);
         $fees = $stmt->fetchAll();
         
-        // Calculate statistics
-        $stats = [
-            'total' => count($fees),
-            'pending' => count(array_filter($fees, fn($f) => $f['status'] === 'pending')),
-            'overdue' => count(array_filter($fees, fn($f) => $f['status'] === 'overdue'))
-        ];
+        // Calculate statistics (for all results, not just current page)
+        // Use the same where clause but without LIMIT/OFFSET
+        $statsParams = array_slice($params, 0, -2); // Remove LIMIT and OFFSET params
+        
+        $statsStmt = $this->db->prepare("
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN mf.status = 'pending' THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN mf.status = 'overdue' THEN 1 ELSE 0 END) as overdue,
+                SUM(CASE WHEN mf.status = 'paid' THEN 1 ELSE 0 END) as paid,
+                SUM(mf.amount) as total_amount,
+                SUM(CASE WHEN mf.status = 'paid' THEN mf.amount ELSE 0 END) as paid_amount,
+                SUM(CASE WHEN mf.status IN ('pending', 'overdue') THEN mf.amount ELSE 0 END) as pending_amount
+            FROM maintenance_fees mf
+            JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1
+            LEFT JOIN users u ON r.user_id = u.id
+            $whereClause
+        ");
+        $statsStmt->execute($statsParams);
+        $stats = $statsStmt->fetch();
         
         $data = [
             'title' => 'Pagos y Cuotas',
             'fees' => $fees,
             'filters' => $filters,
-            'stats' => $stats
+            'stats' => $stats,
+            'page' => $page,
+            'total_pages' => $total_pages,
+            'total' => $total
         ];
         
         $this->view('residents/payments', $data);

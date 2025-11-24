@@ -46,7 +46,7 @@
                     </div>
                     
                     <!-- Other Filters -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
                             <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
@@ -57,8 +57,13 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Mes</label>
-                            <input type="month" name="month" value="<?php echo $filters['month']; ?>" 
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Desde</label>
+                            <input type="date" name="date_from" value="<?php echo $filters['date_from']; ?>" 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha Hasta</label>
+                            <input type="date" name="date_to" value="<?php echo $filters['date_to']; ?>" 
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div class="flex items-end space-x-2">
@@ -163,17 +168,55 @@
                         <?php endif; ?>
                     </tbody>
                 </table>
+                
+                <!-- Pagination -->
+                <?php if ($total_pages > 1): ?>
+                <div class="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                    <div class="text-sm text-gray-700">
+                        Mostrando página <?php echo $page; ?> de <?php echo $total_pages; ?> (Total: <?php echo $total; ?> registros)
+                    </div>
+                    <div class="flex space-x-2">
+                        <?php if ($page > 1): ?>
+                            <a href="<?php echo BASE_URL; ?>/residents/payments?page=<?php echo ($page - 1); ?><?php echo !empty($filters['status']) ? '&status=' . $filters['status'] : ''; ?>&date_from=<?php echo $filters['date_from']; ?>&date_to=<?php echo $filters['date_to']; ?><?php echo !empty($filters['search']) ? '&search=' . urlencode($filters['search']) : ''; ?>" 
+                               class="px-3 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">
+                                <i class="fas fa-chevron-left"></i> Anterior
+                            </a>
+                        <?php endif; ?>
+                        
+                        <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
+                            <a href="<?php echo BASE_URL; ?>/residents/payments?page=<?php echo $i; ?><?php echo !empty($filters['status']) ? '&status=' . $filters['status'] : ''; ?>&date_from=<?php echo $filters['date_from']; ?>&date_to=<?php echo $filters['date_to']; ?><?php echo !empty($filters['search']) ? '&search=' . urlencode($filters['search']) : ''; ?>" 
+                               class="px-3 py-1 border <?php echo $i === $page ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-700 hover:bg-gray-50'; ?> rounded">
+                                <?php echo $i; ?>
+                            </a>
+                        <?php endfor; ?>
+                        
+                        <?php if ($page < $total_pages): ?>
+                            <a href="<?php echo BASE_URL; ?>/residents/payments?page=<?php echo ($page + 1); ?><?php echo !empty($filters['status']) ? '&status=' . $filters['status'] : ''; ?>&date_from=<?php echo $filters['date_from']; ?>&date_to=<?php echo $filters['date_to']; ?><?php echo !empty($filters['search']) ? '&search=' . urlencode($filters['search']) : ''; ?>" 
+                               class="px-3 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">
+                                Siguiente <i class="fas fa-chevron-right"></i>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
 
             <!-- Summary -->
-            <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Total Registros</p>
                     <p class="text-3xl font-bold text-blue-600"><?php echo $stats['total']; ?></p>
+                    <p class="text-sm text-gray-500 mt-1">$<?php echo number_format($stats['total_amount'] ?? 0, 2); ?></p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <p class="text-sm text-gray-600 mb-1">Pagos Realizados</p>
+                    <p class="text-3xl font-bold text-green-600"><?php echo $stats['paid']; ?></p>
+                    <p class="text-sm text-gray-500 mt-1">$<?php echo number_format($stats['paid_amount'] ?? 0, 2); ?></p>
                 </div>
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Pagos Pendientes</p>
                     <p class="text-3xl font-bold text-yellow-600"><?php echo $stats['pending']; ?></p>
+                    <p class="text-sm text-gray-500 mt-1">$<?php echo number_format($stats['pending_amount'] ?? 0, 2); ?></p>
                 </div>
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Pagos Vencidos</p>
