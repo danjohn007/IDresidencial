@@ -175,18 +175,19 @@ class SettingsController extends Controller {
      * Configuración de correo
      */
     public function email() {
-        $data = [
-            'title' => 'Configuración de Correo'
-        ];
-        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $emailSettings = [
                 'email_host' => $this->post('email_host'),
                 'email_port' => $this->post('email_port'),
                 'email_user' => $this->post('email_user'),
-                'email_password' => $this->post('email_password'),
                 'email_from' => $this->post('email_from')
             ];
+            
+            // Only update password if it's provided
+            $password = $this->post('email_password');
+            if (!empty($password)) {
+                $emailSettings['email_password'] = $password;
+            }
             
             foreach ($emailSettings as $key => $value) {
                 $stmt = $this->db->prepare("
@@ -200,6 +201,18 @@ class SettingsController extends Controller {
             $_SESSION['success_message'] = 'Configuración de correo actualizada';
             $this->redirect('settings/email');
         }
+        
+        // Obtener configuración actual
+        $stmt = $this->db->query("SELECT * FROM system_settings WHERE setting_key LIKE 'email_%'");
+        $currentSettings = [];
+        while ($row = $stmt->fetch()) {
+            $currentSettings[$row['setting_key']] = $row['setting_value'];
+        }
+        
+        $data = [
+            'title' => 'Configuración de Correo',
+            'current' => $currentSettings
+        ];
         
         $this->view('settings/email', $data);
     }

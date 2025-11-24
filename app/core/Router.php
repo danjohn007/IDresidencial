@@ -26,11 +26,14 @@ class Router {
         require_once APP_PATH . '/controllers/' . $this->controller . '.php';
         $this->controller = new $this->controller;
 
-        // Verificar si el método existe
+        // Verificar si el método existe y es público
         if (isset($url[1])) {
             if (method_exists($this->controller, $url[1])) {
-                $this->method = $url[1];
-                unset($url[1]);
+                $reflectionMethod = new ReflectionMethod($this->controller, $url[1]);
+                if ($reflectionMethod->isPublic()) {
+                    $this->method = $url[1];
+                    unset($url[1]);
+                }
             }
         }
 
