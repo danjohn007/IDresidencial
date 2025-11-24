@@ -131,10 +131,19 @@ class AuthController extends Controller {
                     ");
                     $stmt->execute([$user['id'], $token, $expiry, $token, $expiry]);
                     
-                    // En producción, aquí se enviaría un email con el link de recuperación
-                    // Por ahora, mostraremos el token en pantalla
-                    $resetLink = BASE_URL . '/auth/resetPassword?token=' . $token;
-                    $data['success'] = "Se ha generado un enlace de recuperación. Por favor, accede a: <a href='$resetLink' class='underline'>$resetLink</a>";
+                    // Enviar correo electrónico con el link de recuperación
+                    require_once APP_PATH . '/core/Mailer.php';
+                    $mailer = new Mailer();
+                    
+                    if ($mailer->isConfigured() && $mailer->sendPasswordReset($email, $token, $user)) {
+                        $data['success'] = 'Se ha enviado un enlace de recuperación a tu correo electrónico. Por favor, revisa tu bandeja de entrada.';
+                        AuditController::log('password_reset_request', 'Solicitud de recuperación de contraseña enviada por email: ' . $email, 'users', $user['id']);
+                    } else {
+                        // Fallback: mostrar enlace si el email no se puede enviar
+                        $resetLink = BASE_URL . '/auth/resetPassword?token=' . $token;
+                        $data['success'] = "No se pudo enviar el correo. Usa este enlace para restablecer tu contraseña: <a href='$resetLink' class='underline'>$resetLink</a>";
+                        error_log("Failed to send password reset email to: {$email}");
+                    }
                 } else {
                     // No revelar si el email existe o no por seguridad
                     $data['success'] = 'Si el correo existe en nuestro sistema, recibirás un enlace de recuperación.';

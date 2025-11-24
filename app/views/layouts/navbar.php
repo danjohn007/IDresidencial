@@ -28,6 +28,22 @@
                 <span class="text-xl font-bold text-gray-800"><?php echo htmlspecialchars($siteName); ?></span>
             </div>
             
+            <!-- Global Search -->
+            <div class="hidden md:block flex-1 max-w-xl mx-8">
+                <div class="relative">
+                    <input type="text" id="globalSearch" 
+                           placeholder="Buscar por nombre, email o teléfono..." 
+                           class="w-full px-4 py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           autocomplete="off">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    
+                    <!-- Search Results Dropdown -->
+                    <div id="searchResults" class="absolute w-full mt-2 bg-white rounded-lg shadow-lg border max-h-96 overflow-y-auto hidden z-50">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+            </div>
+            
             <!-- Right side items -->
             <div class="flex items-center space-x-4">
                 <!-- Notifications -->

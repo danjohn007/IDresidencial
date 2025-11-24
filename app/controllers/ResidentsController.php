@@ -509,4 +509,328 @@ class ResidentsController extends Controller {
         
         $this->redirect('residents/pendingRegistrations');
     }
+    
+    /**
+     * Portal del residente - Ver pagos propios
+     */
+    public function myPayments() {
+        // Solo para residentes
+        if ($_SESSION['role'] !== 'residente') {
+            $_SESSION['error_message'] = 'Acceso denegado';
+            $this->redirect('dashboard');
+        }
+        
+        // Obtener datos del residente actual
+        $userId = $_SESSION['user_id'];
+        $stmt = $this->db->prepare("
+            SELECT r.*, p.property_number 
+            FROM residents r 
+            JOIN properties p ON r.property_id = p.id 
+            WHERE r.user_id = ? AND r.status = 'active' 
+            LIMIT 1
+        ");
+        $stmt->execute([$userId]);
+        $resident = $stmt->fetch();
+        
+        if (!$resident) {
+            $_SESSION['error_message'] = 'No se encontró información del residente';
+            $this->redirect('dashboard');
+        }
+        
+        // Obtener historial de pagos
+        $stmt = $this->db->prepare("
+            SELECT * FROM maintenance_fees 
+            WHERE property_id = ? 
+            ORDER BY due_date DESC, created_at DESC
+        ");
+        $stmt->execute([$resident['property_id']]);
+        $payments = $stmt->fetchAll();
+        
+        // Calcular adeudos
+        $stmt = $this->db->prepare("
+            SELECT 
+                SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) as pending_amount,
+                SUM(CASE WHEN status = 'overdue' THEN amount ELSE 0 END) as overdue_amount,
+                SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as paid_amount,
+                COUNT(CASE WHEN status IN ('pending', 'overdue') THEN 1 END) as pending_count
+            FROM maintenance_fees 
+            WHERE property_id = ?
+        ");
+        $stmt->execute([$resident['property_id']]);
+        $summary = $stmt->fetch();
+        
+        $data = [
+            'title' => 'Mis Pagos',
+            'resident' => $resident,
+            'payments' => $payments,
+            'summary' => $summary
+        ];
+        
+        $this->view('residents/my_payments', $data);
+    }
+    
+    /**
+     * Generar pase de acceso para residente
+     */
+    public function generateAccess() {
+        // Solo para residentes
+        if ($_SESSION['role'] !== 'residente') {
+            $_SESSION['error_message'] = 'Acceso denegado';
+            $this->redirect('dashboard');
+        }
+        
+        $userId = $_SESSION['user_id'];
+        $stmt = $this->db->prepare("
+            SELECT r.*, p.property_number 
+            FROM residents r 
+            JOIN properties p ON r.property_id = p.id 
+            WHERE r.user_id = ? AND r.status = 'active' 
+            LIMIT 1
+        ");
+        $stmt->execute([$userId]);
+        $resident = $stmt->fetch();
+        
+        if (!$resident) {
+            $_SESSION['error_message'] = 'No se encontró información del residente';
+            $this->redirect('dashboard');
+        }
+        
+        $data = [
+            'title' => 'Generar Accesos',
+            'resident' => $resident,
+            'error' => ''
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $passType = $this->post('pass_type', 'single_use');
+            $validFrom = $this->post('valid_from', date('Y-m-d H:i:s'));
+            $validUntil = $this->post('valid_until');
+            $maxUses = intval($this->post('max_uses', 1));
+            $notes = $this->post('notes', '');
+            
+            // Generar código QR único
+            $qrCode = bin2hex(random_bytes(16));
+            
+            try {
+                $stmt = $this->db->prepare("
+                    INSERT INTO resident_access_passes 
+                    (resident_id, pass_type, qr_code, valid_from, valid_until, max_uses, notes, status) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+                ");
+                $stmt->execute([
+                    $resident['id'], 
+                    $passType, 
+                    $qrCode, 
+                    $validFrom, 
+                    $validUntil, 
+                    $maxUses, 
+                    $notes
+                ]);
+                
+                $passId = $this->db->lastInsertId();
+                
+                AuditController::log('create', 'Pase de acceso generado por residente', 'resident_access_passes', $passId);
+                $_SESSION['success_message'] = 'Pase de acceso generado exitosamente';
+                $this->redirect('residents/myAccesses');
+                
+            } catch (PDOException $e) {
+                $data['error'] = 'Error al generar el pase: ' . $e->getMessage();
+            }
+        }
+        
+        $this->view('residents/generate_access', $data);
+    }
+    
+    /**
+     * Ver pases de acceso del residente
+     */
+    public function myAccesses() {
+        // Solo para residentes
+        if ($_SESSION['role'] !== 'residente') {
+            $_SESSION['error_message'] = 'Acceso denegado';
+            $this->redirect('dashboard');
+        }
+        
+        $userId = $_SESSION['user_id'];
+        $stmt = $this->db->prepare("
+            SELECT r.id as resident_id 
+            FROM residents r 
+            WHERE r.user_id = ? AND r.status = 'active' 
+            LIMIT 1
+        ");
+        $stmt->execute([$userId]);
+        $resident = $stmt->fetch();
+        
+        if (!$resident) {
+            $_SESSION['error_message'] = 'No se encontró información del residente';
+            $this->redirect('dashboard');
+        }
+        
+        // Obtener pases de acceso
+        $stmt = $this->db->prepare("
+            SELECT * FROM resident_access_passes 
+            WHERE resident_id = ? 
+            ORDER BY created_at DESC
+        ");
+        $stmt->execute([$resident['resident_id']]);
+        $passes = $stmt->fetchAll();
+        
+        $data = [
+            'title' => 'Mis Pases de Acceso',
+            'passes' => $passes
+        ];
+        
+        $this->view('residents/my_accesses', $data);
+    }
+    
+    /**
+     * Realizar pago con PayPal
+     */
+    public function makePayment($feeId = null) {
+        // Solo para residentes
+        if ($_SESSION['role'] !== 'residente') {
+            $_SESSION['error_message'] = 'Acceso denegado';
+            $this->redirect('dashboard');
+        }
+        
+        if (!$feeId) {
+            $_SESSION['error_message'] = 'ID de pago no especificado';
+            $this->redirect('residents/myPayments');
+        }
+        
+        $userId = $_SESSION['user_id'];
+        
+        // Verificar que el pago pertenece al residente
+        $stmt = $this->db->prepare("
+            SELECT mf.*, p.property_number, r.id as resident_id
+            FROM maintenance_fees mf
+            JOIN properties p ON mf.property_id = p.id
+            JOIN residents r ON r.property_id = p.id
+            WHERE mf.id = ? AND r.user_id = ? AND r.status = 'active'
+        ");
+        $stmt->execute([$feeId, $userId]);
+        $fee = $stmt->fetch();
+        
+        if (!$fee) {
+            $_SESSION['error_message'] = 'Pago no encontrado o no autorizado';
+            $this->redirect('residents/myPayments');
+        }
+        
+        if ($fee['status'] === 'paid') {
+            $_SESSION['info_message'] = 'Este pago ya ha sido realizado';
+            $this->redirect('residents/myPayments');
+        }
+        
+        // Obtener configuración de PayPal
+        $stmt = $this->db->query("
+            SELECT setting_key, setting_value 
+            FROM system_settings 
+            WHERE setting_key LIKE 'paypal_%'
+        ");
+        $paypalSettings = [];
+        while ($row = $stmt->fetch()) {
+            $paypalSettings[$row['setting_key']] = $row['setting_value'];
+        }
+        
+        $data = [
+            'title' => 'Realizar Pago',
+            'fee' => $fee,
+            'paypalSettings' => $paypalSettings
+        ];
+        
+        $this->view('residents/make_payment', $data);
+    }
+    
+    /**
+     * Procesar pago de PayPal
+     */
+    public function processPayment() {
+        // Solo para residentes
+        if ($_SESSION['role'] !== 'residente') {
+            echo json_encode(['success' => false, 'message' => 'Acceso denegado']);
+            exit;
+        }
+        
+        $feeId = $this->post('fee_id');
+        $paymentId = $this->post('payment_id');
+        $payerId = $this->post('payer_id');
+        $paymentMethod = $this->post('payment_method', 'paypal');
+        
+        $userId = $_SESSION['user_id'];
+        
+        // Verificar que el pago pertenece al residente
+        $stmt = $this->db->prepare("
+            SELECT mf.*, r.id as resident_id
+            FROM maintenance_fees mf
+            JOIN properties p ON mf.property_id = p.id
+            JOIN residents r ON r.property_id = p.id
+            WHERE mf.id = ? AND r.user_id = ? AND r.status = 'active'
+        ");
+        $stmt->execute([$feeId, $userId]);
+        $fee = $stmt->fetch();
+        
+        if (!$fee) {
+            echo json_encode(['success' => false, 'message' => 'Pago no encontrado']);
+            exit;
+        }
+        
+        try {
+            $this->db->beginTransaction();
+            
+            // Actualizar estado del pago
+            $stmt = $this->db->prepare("
+                UPDATE maintenance_fees 
+                SET status = 'paid', 
+                    paid_date = NOW(), 
+                    payment_method = ?,
+                    payment_reference = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$paymentMethod, $paymentId, $feeId]);
+            
+            // Registrar movimiento financiero
+            $stmt = $this->db->prepare("
+                INSERT INTO financial_movements 
+                (movement_type_id, transaction_type, amount, description, 
+                 property_id, resident_id, payment_method, payment_reference, 
+                 transaction_date, created_by, reference_type, reference_id)
+                SELECT 
+                    (SELECT id FROM financial_movement_types WHERE category = 'ingreso' LIMIT 1),
+                    'ingreso',
+                    ?,
+                    CONCAT('Pago de cuota de mantenimiento - ', ?),
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    NOW(),
+                    ?,
+                    'maintenance_fee',
+                    ?
+            ");
+            $stmt->execute([
+                $fee['amount'],
+                $fee['period'],
+                $fee['property_id'],
+                $fee['resident_id'],
+                $paymentMethod,
+                $paymentId,
+                $userId,
+                $feeId
+            ]);
+            
+            $this->db->commit();
+            
+            AuditController::log('payment', 'Pago realizado via ' . $paymentMethod, 'maintenance_fees', $feeId);
+            
+            echo json_encode(['success' => true, 'message' => 'Pago procesado exitosamente']);
+            
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            error_log('Payment processing error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error al procesar el pago']);
+        }
+        
+        exit;
+    }
 }
