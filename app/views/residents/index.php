@@ -107,6 +107,10 @@
                                            class="text-blue-600 hover:text-blue-900" title="Ver detalles">
                                             <i class="fas fa-eye"></i>
                                         </a>
+                                        <a href="<?php echo BASE_URL; ?>/residents/edit/<?php echo $resident['id']; ?>" 
+                                           class="text-green-600 hover:text-green-900" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
                                         <?php if ($resident['status'] === 'active'): ?>
                                         <button onclick="confirmSuspend(<?php echo $resident['id']; ?>, '<?php echo addslashes($resident['first_name'] . ' ' . $resident['last_name']); ?>')" 
                                                 class="text-yellow-600 hover:text-yellow-900" title="Suspender">

@@ -49,6 +49,59 @@
                 </div>
             </div>
 
+            <!-- Filters -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <form method="GET" action="<?php echo BASE_URL; ?>/users" class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Filtros de Búsqueda</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <!-- Search by name, email, or phone -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+                            <input type="text" name="search" 
+                                   value="<?php echo htmlspecialchars($filters['search'] ?? ''); ?>"
+                                   placeholder="Nombre, correo o teléfono..."
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        
+                        <!-- Filter by role -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Rol</label>
+                            <select name="role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Todos los roles</option>
+                                <option value="superadmin" <?php echo ($filters['role'] ?? '') === 'superadmin' ? 'selected' : ''; ?>>Super Admin</option>
+                                <option value="administrador" <?php echo ($filters['role'] ?? '') === 'administrador' ? 'selected' : ''; ?>>Administrador</option>
+                                <option value="guardia" <?php echo ($filters['role'] ?? '') === 'guardia' ? 'selected' : ''; ?>>Guardia</option>
+                                <option value="residente" <?php echo ($filters['role'] ?? '') === 'residente' ? 'selected' : ''; ?>>Residente</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Filter by status -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+                            <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Todos los estados</option>
+                                <option value="active" <?php echo ($filters['status'] ?? '') === 'active' ? 'selected' : ''; ?>>Activo</option>
+                                <option value="inactive" <?php echo ($filters['status'] ?? '') === 'inactive' ? 'selected' : ''; ?>>Inactivo</option>
+                                <option value="blocked" <?php echo ($filters['status'] ?? '') === 'blocked' ? 'selected' : ''; ?>>Bloqueado</option>
+                                <option value="pending" <?php echo ($filters['status'] ?? '') === 'pending' ? 'selected' : ''; ?>>Pendiente</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-2">
+                        <a href="<?php echo BASE_URL; ?>/users" 
+                           class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                            <i class="fas fa-times mr-2"></i>Limpiar
+                        </a>
+                        <button type="submit" 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-search mr-2"></i>Buscar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
             <!-- Users Table -->
             <div class="bg-white rounded-lg shadow overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">

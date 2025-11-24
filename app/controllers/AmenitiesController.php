@@ -286,4 +286,68 @@ class AmenitiesController extends Controller {
         
         $this->redirect('amenities/manage');
     }
+    
+    /**
+     * Calendario global de reservaciones
+     */
+    public function calendar() {
+        $db = Database::getInstance()->getConnection();
+        
+        // Get all amenities
+        $amenities = $this->amenityModel->getAll('active');
+        
+        // Get date range (current month by default)
+        $currentDate = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
+        $startDate = date('Y-m-01', strtotime($currentDate));
+        $endDate = date('Y-m-t', strtotime($currentDate));
+        
+        // Get all reservations for the date range
+        $stmt = $db->prepare("
+            SELECT r.*, a.name as amenity_name, a.amenity_type,
+                   u.first_name, u.last_name, p.property_number
+            FROM reservations r
+            JOIN amenities a ON r.amenity_id = a.id
+            JOIN residents res ON r.resident_id = res.id
+            JOIN users u ON res.user_id = u.id
+            LEFT JOIN properties p ON res.property_id = p.id
+            WHERE r.reservation_date BETWEEN ? AND ?
+            AND r.status NOT IN ('cancelled')
+            ORDER BY r.reservation_date, r.start_time
+        ");
+        $stmt->execute([$startDate, $endDate]);
+        $reservations = $stmt->fetchAll();
+        
+        // Check if user is resident
+        $isResident = ($_SESSION['role'] === 'residente');
+        $residentReservationsToday = 0;
+        
+        if ($isResident) {
+            $resident = $this->residentModel->findByUserId($_SESSION['user_id']);
+            if ($resident) {
+                // Check reservations for today
+                $stmt = $db->prepare("
+                    SELECT COUNT(*) as count 
+                    FROM reservations 
+                    WHERE resident_id = ? 
+                    AND reservation_date = CURDATE()
+                    AND status NOT IN ('cancelled')
+                ");
+                $stmt->execute([$resident['id']]);
+                $residentReservationsToday = $stmt->fetch()['count'];
+            }
+        }
+        
+        $data = [
+            'title' => 'Calendario de Reservaciones',
+            'amenities' => $amenities,
+            'reservations' => $reservations,
+            'currentDate' => $currentDate,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'isResident' => $isResident,
+            'residentReservationsToday' => $residentReservationsToday
+        ];
+        
+        $this->view('amenities/calendar', $data);
+    }
 }

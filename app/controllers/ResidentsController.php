@@ -13,7 +13,19 @@ class ResidentsController extends Controller {
     
     public function __construct() {
         $this->requireAuth();
-        $this->requireRole(['superadmin', 'administrador']);
+        
+        // Get current action
+        $url = isset($_GET['url']) ? explode('/', filter_var(rtrim($_GET['url'], '/'), FILTER_SANITIZE_URL)) : [];
+        $action = isset($url[1]) ? $url[1] : 'index';
+        
+        // Methods that residents can access
+        $residentMethods = ['myPayments', 'generateAccess', 'myAccesses', 'cancelPass', 'makePayment', 'processPayment'];
+        
+        // If not a resident method, require admin roles
+        if (!in_array($action, $residentMethods)) {
+            $this->requireRole(['superadmin', 'administrador']);
+        }
+        
         $this->residentModel = $this->model('Resident');
         $this->userModel = $this->model('User');
         $this->db = Database::getInstance()->getConnection();
@@ -78,6 +90,99 @@ class ResidentsController extends Controller {
         ];
         
         $this->view('residents/view', $data);
+    }
+    
+    /**
+     * Editar residente
+     */
+    public function edit($id) {
+        $resident = $this->residentModel->findById($id);
+        
+        if (!$resident) {
+            $_SESSION['error_message'] = 'Residente no encontrado';
+            $this->redirect('residents');
+        }
+        
+        $data = [
+            'title' => 'Editar Residente',
+            'resident' => $resident,
+            'error' => ''
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Actualizar datos del usuario
+            $userData = [
+                'first_name' => $this->post('first_name'),
+                'last_name' => $this->post('last_name'),
+                'phone' => $this->post('phone'),
+                'email' => filter_var($this->post('email'), FILTER_SANITIZE_EMAIL)
+            ];
+            
+            // Validate email format
+            if (!filter_var($userData['email'], FILTER_VALIDATE_EMAIL)) {
+                $data['error'] = 'El formato del correo electrónico no es válido';
+                $this->view('residents/edit', $data);
+                return;
+            }
+            
+            // Check if email is unique (excluding current user)
+            $stmt = $this->db->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+            $stmt->execute([$userData['email'], $resident['user_id']]);
+            if ($stmt->fetch()) {
+                $data['error'] = 'El correo electrónico ya está en uso';
+                $this->view('residents/edit', $data);
+                return;
+            }
+            
+            // Update user data
+            $stmt = $this->db->prepare("
+                UPDATE users 
+                SET first_name = ?, last_name = ?, phone = ?, email = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([
+                $userData['first_name'],
+                $userData['last_name'],
+                $userData['phone'],
+                $userData['email'],
+                $resident['user_id']
+            ]);
+            
+            // Update resident data
+            $residentData = [
+                'property_id' => $this->post('property_id'),
+                'relationship' => $this->post('relationship')
+            ];
+            
+            $stmt = $this->db->prepare("
+                UPDATE residents 
+                SET property_id = ?, relationship = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([
+                $residentData['property_id'],
+                $residentData['relationship'],
+                $id
+            ]);
+            
+            // Update password if provided
+            $newPassword = $this->post('password');
+            if (!empty($newPassword)) {
+                $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+                $stmt = $this->db->prepare("UPDATE users SET password = ? WHERE id = ?");
+                $stmt->execute([$hashedPassword, $resident['user_id']]);
+            }
+            
+            AuditController::log('update', 'Residente actualizado: ' . $userData['first_name'] . ' ' . $userData['last_name'], 'residents', $id);
+            $_SESSION['success_message'] = 'Residente actualizado exitosamente';
+            $this->redirect('residents');
+        }
+        
+        // Obtener propiedades disponibles
+        $stmt = $this->db->query("SELECT * FROM properties ORDER BY property_number");
+        $data['properties'] = $stmt->fetchAll();
+        
+        $this->view('residents/edit', $data);
     }
     
     /**

@@ -73,6 +73,21 @@
             </div>
             <?php endif; ?>
             
+            <!-- Calendar Quick Access (All Users) -->
+            <div class="mb-6">
+                <a href="<?php echo BASE_URL; ?>/amenities/calendar" 
+                   class="flex items-center p-4 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-lg shadow hover:shadow-lg transform hover:-translate-y-1 transition">
+                    <div class="bg-white bg-opacity-20 rounded-full p-3 mr-4">
+                        <i class="fas fa-calendar-alt text-3xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm opacity-90">Acceso Rápido</p>
+                        <p class="font-bold text-xl">Calendario de Reservaciones de Amenidades</p>
+                        <p class="text-sm opacity-90 mt-1">Ver y gestionar reservaciones de amenidades</p>
+                    </div>
+                </a>
+            </div>
+            
             <!-- Stats Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-6">
                 <?php if (in_array($user['role'], ['superadmin', 'administrador'])): ?>
