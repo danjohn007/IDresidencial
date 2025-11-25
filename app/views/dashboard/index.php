@@ -37,7 +37,7 @@
             
             <?php if ($user['role'] === 'superadmin'): ?>
             <!-- Quick Access Shortcuts -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <a href="<?php echo BASE_URL; ?>/financial/create" 
                    class="flex items-center p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg shadow hover:shadow-lg transform hover:-translate-y-1 transition">
                     <div class="bg-white bg-opacity-20 rounded-full p-3 mr-4">
@@ -68,6 +68,17 @@
                     <div>
                         <p class="text-sm opacity-90">Acceso Rápido</p>
                         <p class="font-bold text-lg">Validar QR</p>
+                    </div>
+                </a>
+                
+                <a href="<?php echo BASE_URL; ?>/access/detectedPlates" 
+                   class="flex items-center p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg shadow hover:shadow-lg transform hover:-translate-y-1 transition">
+                    <div class="bg-white bg-opacity-20 rounded-full p-3 mr-4">
+                        <i class="fas fa-camera text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm opacity-90">Acceso Rápido</p>
+                        <p class="font-bold text-lg">Placas Detectadas</p>
                     </div>
                 </a>
             </div>

@@ -216,4 +216,16 @@ class Visit {
         ");
         return $stmt->rowCount();
     }
+    
+    /**
+     * Actualizar foto de identificación
+     */
+    public function updateIdentificationPhoto($id, $photoPath) {
+        $stmt = $this->db->prepare("
+            UPDATE visits 
+            SET identification_photo = ? 
+            WHERE id = ?
+        ");
+        return $stmt->execute([$photoPath, $id]);
+    }
 }

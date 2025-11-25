@@ -153,6 +153,68 @@ class AccessController extends Controller {
     }
     
     /**
+     * Vista de placas detectadas
+     */
+    public function detectedPlates() {
+        $this->requireRole(['superadmin', 'administrador', 'guardia']);
+        require_once APP_PATH . '/views/access/detected_plates.php';
+    }
+    
+    /**
+     * Guardar foto de identificación del visitante
+     */
+    public function saveIdentificationPhoto() {
+        header('Content-Type: application/json');
+        $this->requireRole(['superadmin', 'administrador', 'guardia']);
+        
+        try {
+            $visitId = $this->post('visit_id');
+            $photoData = $this->post('photo_data');
+            
+            if (empty($visitId) || empty($photoData)) {
+                echo json_encode(['success' => false, 'error' => 'Datos incompletos']);
+                return;
+            }
+            
+            // Decode base64 image
+            $photoData = str_replace('data:image/png;base64,', '', $photoData);
+            $photoData = str_replace(' ', '+', $photoData);
+            $imageData = base64_decode($photoData);
+            
+            // Generate unique filename
+            $filename = 'id_photo_' . $visitId . '_' . time() . '.png';
+            $uploadPath = PUBLIC_PATH . '/uploads/id_photos/';
+            
+            // Create directory if it doesn't exist
+            if (!file_exists($uploadPath)) {
+                mkdir($uploadPath, 0777, true);
+            }
+            
+            $filePath = $uploadPath . $filename;
+            
+            // Save image file
+            if (file_put_contents($filePath, $imageData)) {
+                $relativePath = 'uploads/id_photos/' . $filename;
+                
+                // Update visit record with photo path
+                if ($this->visitModel->updateIdentificationPhoto($visitId, $relativePath)) {
+                    echo json_encode([
+                        'success' => true, 
+                        'photo_url' => BASE_URL . '/' . $relativePath
+                    ]);
+                } else {
+                    echo json_encode(['success' => false, 'error' => 'Error al actualizar base de datos']);
+                }
+            } else {
+                echo json_encode(['success' => false, 'error' => 'Error al guardar archivo']);
+            }
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+    
+    /**
      * Registrar entrada
      */
     public function registerEntry($visitId) {
