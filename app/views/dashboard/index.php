@@ -354,7 +354,7 @@
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-gray-900">
-                                            <?php echo htmlspecialchars($activity['name']); ?>
+                                            <?php echo htmlspecialchars($activity['name'] ?? 'Sin nombre'); ?>
                                         </p>
                                         <p class="text-sm text-gray-600">
                                             <?php echo ucfirst($activity['log_type']); ?> - <?php echo ucfirst($activity['access_type']); ?>

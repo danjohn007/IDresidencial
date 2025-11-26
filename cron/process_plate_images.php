@@ -77,11 +77,24 @@ try {
     // Buscar imágenes en directorio FTP
     $images = glob(FTP_SOURCE_DIR . '/*.{jpg,jpeg,png,JPG,JPEG,PNG}', GLOB_BRACE);
     $processedCount = 0;
+    $skippedCount = 0;
     
     writeLog("Imágenes encontradas: " . count($images));
     
     foreach ($images as $imagePath) {
         try {
+            $fileName = basename($imagePath);
+            
+            // Solo procesar imágenes que empiezan con "LP_" (License Plate)
+            // Ignorar las que empiezan con "VH_" (Vehicle)
+            if (strpos($fileName, 'VH_') === 0) {
+                writeLog("⏭ OMITIDO: $fileName (imagen de vehículo, solo procesamos placas)");
+                // Eliminar archivo VH_ para no acumular
+                unlink($imagePath);
+                $skippedCount++;
+                continue;
+            }
+            
             processImage($imagePath, $db);
             $processedCount++;
         } catch (Exception $e) {
@@ -90,6 +103,7 @@ try {
     }
     
     writeLog("Imágenes procesadas exitosamente: $processedCount");
+    writeLog("Imágenes de vehículo omitidas (VH_): $skippedCount");
     writeLog("========== FIN DE PROCESAMIENTO ==========\n");
     
 } catch (PDOException $e) {

@@ -115,7 +115,7 @@
                                             <i class="fas fa-<?php echo $access['access_type'] === 'entry' ? 'sign-in-alt text-green-600' : 'sign-out-alt text-orange-600'; ?>"></i>
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($access['name']); ?></p>
+                                            <p class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($access['name'] ?? 'Sin nombre'); ?></p>
                                             <p class="text-xs text-gray-500">
                                                 <?php echo ucfirst($access['log_type']); ?> - 
                                                 <?php echo date('H:i:s', strtotime($access['timestamp'])); ?>

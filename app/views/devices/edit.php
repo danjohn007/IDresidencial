@@ -42,10 +42,23 @@
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Device ID <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" name="device_id" required 
+                                       value="<?php echo htmlspecialchars($device['device_id'] ?? ''); ?>"
+                                       placeholder="shellyswitch25-XXXXXXXXXXXX"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Para Shelly: Encuentra el Device ID en la app o web del dispositivo
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Nombre <span class="text-red-500">*</span>
                                 </label>
                                 <input type="text" name="device_name" required 
-                                       value="<?php echo htmlspecialchars($device['device_name']); ?>"
+                                       value="<?php echo htmlspecialchars($device['device_name'] ?? ''); ?>"
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             </div>
                             
@@ -56,7 +69,7 @@
                                             Dirección IP <span class="text-red-500">*</span>
                                         </label>
                                         <input type="text" name="ip_address" required 
-                                               value="<?php echo htmlspecialchars($device['ip_address']); ?>"
+                                               value="<?php echo htmlspecialchars($device['ip_address'] ?? ''); ?>"
                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     </div>
                                     
@@ -65,7 +78,7 @@
                                             Puerto <span class="text-red-500">*</span>
                                         </label>
                                         <input type="number" name="port" required 
-                                               value="<?php echo $device['port']; ?>"
+                                               value="<?php echo $device['port'] ?? 80; ?>"
                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     </div>
                                 </div>
@@ -75,7 +88,7 @@
                                         Usuario <span class="text-red-500">*</span>
                                     </label>
                                     <input type="text" name="username" required 
-                                           value="<?php echo htmlspecialchars($device['username']); ?>"
+                                           value="<?php echo htmlspecialchars($device['username'] ?? ''); ?>"
                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 
@@ -105,7 +118,7 @@
                                         Token de Autenticación <span class="text-red-500">*</span>
                                     </label>
                                     <input type="text" name="auth_token" required 
-                                           value="<?php echo htmlspecialchars($device['auth_token']); ?>"
+                                           value="<?php echo htmlspecialchars($device['auth_token'] ?? ''); ?>"
                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 
@@ -114,7 +127,7 @@
                                         Servidor Cloud
                                     </label>
                                     <input type="text" name="cloud_server" 
-                                           value="<?php echo htmlspecialchars($device['cloud_server']); ?>"
+                                           value="<?php echo htmlspecialchars($device['cloud_server'] ?? ''); ?>"
                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 
@@ -123,7 +136,7 @@
                                         Área
                                     </label>
                                     <input type="text" name="area" 
-                                           value="<?php echo htmlspecialchars($device['area']); ?>"
+                                           value="<?php echo htmlspecialchars($device['area'] ?? ''); ?>"
                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 
@@ -161,7 +174,7 @@
                                             Duración Pulso (ms)
                                         </label>
                                         <input type="number" name="pulse_duration" 
-                                               value="<?php echo $device['pulse_duration']; ?>"
+                                               value="<?php echo $device['pulse_duration'] ?? 1000; ?>"
                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                                     </div>
                                     
@@ -170,7 +183,7 @@
                                             Tiempo de Apertura (seg)
                                         </label>
                                         <input type="number" name="open_time" 
-                                               value="<?php echo $device['open_time']; ?>"
+                                               value="<?php echo $device['open_time'] ?? 5; ?>"
                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                                     </div>
                                 </div>
@@ -199,7 +212,7 @@
                                     Ubicación
                                 </label>
                                 <input type="text" name="location" 
-                                       value="<?php echo htmlspecialchars($device['location']); ?>"
+                                       value="<?php echo htmlspecialchars($device['location'] ?? ''); ?>"
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             </div>
                             

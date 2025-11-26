@@ -25,7 +25,7 @@ class AccessLog {
             $data['access_type'],
             $data['access_method'],
             $data['property_id'] ?? null,
-            $data['name'],
+            $data['name'] ?? null,
             $data['vehicle_plate'] ?? null,
             $data['guard_id'] ?? null,
             $data['notes'] ?? null
