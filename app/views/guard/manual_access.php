@@ -332,7 +332,16 @@ document.getElementById('manualAccessForm').addEventListener('submit', function(
             console.log('✅ JSON parseado:', data);
             
             if (data.success) {
-                alert('✅ Acceso registrado exitosamente');
+                let message = '✅ Acceso registrado exitosamente';
+                
+                // Agregar información del dispositivo si se activó
+                if (data.device_activated) {
+                    message += '\n' + data.device_message;
+                } else if (data.access_type === 'entry' && data.device_message) {
+                    message += '\n⚠️ ' + data.device_message;
+                }
+                
+                alert(message);
                 location.reload();
             } else {
                 alert('❌ Error: ' + data.message);

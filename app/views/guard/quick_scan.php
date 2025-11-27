@@ -167,11 +167,23 @@ function registerEntry(visitId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('✅ Entrada registrada exitosamente');
+            let message = '✅ Entrada registrada exitosamente';
+            
+            // Agregar información del dispositivo si se activó
+            if (data.device_activated) {
+                message += '\n' + data.device_message;
+            } else if (data.device_message) {
+                message += '\n⚠️ ' + data.device_message;
+            }
+            
+            alert(message);
             location.reload();
         } else {
             alert('❌ Error: ' + data.message);
         }
+    })
+    .catch(error => {
+        alert('❌ Error de conexión: ' + error.message);
     });
 }
 </script>

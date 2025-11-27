@@ -260,10 +260,22 @@ class GuardController extends Controller {
             
             // Registrar el acceso
             if ($this->accessLogModel->create($accessData)) {
+                // Intentar activar dispositivo automáticamente (solo para entradas)
+                $deviceActivated = false;
+                $deviceMessage = '';
+                
+                if ($accessType === 'entry') {
+                    $deviceResult = $this->activateAccessDevice($propertyId);
+                    $deviceActivated = $deviceResult['activated'];
+                    $deviceMessage = $deviceResult['message'];
+                }
+                
                 echo json_encode([
                     'success' => true, 
                     'message' => 'Acceso registrado exitosamente',
-                    'access_type' => $accessType
+                    'access_type' => $accessType,
+                    'device_activated' => $deviceActivated,
+                    'device_message' => $deviceMessage
                 ]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Error al registrar el acceso']);
@@ -437,5 +449,232 @@ class GuardController extends Controller {
         } catch (Exception $e) {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
+    }
+    
+    /**
+     * Activar dispositivo de acceso automáticamente
+     */
+    private function activateAccessDevice($propertyId = null) {
+        try {
+            $db = Database::getInstance()->getConnection();
+            
+            // Buscar dispositivo activo y habilitado
+            // Si hay propertyId, buscar por sección de la propiedad, sino usar dispositivo por defecto
+            if ($propertyId) {
+                $stmt = $db->prepare("
+                    SELECT d.* 
+                    FROM access_devices d
+                    INNER JOIN properties p ON d.branch = p.section
+                    WHERE p.id = ? 
+                      AND d.enabled = 1 
+                      AND d.status = 'online'
+                    ORDER BY d.id DESC
+                    LIMIT 1
+                ");
+                $stmt->execute([$propertyId]);
+                $device = $stmt->fetch();
+                
+                // Si no encuentra por sección, buscar dispositivo general
+                if (!$device) {
+                    $stmt = $db->query("
+                        SELECT * FROM access_devices 
+                        WHERE enabled = 1 
+                          AND status = 'online'
+                          AND (branch IS NULL OR branch = '')
+                        ORDER BY id DESC
+                        LIMIT 1
+                    ");
+                    $device = $stmt->fetch();
+                }
+            } else {
+                // Sin propertyId, usar dispositivo general
+                $stmt = $db->query("
+                    SELECT * FROM access_devices 
+                    WHERE enabled = 1 
+                      AND status = 'online'
+                    ORDER BY id DESC
+                    LIMIT 1
+                ");
+                $device = $stmt->fetch();
+            }
+            
+            if (!$device) {
+                return [
+                    'activated' => false,
+                    'message' => 'No hay dispositivos disponibles'
+                ];
+            }
+            
+            // Activar el dispositivo según su tipo
+            if ($device['device_type'] === 'shelly') {
+                $result = $this->activateShellyDevice($device);
+            } elseif ($device['device_type'] === 'hikvision') {
+                $result = $this->activateHikvisionDevice($device);
+            } else {
+                return [
+                    'activated' => false,
+                    'message' => 'Tipo de dispositivo no soportado'
+                ];
+            }
+            
+            // Registrar acción en logs
+            $deviceModel = $this->model('Device');
+            $deviceModel->logAction(
+                $device['id'], 
+                'open', 
+                $result['success'], 
+                $result['success'] ? null : $result['message'],
+                0
+            );
+            
+            return [
+                'activated' => $result['success'],
+                'message' => $result['success'] 
+                    ? "✅ {$device['device_name']} activado" 
+                    : "❌ Error: {$result['message']}"
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'activated' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Activar dispositivo Shelly
+     */
+    private function activateShellyDevice($device) {
+        $authToken = $device['auth_token'];
+        $deviceId = $device['device_id'];
+        $cloudServer = $device['cloud_server'] ?: 'shelly-208-eu.shelly.cloud';
+        $outputChannel = $device['output_channel'] ?? 0;
+        $pulseDuration = $device['pulse_duration'] ?? 1000;
+        $inverted = $device['inverted'] ?? 0;
+        
+        if (empty($authToken) || empty($deviceId)) {
+            return ['success' => false, 'message' => 'Falta auth_token o device_id'];
+        }
+        
+        // Limpiar el servidor
+        $cloudServer = trim($cloudServer);
+        $cloudServer = preg_replace('/:\d+.*$/', '', $cloudServer);
+        $cloudServer = filter_var($cloudServer, FILTER_SANITIZE_URL);
+        
+        $turnOn = !$inverted;
+        $url = "https://{$cloudServer}/device/relay/control";
+        
+        $postData = [
+            'channel' => $outputChannel,
+            'turn' => $turnOn ? 'on' : 'off',
+            'id' => $deviceId,
+            'auth_key' => $authToken
+        ];
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        
+        if ($curlError) {
+            return ['success' => false, 'message' => 'Error de conexión: ' . $curlError];
+        }
+        
+        if ($httpCode !== 200) {
+            return ['success' => false, 'message' => "HTTP Error {$httpCode}"];
+        }
+        
+        $data = json_decode($response, true);
+        
+        if (!$data || !isset($data['isok'])) {
+            return ['success' => false, 'message' => 'Respuesta inválida del servidor'];
+        }
+        
+        if (!$data['isok']) {
+            return ['success' => false, 'message' => 'Shelly Cloud error'];
+        }
+        
+        // Si se configuró duración de pulso, esperar y apagar
+        if ($pulseDuration > 0 && $device['simultaneous'] == 0) {
+            usleep($pulseDuration * 1000);
+            
+            $offData = [
+                'channel' => $outputChannel,
+                'turn' => $turnOn ? 'off' : 'on',
+                'id' => $deviceId,
+                'auth_key' => $authToken
+            ];
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($offData));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_exec($ch);
+            curl_close($ch);
+        }
+        
+        return ['success' => true, 'message' => 'Dispositivo activado'];
+    }
+    
+    /**
+     * Activar dispositivo HikVision
+     */
+    private function activateHikvisionDevice($device) {
+        $ip = $device['ip_address'];
+        $port = $device['port'] ?? 80;
+        $username = $device['username'];
+        $password = $device['password'];
+        $doorNumber = $device['door_number'] ?? 1;
+        
+        if (empty($ip) || empty($username) || empty($password)) {
+            return ['success' => false, 'message' => 'Falta configuración de HikVision'];
+        }
+        
+        $url = "http://{$ip}:{$port}/ISAPI/AccessControl/RemoteControl/door/{$doorNumber}";
+        
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>' .
+               '<RemoteControlDoor>' .
+               '<cmd>open</cmd>' .
+               '</RemoteControlDoor>';
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
+        curl_setopt($ch, CURLOPT_USERPWD, "{$username}:{$password}");
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $xml);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/xml',
+            'Content-Length: ' . strlen($xml)
+        ]);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+        
+        if ($curlError) {
+            return ['success' => false, 'message' => 'Error de conexión: ' . $curlError];
+        }
+        
+        if ($httpCode !== 200) {
+            return ['success' => false, 'message' => "HTTP Error {$httpCode}"];
+        }
+        
+        return ['success' => true, 'message' => 'Puerta abierta'];
     }
 }
