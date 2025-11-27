@@ -5,8 +5,8 @@
 
 // Configuración de la base de datos
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'janetzy_residencial');
-define('DB_USER', 'janetzy_residencial');
+define('DB_NAME', 'residenc_residencial');
+define('DB_USER', 'residenc_residencial');
 define('DB_PASS', 'Danjohn007!');
 define('DB_CHARSET', 'utf8mb4');
 
