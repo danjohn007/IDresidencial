@@ -79,15 +79,30 @@ class DashboardController extends Controller {
             $stmt->execute([$dateFrom, $dateTo]);
             $chartsData['financialMovements'] = $stmt->fetchAll();
             
-            // Chart 2: Visitas por día
+            // Chart 2: Visitas por día (incluye tanto pases solicitados como visitas registradas)
             $stmt = $db->prepare("
-                SELECT DATE(created_at) as date, COUNT(*) as total
-                FROM visits
-                WHERE DATE(created_at) BETWEEN ? AND ?
-                GROUP BY DATE(created_at)
-                ORDER BY date
+                SELECT visit_date as date, SUM(total) as total
+                FROM (
+                    -- Pases solicitados por residentes
+                    SELECT DATE(created_at) as visit_date, COUNT(*) as total
+                    FROM visits
+                    WHERE DATE(created_at) BETWEEN ? AND ?
+                    GROUP BY DATE(created_at)
+                    
+                    UNION ALL
+                    
+                    -- Visitas registradas con entrada
+                    SELECT DATE(entry_time) as visit_date, COUNT(*) as total
+                    FROM visits
+                    WHERE entry_time IS NOT NULL 
+                      AND DATE(entry_time) BETWEEN ? AND ?
+                      AND DATE(entry_time) != DATE(created_at)
+                    GROUP BY DATE(entry_time)
+                ) as combined_visits
+                GROUP BY visit_date
+                ORDER BY visit_date
             ");
-            $stmt->execute([$dateFrom, $dateTo]);
+            $stmt->execute([$dateFrom, $dateTo, $dateFrom, $dateTo]);
             $chartsData['dailyVisits'] = $stmt->fetchAll();
             
             // Chart 3: Mantenimientos por categoría

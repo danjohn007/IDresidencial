@@ -41,14 +41,43 @@ class MaintenanceController extends Controller {
     public function create() {
         $data = [
             'title' => 'Reportar Incidencia',
-            'error' => ''
+            'error' => '',
+            'resident' => null
         ];
         
+        // Load resident information for view
+        $resident = $this->residentModel->findByUserId($_SESSION['user_id']);
+        $data['resident'] = $resident;
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Re-check resident on POST
             $resident = $this->residentModel->findByUserId($_SESSION['user_id']);
             
             if (!$resident) {
-                $data['error'] = 'No se encontró información de residente';
+                // If user is not a resident, still allow report with null resident_id and property_id
+                // This allows administrators and guards to create reports for common areas
+                $reportData = [
+                    'resident_id' => null,
+                    'property_id' => null,
+                    'category' => $this->post('category'),
+                    'title' => $this->post('title'),
+                    'description' => $this->post('description'),
+                    'priority' => $this->post('priority', 'media'),
+                    'location' => $this->post('location'),
+                    'status' => 'pendiente'
+                ];
+                
+                // Allow admins and guards to create reports
+                if (in_array($_SESSION['role'], ['superadmin', 'administrador', 'guardia'])) {
+                    if ($this->maintenanceModel->create($reportData)) {
+                        $_SESSION['success_message'] = 'Reporte creado exitosamente';
+                        $this->redirect('maintenance');
+                    } else {
+                        $data['error'] = 'Error al crear el reporte';
+                    }
+                } else {
+                    $data['error'] = 'No se encontró información de residente. Por favor contacte al administrador para vincular su cuenta a una propiedad.';
+                }
             } else {
                 $reportData = [
                     'resident_id' => $resident['id'],
