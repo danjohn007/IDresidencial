@@ -37,10 +37,10 @@ ALTER TABLE visits
 -- Add indexes for better performance on reports
 -- ============================================
 
--- Index for daily visits query performance
+-- Index for daily visits query performance (on raw columns, not functions)
 ALTER TABLE visits 
-    ADD INDEX IF NOT EXISTS idx_visits_entry_date (DATE(entry_time)),
-    ADD INDEX IF NOT EXISTS idx_visits_created_date (DATE(created_at));
+    ADD INDEX IF NOT EXISTS idx_visits_entry_time (entry_time),
+    ADD INDEX IF NOT EXISTS idx_visits_created_at (created_at);
 
 -- Index for maintenance fees query performance  
 ALTER TABLE maintenance_fees
@@ -127,7 +127,7 @@ BEGIN
     
     -- Calculate period and due date
     SET v_period = DATE_FORMAT(CURDATE(), '%Y-%m');
-    SET v_due_date = DATE_FORMAT(LAST_DAY(CURDATE()), '%Y-%m-10');
+    SET v_due_date = DATE_FORMAT(CURDATE(), '%Y-%m-10');
     
     -- If due date is in the past for current month, set it to next month
     IF v_due_date < CURDATE() THEN
