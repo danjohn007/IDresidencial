@@ -180,12 +180,20 @@ class UsersController extends Controller {
     /**
      * Ver detalles de usuario (public method)
      */
-    public function viewDetails($id) {
+    public function viewDetails($id = null) {
+        // If no ID provided, redirect to users list
+        if ($id === null) {
+            $_SESSION['error_message'] = 'ID de usuario no especificado';
+            $this->redirect('users');
+            return;
+        }
+        
         $user = $this->userModel->findById($id);
         
         if (!$user) {
             $_SESSION['error_message'] = 'Usuario no encontrado';
             $this->redirect('users');
+            return;
         }
         
         // Obtener actividad reciente

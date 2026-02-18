@@ -150,17 +150,17 @@
                                         <div class="flex items-start border-l-4 border-blue-500 pl-4 py-2">
                                             <div class="flex-1">
                                                 <p class="text-sm font-semibold text-gray-900">
-                                                    <?php echo htmlspecialchars($log['action_type']); ?>
+                                                    <?php echo htmlspecialchars($log['action'] ?? ''); ?>
                                                 </p>
                                                 <p class="text-sm text-gray-600 mt-1">
-                                                    <?php echo htmlspecialchars($log['description']); ?>
+                                                    <?php echo htmlspecialchars($log['description'] ?? ''); ?>
                                                 </p>
-                                                <?php if (!empty($log['entity_type'])): ?>
+                                                <?php if (!empty($log['table_name'])): ?>
                                                     <p class="text-xs text-gray-500 mt-1">
-                                                        <span class="font-semibold">Entidad:</span> 
-                                                        <?php echo htmlspecialchars($log['entity_type']); ?>
-                                                        <?php if (!empty($log['entity_id'])): ?>
-                                                            #<?php echo htmlspecialchars($log['entity_id']); ?>
+                                                        <span class="font-semibold">Tabla:</span> 
+                                                        <?php echo htmlspecialchars($log['table_name']); ?>
+                                                        <?php if (!empty($log['record_id'])): ?>
+                                                            #<?php echo htmlspecialchars($log['record_id']); ?>
                                                         <?php endif; ?>
                                                     </p>
                                                 <?php endif; ?>
