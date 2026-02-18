@@ -337,7 +337,7 @@ class ResidentsController extends Controller {
             SELECT COUNT(*) as total
             FROM maintenance_fees mf
             JOIN properties p ON mf.property_id = p.id
-            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
             LEFT JOIN users u ON r.user_id = u.id
             $whereClause
         ");
@@ -345,16 +345,24 @@ class ResidentsController extends Controller {
         $total = $countStmt->fetch()['total'];
         $total_pages = ceil($total / $per_page);
         
-        // Get paginated results
+        // Get paginated results - showing all maintenance fees with resident info
         $params[] = $per_page;
         $params[] = $offset;
         
         $stmt = $this->db->prepare("
             SELECT mf.*, p.property_number, p.section,
-                   u.first_name, u.last_name, u.phone
+                   COALESCE(u.first_name, 'Sin asignar') as first_name, 
+                   COALESCE(u.last_name, '') as last_name, 
+                   u.phone,
+                   r.id as resident_id,
+                   -- Update overdue status if past due date
+                   CASE 
+                       WHEN mf.status = 'pending' AND mf.due_date < CURDATE() THEN 'overdue'
+                       ELSE mf.status
+                   END as current_status
             FROM maintenance_fees mf
             JOIN properties p ON mf.property_id = p.id
-            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
             LEFT JOIN users u ON r.user_id = u.id
             $whereClause
             ORDER BY mf.due_date DESC, p.property_number
@@ -363,6 +371,14 @@ class ResidentsController extends Controller {
         $stmt->execute($params);
         $fees = $stmt->fetchAll();
         
+        // Update overdue fees in the database
+        $updateStmt = $this->db->prepare("
+            UPDATE maintenance_fees 
+            SET status = 'overdue' 
+            WHERE status = 'pending' AND due_date < CURDATE()
+        ");
+        $updateStmt->execute();
+        
         // Calculate statistics (for all results, not just current page)
         // Use the same where clause but without LIMIT/OFFSET
         $statsParams = array_slice($params, 0, -2); // Remove LIMIT and OFFSET params
@@ -370,20 +386,72 @@ class ResidentsController extends Controller {
         $statsStmt = $this->db->prepare("
             SELECT 
                 COUNT(*) as total,
-                SUM(CASE WHEN mf.status = 'pending' THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN mf.status = 'overdue' THEN 1 ELSE 0 END) as overdue,
+                SUM(CASE WHEN mf.status = 'pending' AND mf.due_date >= CURDATE() THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN mf.status = 'pending' AND mf.due_date < CURDATE() THEN 1 
+                         WHEN mf.status = 'overdue' THEN 1 ELSE 0 END) as overdue,
                 SUM(CASE WHEN mf.status = 'paid' THEN 1 ELSE 0 END) as paid,
                 SUM(mf.amount) as total_amount,
                 SUM(CASE WHEN mf.status = 'paid' THEN mf.amount ELSE 0 END) as paid_amount,
-                SUM(CASE WHEN mf.status IN ('pending', 'overdue') THEN mf.amount ELSE 0 END) as pending_amount
+                SUM(CASE WHEN mf.status = 'pending' OR mf.status = 'overdue' THEN mf.amount ELSE 0 END) as pending_amount
             FROM maintenance_fees mf
             JOIN properties p ON mf.property_id = p.id
-            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
             LEFT JOIN users u ON r.user_id = u.id
             $whereClause
         ");
         $statsStmt->execute($statsParams);
         $stats = $statsStmt->fetch();
+        
+        // Check for properties that need fees generated (active residents without current period fee)
+        $currentPeriod = date('Y-m');
+        $checkStmt = $this->db->prepare("
+            SELECT p.id, p.property_number
+            FROM properties p
+            INNER JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
+            WHERE p.status = 'ocupada'
+              AND NOT EXISTS (
+                  SELECT 1 FROM maintenance_fees mf 
+                  WHERE mf.property_id = p.id AND mf.period = ?
+              )
+            LIMIT 10
+        ");
+        $checkStmt->execute([$currentPeriod]);
+        $propertiesNeedingFees = $checkStmt->fetchAll();
+        
+        // Optionally auto-generate fees for these properties
+        if (!empty($propertiesNeedingFees)) {
+            $defaultAmount = 1500.00; // Default maintenance fee
+            $dueDate = date('Y-m-10'); // 10th of current month
+            
+            foreach ($propertiesNeedingFees as $property) {
+                // Get membership amount if exists
+                $amountStmt = $this->db->prepare("
+                    SELECT mp.monthly_cost
+                    FROM memberships m
+                    INNER JOIN membership_plans mp ON m.membership_plan_id = mp.id
+                    INNER JOIN residents r ON r.id = m.resident_id
+                    WHERE r.property_id = ? AND m.status = 'active' AND r.is_primary = 1
+                    LIMIT 1
+                ");
+                $amountStmt->execute([$property['id']]);
+                $membershipAmount = $amountStmt->fetch();
+                $amount = $membershipAmount ? $membershipAmount['monthly_cost'] : $defaultAmount;
+                
+                // Insert fee
+                $insertStmt = $this->db->prepare("
+                    INSERT INTO maintenance_fees (property_id, period, amount, due_date, status)
+                    VALUES (?, ?, ?, ?, 'pending')
+                ");
+                $insertStmt->execute([$property['id'], $currentPeriod, $amount, $dueDate]);
+            }
+            
+            // If fees were generated, redirect to refresh the page
+            if (!empty($propertiesNeedingFees)) {
+                $_SESSION['success_message'] = 'Se generaron ' . count($propertiesNeedingFees) . ' nuevas cuotas de mantenimiento.';
+                $this->redirect('residents/payments?' . http_build_query($filters));
+                return;
+            }
+        }
         
         $data = [
             'title' => 'Pagos y Cuotas',

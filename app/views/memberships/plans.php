@@ -12,10 +12,27 @@
                 <p class="text-gray-600 mt-1">Catálogo de planes disponibles</p>
             </div>
 
-            <div class="mb-4">
+            <?php if (isset($_SESSION['success_message'])): ?>
+                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                    <?php echo $_SESSION['success_message']; unset($_SESSION['success_message']); ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (isset($_SESSION['error_message'])): ?>
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                    <?php echo $_SESSION['error_message']; unset($_SESSION['error_message']); ?>
+                </div>
+            <?php endif; ?>
+
+            <div class="mb-4 flex justify-between items-center">
                 <a href="<?php echo BASE_URL; ?>/memberships" 
                    class="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
                     <i class="fas fa-arrow-left mr-2"></i> Volver a Membresías
+                </a>
+                
+                <a href="<?php echo BASE_URL; ?>/memberships/createPlan" 
+                   class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-plus mr-2"></i> Nuevo Plan
                 </a>
             </div>
 
@@ -61,6 +78,23 @@
                                         <i class="fas fa-times-circle mr-1"></i> Inactivo
                                     </span>
                                 <?php endif; ?>
+                            </div>
+                            
+                            <div class="flex space-x-2 mt-4">
+                                <a href="<?php echo BASE_URL; ?>/memberships/editPlan/<?php echo $plan['id']; ?>" 
+                                   class="flex-1 text-center px-3 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm">
+                                    <i class="fas fa-edit mr-1"></i> Editar
+                                </a>
+                                <a href="<?php echo BASE_URL; ?>/memberships/togglePlanStatus/<?php echo $plan['id']; ?>" 
+                                   class="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
+                                   onclick="return confirm('¿Está seguro de cambiar el estado?')">
+                                    <i class="fas fa-toggle-on"></i>
+                                </a>
+                                <a href="<?php echo BASE_URL; ?>/memberships/deletePlan/<?php echo $plan['id']; ?>" 
+                                   class="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                   onclick="return confirm('¿Está seguro de eliminar este plan? Esta acción no se puede deshacer.')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
                             </div>
                         </div>
                     </div>

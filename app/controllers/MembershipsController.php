@@ -52,6 +52,112 @@ class MembershipsController extends Controller {
     }
     
     /**
+     * Crear plan de membresía
+     */
+    public function createPlan() {
+        $data = [
+            'title' => 'Nuevo Plan de Membresía',
+            'error' => ''
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $benefitsInput = $this->post('benefits');
+            $benefits = array_filter(array_map('trim', explode("\n", $benefitsInput)));
+            
+            $planData = [
+                'name' => $this->post('name'),
+                'description' => $this->post('description'),
+                'monthly_cost' => $this->post('monthly_cost'),
+                'benefits' => $benefits,
+                'is_active' => $this->post('is_active', 1)
+            ];
+            
+            if (empty($planData['name']) || empty($planData['monthly_cost'])) {
+                $data['error'] = 'El nombre y el costo mensual son requeridos';
+            } else {
+                if ($this->membershipModel->createPlan($planData)) {
+                    $_SESSION['success_message'] = 'Plan de membresía creado exitosamente';
+                    $this->redirect('memberships/plans');
+                } else {
+                    $data['error'] = 'Error al crear el plan de membresía';
+                }
+            }
+        }
+        
+        $this->view('memberships/createPlan', $data);
+    }
+    
+    /**
+     * Editar plan de membresía
+     */
+    public function editPlan($id) {
+        $plan = $this->membershipModel->getPlanById($id);
+        
+        if (!$plan) {
+            $_SESSION['error_message'] = 'Plan de membresía no encontrado';
+            $this->redirect('memberships/plans');
+        }
+        
+        $data = [
+            'title' => 'Editar Plan de Membresía',
+            'plan' => $plan,
+            'error' => ''
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $benefitsInput = $this->post('benefits');
+            $benefits = array_filter(array_map('trim', explode("\n", $benefitsInput)));
+            
+            $planData = [
+                'name' => $this->post('name'),
+                'description' => $this->post('description'),
+                'monthly_cost' => $this->post('monthly_cost'),
+                'benefits' => $benefits,
+                'is_active' => $this->post('is_active', 1)
+            ];
+            
+            if (empty($planData['name']) || empty($planData['monthly_cost'])) {
+                $data['error'] = 'El nombre y el costo mensual son requeridos';
+            } else {
+                if ($this->membershipModel->updatePlan($id, $planData)) {
+                    $_SESSION['success_message'] = 'Plan de membresía actualizado exitosamente';
+                    $this->redirect('memberships/plans');
+                } else {
+                    $data['error'] = 'Error al actualizar el plan de membresía';
+                }
+            }
+        }
+        
+        $this->view('memberships/editPlan', $data);
+    }
+    
+    /**
+     * Cambiar estado del plan
+     */
+    public function togglePlanStatus($id) {
+        if ($this->membershipModel->togglePlanStatus($id)) {
+            $_SESSION['success_message'] = 'Estado del plan actualizado exitosamente';
+        } else {
+            $_SESSION['error_message'] = 'Error al actualizar el estado del plan';
+        }
+        
+        $this->redirect('memberships/plans');
+    }
+    
+    /**
+     * Eliminar plan de membresía
+     */
+    public function deletePlan($id) {
+        if ($this->membershipModel->deletePlan($id)) {
+            $_SESSION['success_message'] = 'Plan de membresía eliminado exitosamente';
+        } else {
+            $_SESSION['error_message'] = 'Error al eliminar el plan. Puede que tenga membresías activas asociadas.';
+        }
+        
+        $this->redirect('memberships/plans');
+    }
+    
+    /**
      * Crear nueva membresía
      */
     public function create() {

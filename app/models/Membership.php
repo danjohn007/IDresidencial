@@ -200,4 +200,131 @@ class Membership {
         $stmt->execute([$membershipId]);
         return $stmt->fetchAll();
     }
+    
+    /**
+     * Crear un nuevo plan de membresía
+     */
+    public function createPlan($data) {
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO membership_plans 
+                (name, description, monthly_cost, benefits, is_active)
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            
+            $benefits = is_array($data['benefits']) ? json_encode($data['benefits']) : $data['benefits'];
+            
+            $result = $stmt->execute([
+                $data['name'],
+                $data['description'] ?? null,
+                $data['monthly_cost'],
+                $benefits,
+                $data['is_active'] ?? 1
+            ]);
+            
+            if ($result && class_exists('AuditController')) {
+                AuditController::log('create', 'Plan de membresía creado: ' . $data['name'], 'membership_plans', $this->db->lastInsertId());
+            }
+            
+            return $result ? $this->db->lastInsertId() : false;
+        } catch (Exception $e) {
+            error_log("Error creating membership plan: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Actualizar un plan de membresía
+     */
+    public function updatePlan($id, $data) {
+        try {
+            $stmt = $this->db->prepare("
+                UPDATE membership_plans 
+                SET name = ?,
+                    description = ?,
+                    monthly_cost = ?,
+                    benefits = ?,
+                    is_active = ?
+                WHERE id = ?
+            ");
+            
+            $benefits = is_array($data['benefits']) ? json_encode($data['benefits']) : $data['benefits'];
+            
+            $result = $stmt->execute([
+                $data['name'],
+                $data['description'] ?? null,
+                $data['monthly_cost'],
+                $benefits,
+                $data['is_active'] ?? 1,
+                $id
+            ]);
+            
+            if ($result && class_exists('AuditController')) {
+                AuditController::log('update', 'Plan de membresía actualizado: ' . $data['name'], 'membership_plans', $id);
+            }
+            
+            return $result;
+        } catch (Exception $e) {
+            error_log("Error updating membership plan: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Eliminar un plan de membresía
+     */
+    public function deletePlan($id) {
+        try {
+            // Check if plan has active memberships
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as total FROM memberships 
+                WHERE membership_plan_id = ? AND status = 'active'
+            ");
+            $stmt->execute([$id]);
+            $count = $stmt->fetch()['total'];
+            
+            if ($count > 0) {
+                return false; // Cannot delete plan with active memberships
+            }
+            
+            $stmt = $this->db->prepare("DELETE FROM membership_plans WHERE id = ?");
+            $result = $stmt->execute([$id]);
+            
+            if ($result && class_exists('AuditController')) {
+                AuditController::log('delete', 'Plan de membresía eliminado', 'membership_plans', $id);
+            }
+            
+            return $result;
+        } catch (Exception $e) {
+            error_log("Error deleting membership plan: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Cambiar estado de un plan de membresía
+     */
+    public function togglePlanStatus($id) {
+        try {
+            $plan = $this->getPlanById($id);
+            if (!$plan) {
+                return false;
+            }
+            
+            $newStatus = $plan['is_active'] ? 0 : 1;
+            
+            $stmt = $this->db->prepare("UPDATE membership_plans SET is_active = ? WHERE id = ?");
+            $result = $stmt->execute([$newStatus, $id]);
+            
+            if ($result && class_exists('AuditController')) {
+                $status = $newStatus ? 'activo' : 'inactivo';
+                AuditController::log('update', 'Estado del plan de membresía cambiado a: ' . $status, 'membership_plans', $id);
+            }
+            
+            return $result;
+        } catch (Exception $e) {
+            error_log("Error toggling membership plan status: " . $e->getMessage());
+            return false;
+        }
+    }
 }
