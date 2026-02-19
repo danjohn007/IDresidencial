@@ -332,6 +332,14 @@ class ResidentsController extends Controller {
         
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
+        // Update overdue fees in the database FIRST
+        $updateStmt = $this->db->prepare("
+            UPDATE maintenance_fees 
+            SET status = 'overdue' 
+            WHERE status = 'pending' AND due_date < CURDATE()
+        ");
+        $updateStmt->execute();
+        
         // Get total count for pagination
         $countStmt = $this->db->prepare("
             SELECT COUNT(*) as total
@@ -354,12 +362,7 @@ class ResidentsController extends Controller {
                    COALESCE(u.first_name, 'Sin asignar') as first_name, 
                    COALESCE(u.last_name, '') as last_name, 
                    u.phone,
-                   r.id as resident_id,
-                   -- Update overdue status if past due date
-                   CASE 
-                       WHEN mf.status = 'pending' AND mf.due_date < CURDATE() THEN 'overdue'
-                       ELSE mf.status
-                   END as current_status
+                   r.id as resident_id
             FROM maintenance_fees mf
             JOIN properties p ON mf.property_id = p.id
             LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
@@ -370,14 +373,6 @@ class ResidentsController extends Controller {
         ");
         $stmt->execute($params);
         $fees = $stmt->fetchAll();
-        
-        // Update overdue fees in the database
-        $updateStmt = $this->db->prepare("
-            UPDATE maintenance_fees 
-            SET status = 'overdue' 
-            WHERE status = 'pending' AND due_date < CURDATE()
-        ");
-        $updateStmt->execute();
         
         // Calculate statistics (for all results, not just current page)
         // Use the same where clause but without LIMIT/OFFSET
