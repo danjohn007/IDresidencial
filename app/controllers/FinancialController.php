@@ -102,25 +102,45 @@ class FinancialController extends Controller {
             $movementId = $this->financialModel->create($movementData);
             if ($movementId) {
                 // Check if this is a maintenance fee payment
-                $movementType = $this->db->prepare("SELECT name FROM financial_movement_types WHERE id = ?");
+                $movementType = $this->db->prepare("
+                    SELECT name, category 
+                    FROM financial_movement_types 
+                    WHERE id = ?
+                ");
                 $movementType->execute([$movementData['movement_type_id']]);
                 $typeInfo = $movementType->fetch();
                 
-                // If this is a maintenance fee payment and has a property, update the maintenance_fees status
-                if ($typeInfo && stripos($typeInfo['name'], 'mantenimiento') !== false && $movementData['property_id']) {
-                    // Extract period from transaction date (YYYY-MM format)
-                    $period = date('Y-m', strtotime($movementData['transaction_date']));
+                // If this is a maintenance fee payment (income with 'mantenimiento' in name) and has a property
+                if ($typeInfo && 
+                    $movementData['transaction_type'] === 'ingreso' &&
+                    (stripos($typeInfo['name'], 'mantenimiento') !== false || stripos($typeInfo['name'], 'cuota') !== false) && 
+                    $movementData['property_id']) {
                     
-                    // Find unpaid maintenance fee for this property and period
+                    // Try to find the oldest unpaid maintenance fee for this property
+                    // This allows paying multiple months in order
                     $feeStmt = $this->db->prepare("
-                        SELECT id FROM maintenance_fees 
+                        SELECT id, period, amount FROM maintenance_fees 
                         WHERE property_id = ? 
-                        AND period = ? 
                         AND status IN ('pending', 'overdue')
+                        AND amount = ?
+                        ORDER BY due_date ASC
                         LIMIT 1
                     ");
-                    $feeStmt->execute([$movementData['property_id'], $period]);
+                    $feeStmt->execute([$movementData['property_id'], $movementData['amount']]);
                     $fee = $feeStmt->fetch();
+                    
+                    // If no exact amount match, try to find any unpaid fee for this property
+                    if (!$fee) {
+                        $feeStmt = $this->db->prepare("
+                            SELECT id, period, amount FROM maintenance_fees 
+                            WHERE property_id = ? 
+                            AND status IN ('pending', 'overdue')
+                            ORDER BY due_date ASC
+                            LIMIT 1
+                        ");
+                        $feeStmt->execute([$movementData['property_id']]);
+                        $fee = $feeStmt->fetch();
+                    }
                     
                     if ($fee) {
                         // Update the maintenance fee status
