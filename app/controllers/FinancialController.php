@@ -111,6 +111,8 @@ class FinancialController extends Controller {
                 $typeInfo = $movementType->fetch();
                 
                 // If this is a maintenance fee payment (income with 'mantenimiento' in name) and has a property
+                // NOTE: Keyword matching is used here for simplicity. For production, consider adding 
+                // an 'is_maintenance_fee' boolean flag to financial_movement_types table.
                 if ($typeInfo && 
                     $movementData['transaction_type'] === 'ingreso' &&
                     (stripos($typeInfo['name'], 'mantenimiento') !== false || stripos($typeInfo['name'], 'cuota') !== false) && 
@@ -118,11 +120,12 @@ class FinancialController extends Controller {
                     
                     // Try to find the oldest unpaid maintenance fee for this property
                     // This allows paying multiple months in order
+                    // Use a small tolerance for amount comparison to handle floating-point precision
                     $feeStmt = $this->db->prepare("
                         SELECT id, period, amount FROM maintenance_fees 
                         WHERE property_id = ? 
                         AND status IN ('pending', 'overdue')
-                        AND amount = ?
+                        AND ABS(amount - ?) < 0.01
                         ORDER BY due_date ASC
                         LIMIT 1
                     ");

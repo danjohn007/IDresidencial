@@ -52,7 +52,7 @@
                             <p class="text-gray-900"><?php echo !empty($subdivision['city']) ? htmlspecialchars($subdivision['city']) : '<span class="text-gray-400">-</span>'; ?></p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-500 mb-1">Entidad Federativa</label>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Estado</label>
                             <p class="text-gray-900"><?php echo !empty($subdivision['state']) ? htmlspecialchars($subdivision['state']) : '<span class="text-gray-400">-</span>'; ?></p>
                         </div>
                         <div>
