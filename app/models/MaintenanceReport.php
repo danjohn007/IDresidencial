@@ -31,8 +31,8 @@ class MaintenanceReport {
                    p.property_number, p.section,
                    assigned.first_name as assigned_first_name, assigned.last_name as assigned_last_name
             FROM maintenance_reports m
-            JOIN residents r ON m.resident_id = r.id
-            JOIN users u ON r.user_id = u.id
+            LEFT JOIN residents r ON m.resident_id = r.id
+            LEFT JOIN users u ON r.user_id = u.id
             LEFT JOIN properties p ON m.property_id = p.id
             LEFT JOIN users assigned ON m.assigned_to = assigned.id
             WHERE m.id = ?
@@ -64,8 +64,8 @@ class MaintenanceReport {
         
         $sql = "SELECT m.*, u.first_name, u.last_name, p.property_number
                 FROM maintenance_reports m
-                JOIN residents r ON m.resident_id = r.id
-                JOIN users u ON r.user_id = u.id
+                LEFT JOIN residents r ON m.resident_id = r.id
+                LEFT JOIN users u ON r.user_id = u.id
                 LEFT JOIN properties p ON m.property_id = p.id
                 $whereClause
                 ORDER BY 

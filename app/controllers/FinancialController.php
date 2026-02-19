@@ -99,7 +99,56 @@ class FinancialController extends Controller {
                 'notes' => $this->post('notes') ?: null
             ];
             
-            if ($this->financialModel->create($movementData)) {
+            $movementId = $this->financialModel->create($movementData);
+            if ($movementId) {
+                // Check if this is a maintenance fee payment
+                $movementType = $this->db->prepare("SELECT name FROM financial_movement_types WHERE id = ?");
+                $movementType->execute([$movementData['movement_type_id']]);
+                $typeInfo = $movementType->fetch();
+                
+                // If this is a maintenance fee payment and has a property, update the maintenance_fees status
+                if ($typeInfo && stripos($typeInfo['name'], 'mantenimiento') !== false && $movementData['property_id']) {
+                    // Extract period from transaction date (YYYY-MM format)
+                    $period = date('Y-m', strtotime($movementData['transaction_date']));
+                    
+                    // Find unpaid maintenance fee for this property and period
+                    $feeStmt = $this->db->prepare("
+                        SELECT id FROM maintenance_fees 
+                        WHERE property_id = ? 
+                        AND period = ? 
+                        AND status IN ('pending', 'overdue')
+                        LIMIT 1
+                    ");
+                    $feeStmt->execute([$movementData['property_id'], $period]);
+                    $fee = $feeStmt->fetch();
+                    
+                    if ($fee) {
+                        // Update the maintenance fee status
+                        $updateFeeStmt = $this->db->prepare("
+                            UPDATE maintenance_fees 
+                            SET status = 'paid', 
+                                paid_date = ?,
+                                payment_method = ?,
+                                payment_reference = ?
+                            WHERE id = ?
+                        ");
+                        $updateFeeStmt->execute([
+                            $movementData['transaction_date'],
+                            $movementData['payment_method'],
+                            $movementData['payment_reference'],
+                            $fee['id']
+                        ]);
+                        
+                        // Update the financial movement with reference
+                        $updateMovementStmt = $this->db->prepare("
+                            UPDATE financial_movements 
+                            SET reference_type = 'maintenance_fee', reference_id = ?
+                            WHERE id = ?
+                        ");
+                        $updateMovementStmt->execute([$fee['id'], $movementId]);
+                    }
+                }
+                
                 AuditController::log('create', 'Movimiento financiero creado: ' . $movementData['description'], 'financial_movements', null);
                 $_SESSION['success_message'] = 'Movimiento financiero creado exitosamente';
                 $this->redirect('financial');
