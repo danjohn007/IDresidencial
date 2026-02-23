@@ -285,9 +285,9 @@ class ResidentsController extends Controller {
      * Ver estado de cuenta
      */
     public function payments() {
-        // Default to current month date range
+        // Default to current month + next month to show both overdue/current and pending upcoming
         $defaultDateFrom = date('Y-m-01'); // First day of current month
-        $defaultDateTo = date('Y-m-t');     // Last day of current month
+        $defaultDateTo = date('Y-m-t', strtotime('+1 month')); // Last day of next month
         
         $filters = [
             'status' => $this->get('status'),
@@ -397,55 +397,60 @@ class ResidentsController extends Controller {
         $statsStmt->execute($statsParams);
         $stats = $statsStmt->fetch();
         
-        // Check for properties that need fees generated (active residents without current period fee)
+        // Check for properties that need fees generated (active residents without current or next period fee)
         $currentPeriod = date('Y-m');
-        $checkStmt = $this->db->prepare("
-            SELECT p.id, p.property_number
-            FROM properties p
-            INNER JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
-            WHERE p.status = 'ocupada'
-              AND NOT EXISTS (
-                  SELECT 1 FROM maintenance_fees mf 
-                  WHERE mf.property_id = p.id AND mf.period = ?
-              )
-            LIMIT 10
-        ");
-        $checkStmt->execute([$currentPeriod]);
-        $propertiesNeedingFees = $checkStmt->fetchAll();
+        $nextPeriod = date('Y-m', strtotime('+1 month'));
+        $generatedCount = 0;
         
-        // Optionally auto-generate fees for these properties
-        if (!empty($propertiesNeedingFees)) {
-            $defaultAmount = 1500.00; // Default maintenance fee
-            $dueDate = date('Y-m-10'); // 10th of current month
+        foreach ([$currentPeriod, $nextPeriod] as $period) {
+            $checkStmt = $this->db->prepare("
+                SELECT p.id, p.property_number
+                FROM properties p
+                INNER JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
+                WHERE p.status = 'ocupada'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM maintenance_fees mf 
+                      WHERE mf.property_id = p.id AND mf.period = ?
+                  )
+                LIMIT 10
+            ");
+            $checkStmt->execute([$period]);
+            $propertiesNeedingFees = $checkStmt->fetchAll();
             
-            foreach ($propertiesNeedingFees as $property) {
-                // Get membership amount if exists
-                $amountStmt = $this->db->prepare("
-                    SELECT mp.monthly_cost
-                    FROM memberships m
-                    INNER JOIN membership_plans mp ON m.membership_plan_id = mp.id
-                    INNER JOIN residents r ON r.id = m.resident_id
-                    WHERE r.property_id = ? AND m.status = 'active' AND r.is_primary = 1
-                    LIMIT 1
-                ");
-                $amountStmt->execute([$property['id']]);
-                $membershipAmount = $amountStmt->fetch();
-                $amount = $membershipAmount ? $membershipAmount['monthly_cost'] : $defaultAmount;
-                
-                // Insert fee
-                $insertStmt = $this->db->prepare("
-                    INSERT INTO maintenance_fees (property_id, period, amount, due_date, status)
-                    VALUES (?, ?, ?, ?, 'pending')
-                ");
-                $insertStmt->execute([$property['id'], $currentPeriod, $amount, $dueDate]);
-            }
-            
-            // If fees were generated, redirect to refresh the page
             if (!empty($propertiesNeedingFees)) {
-                $_SESSION['success_message'] = 'Se generaron ' . count($propertiesNeedingFees) . ' nuevas cuotas de mantenimiento.';
-                $this->redirect('residents/payments?' . http_build_query($filters));
-                return;
+                $defaultAmount = 1500.00; // Default maintenance fee
+                $dueDate = date('Y-m-10', strtotime($period . '-01')); // 10th of the period month
+                
+                foreach ($propertiesNeedingFees as $property) {
+                    // Get membership amount if exists
+                    $amountStmt = $this->db->prepare("
+                        SELECT mp.monthly_cost
+                        FROM memberships m
+                        INNER JOIN membership_plans mp ON m.membership_plan_id = mp.id
+                        INNER JOIN residents r ON r.id = m.resident_id
+                        WHERE r.property_id = ? AND m.status = 'active' AND r.is_primary = 1
+                        LIMIT 1
+                    ");
+                    $amountStmt->execute([$property['id']]);
+                    $membershipAmount = $amountStmt->fetch();
+                    $amount = $membershipAmount ? $membershipAmount['monthly_cost'] : $defaultAmount;
+                    
+                    // Insert fee
+                    $insertStmt = $this->db->prepare("
+                        INSERT INTO maintenance_fees (property_id, period, amount, due_date, status)
+                        VALUES (?, ?, ?, ?, 'pending')
+                    ");
+                    $insertStmt->execute([$property['id'], $period, $amount, $dueDate]);
+                    $generatedCount++;
+                }
             }
+        }
+        
+        // If fees were generated, redirect to refresh the page
+        if ($generatedCount > 0) {
+            $_SESSION['success_message'] = 'Se generaron ' . $generatedCount . ' nuevas cuotas de mantenimiento.';
+            $this->redirect('residents/payments?' . http_build_query($filters));
+            return;
         }
         
         $data = [
@@ -1180,5 +1185,373 @@ class ResidentsController extends Controller {
         }
         
         exit;
+    }
+    
+    /**
+     * Registrar pago de cuota de mantenimiento (modal admin)
+     */
+    public function registerFeePayment() {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+            exit;
+        }
+        
+        $feeId = intval($this->post('fee_id'));
+        $transactionDate = $this->post('transaction_date');
+        $description = trim($this->post('description', ''));
+        $paymentMethod = $this->post('payment_method');
+        $paymentReference = trim($this->post('payment_reference', ''));
+        
+        // Validate required fields
+        if (!$feeId || !$transactionDate || !$paymentMethod) {
+            echo json_encode(['success' => false, 'message' => 'Fecha y método de pago son obligatorios']);
+            exit;
+        }
+        
+        // Get the fee
+        $stmt = $this->db->prepare("
+            SELECT mf.*, p.property_number, r.id as resident_id
+            FROM maintenance_fees mf
+            JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
+            WHERE mf.id = ?
+        ");
+        $stmt->execute([$feeId]);
+        $fee = $stmt->fetch();
+        
+        if (!$fee) {
+            echo json_encode(['success' => false, 'message' => 'Cuota no encontrada']);
+            exit;
+        }
+        
+        if ($fee['status'] === 'paid') {
+            echo json_encode(['success' => false, 'message' => 'Esta cuota ya fue pagada']);
+            exit;
+        }
+        
+        // Handle evidence file upload
+        $evidencePath = null;
+        if (!empty($_FILES['evidence']) && $_FILES['evidence']['error'] === UPLOAD_ERR_OK) {
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $fileType = $finfo->file($_FILES['evidence']['tmp_name']);
+            if (!in_array($fileType, $allowedTypes)) {
+                echo json_encode(['success' => false, 'message' => 'Tipo de archivo no permitido. Use JPG, PNG, GIF o PDF']);
+                exit;
+            }
+            $ext = strtolower(pathinfo($_FILES['evidence']['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, $allowedExtensions)) {
+                echo json_encode(['success' => false, 'message' => 'Extensión de archivo no permitida. Use JPG, PNG, GIF o PDF']);
+                exit;
+            }
+            $maxSize = 5 * 1024 * 1024; // 5MB
+            if ($_FILES['evidence']['size'] > $maxSize) {
+                echo json_encode(['success' => false, 'message' => 'El archivo no puede superar 5MB']);
+                exit;
+            }
+            $uploadDir = PUBLIC_PATH . '/uploads/evidence/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            $fileName = 'fee_' . $feeId . '_' . time() . '.' . $ext;
+            $destPath = $uploadDir . $fileName;
+            if (move_uploaded_file($_FILES['evidence']['tmp_name'], $destPath)) {
+                $evidencePath = 'uploads/evidence/' . $fileName;
+            }
+        }
+        
+        $descriptionFinal = $description ?: ('Pago de cuota de mantenimiento - ' . $fee['period']);
+        
+        try {
+            $this->db->beginTransaction();
+            
+            // Get 'Cuota de Mantenimiento' movement type id
+            $typeStmt = $this->db->prepare("
+                SELECT id FROM financial_movement_types 
+                WHERE category = 'ingreso' AND (name LIKE '%Cuota%' OR name LIKE '%Mantenimiento%')
+                ORDER BY id ASC LIMIT 1
+            ");
+            $typeStmt->execute();
+            $movementType = $typeStmt->fetch();
+            $movementTypeId = $movementType ? $movementType['id'] : 1;
+            
+            // Create financial movement
+            $movStmt = $this->db->prepare("
+                INSERT INTO financial_movements 
+                (movement_type_id, transaction_type, amount, description,
+                 property_id, resident_id, payment_method, payment_reference,
+                 transaction_date, created_by, reference_type, reference_id, notes)
+                VALUES (?, 'ingreso', ?, ?, ?, ?, ?, ?, ?, ?, 'maintenance_fee', ?, ?)
+            ");
+            $movStmt->execute([
+                $movementTypeId,
+                $fee['amount'],
+                $descriptionFinal,
+                $fee['property_id'],
+                $fee['resident_id'],
+                $paymentMethod,
+                $paymentReference ?: null,
+                $transactionDate,
+                $_SESSION['user_id'],
+                $feeId,
+                $evidencePath
+            ]);
+            
+            // Update maintenance fee status
+            $noteValue = $description ?: $fee['notes'];
+            $updateStmt = $this->db->prepare("
+                UPDATE maintenance_fees 
+                SET status = 'paid',
+                    paid_date = ?,
+                    payment_method = ?,
+                    payment_reference = ?,
+                    payment_confirmation = ?,
+                    notes = ?
+                WHERE id = ?
+            ");
+            $updateStmt->execute([
+                $transactionDate,
+                $paymentMethod,
+                $paymentReference ?: null,
+                $evidencePath,
+                $noteValue ?: null,
+                $feeId
+            ]);
+            
+            $this->db->commit();
+            
+            AuditController::log('payment', 'Cuota de mantenimiento pagada (admin): ' . $fee['period'], 'maintenance_fees', $feeId);
+            
+            echo json_encode(['success' => true, 'message' => 'Pago registrado exitosamente']);
+            
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            error_log('registerFeePayment error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error al registrar el pago']);
+        }
+        
+        exit;
+    }
+    
+    /**
+     * Ver detalles de pago de una cuota
+     */
+    public function viewFeePayment($feeId = null) {
+        if (!$feeId) {
+            $_SESSION['error_message'] = 'ID de cuota no especificado';
+            $this->redirect('residents/payments');
+        }
+        
+        $stmt = $this->db->prepare("
+            SELECT mf.*, p.property_number, p.section,
+                   COALESCE(u.first_name, 'Sin asignar') as first_name,
+                   COALESCE(u.last_name, '') as last_name,
+                   u.phone,
+                   fm.id as movement_id, fm.transaction_date, fm.notes as movement_notes
+            FROM maintenance_fees mf
+            JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
+            LEFT JOIN users u ON r.user_id = u.id
+            LEFT JOIN financial_movements fm ON fm.reference_type = 'maintenance_fee' AND fm.reference_id = mf.id
+            WHERE mf.id = ?
+        ");
+        $stmt->execute([$feeId]);
+        $fee = $stmt->fetch();
+        
+        if (!$fee) {
+            $_SESSION['error_message'] = 'Cuota no encontrada';
+            $this->redirect('residents/payments');
+        }
+        
+        $data = [
+            'title' => 'Detalle de Pago',
+            'fee' => $fee
+        ];
+        
+        $this->view('residents/view_fee_payment', $data);
+    }
+    
+    /**
+     * Editar pago de una cuota
+     */
+    public function editFeePayment($feeId = null) {
+        if (!$feeId) {
+            $_SESSION['error_message'] = 'ID de cuota no especificado';
+            $this->redirect('residents/payments');
+        }
+        
+        $stmt = $this->db->prepare("
+            SELECT mf.*, p.property_number,
+                   COALESCE(u.first_name, '') as first_name,
+                   COALESCE(u.last_name, '') as last_name,
+                   fm.id as movement_id
+            FROM maintenance_fees mf
+            JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
+            LEFT JOIN users u ON r.user_id = u.id
+            LEFT JOIN financial_movements fm ON fm.reference_type = 'maintenance_fee' AND fm.reference_id = mf.id
+            WHERE mf.id = ?
+        ");
+        $stmt->execute([$feeId]);
+        $fee = $stmt->fetch();
+        
+        if (!$fee) {
+            $_SESSION['error_message'] = 'Cuota no encontrada';
+            $this->redirect('residents/payments');
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $transactionDate = $this->post('transaction_date');
+            $paymentMethod = $this->post('payment_method');
+            $paymentReference = trim($this->post('payment_reference', ''));
+            $notes = trim($this->post('notes', ''));
+            
+            if (!$transactionDate || !$paymentMethod) {
+                $_SESSION['error_message'] = 'Fecha y método de pago son obligatorios';
+                $this->redirect('residents/editFeePayment/' . $feeId);
+            }
+            
+            try {
+                $this->db->beginTransaction();
+                
+                $updateFee = $this->db->prepare("
+                    UPDATE maintenance_fees 
+                    SET paid_date = ?, payment_method = ?, payment_reference = ?, notes = ?
+                    WHERE id = ?
+                ");
+                $updateFee->execute([$transactionDate, $paymentMethod, $paymentReference ?: null, $notes ?: null, $feeId]);
+                
+                if ($fee['movement_id']) {
+                    $updateMov = $this->db->prepare("
+                        UPDATE financial_movements 
+                        SET transaction_date = ?, payment_method = ?, payment_reference = ?, notes = ?
+                        WHERE id = ?
+                    ");
+                    $updateMov->execute([$transactionDate, $paymentMethod, $paymentReference ?: null, $notes ?: null, $fee['movement_id']]);
+                }
+                
+                $this->db->commit();
+                
+                AuditController::log('update', 'Pago de cuota editado: ' . $feeId, 'maintenance_fees', $feeId);
+                $_SESSION['success_message'] = 'Pago actualizado exitosamente';
+                $this->redirect('residents/payments');
+                
+            } catch (PDOException $e) {
+                $this->db->rollBack();
+                error_log('editFeePayment error: ' . $e->getMessage());
+                $_SESSION['error_message'] = 'Error al actualizar el pago';
+                $this->redirect('residents/editFeePayment/' . $feeId);
+            }
+        }
+        
+        $data = [
+            'title' => 'Editar Pago',
+            'fee' => $fee
+        ];
+        
+        $this->view('residents/edit_fee_payment', $data);
+    }
+    
+    /**
+     * Eliminar pago de una cuota (revertir a pendiente/vencido)
+     */
+    public function deleteFeePayment($feeId = null) {
+        if (!$feeId) {
+            $_SESSION['error_message'] = 'ID de cuota no especificado';
+            $this->redirect('residents/payments');
+        }
+        
+        $stmt = $this->db->prepare("
+            SELECT mf.*, fm.id as movement_id
+            FROM maintenance_fees mf
+            LEFT JOIN financial_movements fm ON fm.reference_type = 'maintenance_fee' AND fm.reference_id = mf.id
+            WHERE mf.id = ?
+        ");
+        $stmt->execute([$feeId]);
+        $fee = $stmt->fetch();
+        
+        if (!$fee) {
+            $_SESSION['error_message'] = 'Cuota no encontrada';
+            $this->redirect('residents/payments');
+        }
+        
+        try {
+            $this->db->beginTransaction();
+            
+            // Revert fee to appropriate status (date-only comparison to avoid timezone issues)
+            $newStatus = ($fee['due_date'] < date('Y-m-d')) ? 'overdue' : 'pending';
+            $revertStmt = $this->db->prepare("
+                UPDATE maintenance_fees 
+                SET status = ?, paid_date = NULL, payment_method = NULL,
+                    payment_reference = NULL, payment_confirmation = NULL
+                WHERE id = ?
+            ");
+            $revertStmt->execute([$newStatus, $feeId]);
+            
+            // Delete the associated financial movement if exists
+            if ($fee['movement_id']) {
+                $delMovStmt = $this->db->prepare("DELETE FROM financial_movements WHERE id = ?");
+                $delMovStmt->execute([$fee['movement_id']]);
+            }
+            
+            $this->db->commit();
+            
+            AuditController::log('delete', 'Pago de cuota eliminado: ' . $feeId, 'maintenance_fees', $feeId);
+            $_SESSION['success_message'] = 'Pago eliminado y cuota revertida a ' . ($newStatus === 'overdue' ? 'Vencido' : 'Pendiente');
+            
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            error_log('deleteFeePayment error: ' . $e->getMessage());
+            $_SESSION['error_message'] = 'Error al eliminar el pago';
+        }
+        
+        $this->redirect('residents/payments');
+    }
+    
+    /**
+     * Imprimir recibo de pago de cuota
+     */
+    public function printFeePayment($feeId = null) {
+        if (!$feeId) {
+            $_SESSION['error_message'] = 'ID de cuota no especificado';
+            $this->redirect('residents/payments');
+        }
+        
+        $stmt = $this->db->prepare("
+            SELECT mf.*, p.property_number, p.section,
+                   COALESCE(u.first_name, 'Sin asignar') as first_name,
+                   COALESCE(u.last_name, '') as last_name,
+                   u.phone, u.email,
+                   fm.id as movement_id, fm.transaction_date, fm.notes as movement_notes,
+                   fm.description as movement_description
+            FROM maintenance_fees mf
+            JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
+            LEFT JOIN users u ON r.user_id = u.id
+            LEFT JOIN financial_movements fm ON fm.reference_type = 'maintenance_fee' AND fm.reference_id = mf.id
+            WHERE mf.id = ?
+        ");
+        $stmt->execute([$feeId]);
+        $fee = $stmt->fetch();
+        
+        if (!$fee) {
+            $_SESSION['error_message'] = 'Cuota no encontrada';
+            $this->redirect('residents/payments');
+        }
+        
+        // Get residencial name from settings
+        $settingStmt = $this->db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'residencial_name' LIMIT 1");
+        $residencialName = $settingStmt ? ($settingStmt->fetch()['setting_value'] ?? 'Residencial') : 'Residencial';
+        
+        $data = [
+            'title' => 'Recibo de Pago',
+            'fee' => $fee,
+            'residencialName' => $residencialName
+        ];
+        
+        $this->view('residents/print_fee_payment', $data);
     }
 }
