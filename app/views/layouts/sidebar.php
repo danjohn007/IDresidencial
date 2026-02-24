@@ -99,10 +99,33 @@
                 
                 <!-- Módulo Financiero -->
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/financial" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
-                        <i class="fas fa-chart-line w-5"></i>
-                        <span>Módulo Financiero</span>
-                    </a>
+                    <button onclick="toggleSubmenu('financial-submenu')" class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-chart-line w-5"></i>
+                            <span>Módulo Financiero</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm" id="financial-submenu-icon"></i>
+                    </button>
+                    <ul id="financial-submenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/financial" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-list w-5"></i>
+                                <span>Módulo Financiero</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/financial/budget" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-chart-pie w-5"></i>
+                                <span>Presupuesto y Proyecciones</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/financial/importCSV" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-file-import w-5"></i>
+                                <span>Importar CSV</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                 
                 <!-- Membresías -->
@@ -115,10 +138,27 @@
                 
                 <!-- Pagos -->
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/residents/payments" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
-                        <i class="fas fa-credit-card w-5"></i>
-                        <span>Pagos</span>
-                    </a>
+                    <button onclick="toggleSubmenu('payments-submenu')" class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-credit-card w-5"></i>
+                            <span>Pagos</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm" id="payments-submenu-icon"></i>
+                    </button>
+                    <ul id="payments-submenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/residents/payments" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-money-bill-wave w-5"></i>
+                                <span>Pagos</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/financial/overdueAccounts" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-exclamation-triangle w-5"></i>
+                                <span>Cartera Vencida</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                 
                 <!-- Reportes -->
@@ -145,6 +185,14 @@
                     <a href="<?php echo BASE_URL; ?>/residents/myPayments" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
                         <i class="fas fa-credit-card w-5"></i>
                         <span>Mis Pagos</span>
+                    </a>
+                </li>
+                
+                <!-- Mis Ingresos y Egresos -->
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/residents/financialReport" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fas fa-chart-line w-5"></i>
+                        <span>Mis Ingresos y Egresos</span>
                     </a>
                 </li>
                 

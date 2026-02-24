@@ -178,6 +178,91 @@ class ReportsController extends Controller {
     }
     
     /**
+     * Reporte de Imprevistos
+     */
+    public function unforeseen() {
+        $page = max(1, intval($this->get('page', 1)));
+        $per_page = 20;
+        $offset = ($page - 1) * $per_page;
+        $search = $this->get('search', '');
+        $date_from = $this->get('date_from', date('Y-m-01'));
+        $date_to = $this->get('date_to', date('Y-m-d'));
+        
+        $where = ["fm.is_unforeseen = 1", "fm.transaction_type = 'egreso'"];
+        $params = [];
+        
+        if (!empty($search)) {
+            $where[] = "(fm.description LIKE ? OR fmt.name LIKE ?)";
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
+        }
+        
+        if (!empty($date_from)) {
+            $where[] = "fm.transaction_date >= ?";
+            $params[] = $date_from;
+        }
+        
+        if (!empty($date_to)) {
+            $where[] = "fm.transaction_date <= ?";
+            $params[] = $date_to;
+        }
+        
+        $whereClause = 'WHERE ' . implode(' AND ', $where);
+        
+        $countParams = $params;
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) as total
+            FROM financial_movements fm
+            INNER JOIN financial_movement_types fmt ON fm.movement_type_id = fmt.id
+            $whereClause
+        ");
+        $stmt->execute($countParams);
+        $total = $stmt->fetch()['total'];
+        $total_pages = ceil($total / $per_page);
+        
+        $params[] = $per_page;
+        $params[] = $offset;
+        
+        $stmt = $this->db->prepare("
+            SELECT fm.*, fmt.name as movement_type_name,
+                   p.property_number,
+                   CONCAT(u.first_name, ' ', u.last_name) as created_by_name
+            FROM financial_movements fm
+            INNER JOIN financial_movement_types fmt ON fm.movement_type_id = fmt.id
+            LEFT JOIN properties p ON fm.property_id = p.id
+            LEFT JOIN users u ON fm.created_by = u.id
+            $whereClause
+            ORDER BY fm.transaction_date DESC
+            LIMIT ? OFFSET ?
+        ");
+        $stmt->execute($params);
+        $records = $stmt->fetchAll();
+        
+        $stmt = $this->db->prepare("
+            SELECT COALESCE(SUM(amount), 0) as total_amount
+            FROM financial_movements
+            WHERE is_unforeseen = 1 AND transaction_type = 'egreso'
+            AND transaction_date BETWEEN ? AND ?
+        ");
+        $stmt->execute([$date_from, $date_to]);
+        $totalAmount = $stmt->fetch()['total_amount'];
+        
+        $data = [
+            'title' => 'Reporte de Imprevistos',
+            'records' => $records,
+            'total' => $total,
+            'total_pages' => $total_pages,
+            'page' => $page,
+            'search' => $search,
+            'date_from' => $date_from,
+            'date_to' => $date_to,
+            'totalAmount' => $totalAmount
+        ];
+        
+        $this->view('reports/unforeseen', $data);
+    }
+    
+    /**
      * Reporte de membresías
      */
     public function memberships() {

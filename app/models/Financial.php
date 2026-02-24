@@ -46,7 +46,7 @@ class Financial {
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
         $stmt = $this->db->prepare("
-            SELECT fm.*, 
+            SELECT fm.*, fm.is_unforeseen, fm.evidence_file,
                    fmt.name as movement_type_name,
                    fmt.category,
                    p.property_number,
@@ -72,7 +72,7 @@ class Financial {
      */
     public function findById($id) {
         $stmt = $this->db->prepare("
-            SELECT fm.*, 
+            SELECT fm.*, fm.is_unforeseen, fm.evidence_file,
                    fmt.name as movement_type_name,
                    fmt.category,
                    p.property_number,
@@ -96,8 +96,8 @@ class Financial {
                 INSERT INTO financial_movements 
                 (movement_type_id, transaction_type, amount, description, reference_type, 
                  reference_id, property_id, resident_id, payment_method, payment_reference, 
-                 transaction_date, created_by, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 transaction_date, created_by, notes, is_unforeseen, evidence_file)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
             $result = $stmt->execute([
@@ -113,7 +113,9 @@ class Financial {
                 $data['payment_reference'] ?? null,
                 $data['transaction_date'],
                 $data['created_by'],
-                $data['notes'] ?? null
+                $data['notes'] ?? null,
+                $data['is_unforeseen'] ?? 0,
+                $data['evidence_file'] ?? null
             ]);
             
             if ($result) {
@@ -147,7 +149,9 @@ class Financial {
                     payment_method = ?,
                     payment_reference = ?,
                     transaction_date = ?,
-                    notes = ?
+                    notes = ?,
+                    is_unforeseen = ?,
+                    evidence_file = ?
                 WHERE id = ?
             ");
             
@@ -162,6 +166,8 @@ class Financial {
                 $data['payment_reference'] ?? null,
                 $data['transaction_date'],
                 $data['notes'] ?? null,
+                $data['is_unforeseen'] ?? 0,
+                $data['evidence_file'] ?? null,
                 $id
             ]);
             

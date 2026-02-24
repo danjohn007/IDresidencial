@@ -96,8 +96,23 @@ class FinancialController extends Controller {
                 'payment_reference' => $this->post('payment_reference') ?: null,
                 'transaction_date' => $this->post('transaction_date'),
                 'created_by' => $_SESSION['user_id'],
-                'notes' => $this->post('notes') ?: null
+                'notes' => $this->post('notes') ?: null,
+                'is_unforeseen' => ($this->post('transaction_type') === 'egreso' && $this->post('is_unforeseen')) ? 1 : 0,
+                'evidence_file' => null
             ];
+            
+            // Handle evidence file upload
+            if (!empty($_FILES['evidence_file']['name']) && $_FILES['evidence_file']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = PUBLIC_PATH . '/uploads/evidence/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                $ext = pathinfo($_FILES['evidence_file']['name'], PATHINFO_EXTENSION);
+                $filename = 'evidence_' . time() . '_' . uniqid() . '.' . $ext;
+                if (move_uploaded_file($_FILES['evidence_file']['tmp_name'], $uploadDir . $filename)) {
+                    $movementData['evidence_file'] = 'uploads/evidence/' . $filename;
+                }
+            }
             
             $movementId = $this->financialModel->create($movementData);
             if ($movementId) {
@@ -255,8 +270,23 @@ class FinancialController extends Controller {
                 'payment_method' => $this->post('payment_method') ?: null,
                 'payment_reference' => $this->post('payment_reference') ?: null,
                 'transaction_date' => $this->post('transaction_date'),
-                'notes' => $this->post('notes') ?: null
+                'notes' => $this->post('notes') ?: null,
+                'is_unforeseen' => ($this->post('transaction_type') === 'egreso' && $this->post('is_unforeseen')) ? 1 : 0,
+                'evidence_file' => $movement['evidence_file'] ?? null
             ];
+            
+            // Handle evidence file upload
+            if (!empty($_FILES['evidence_file']['name']) && $_FILES['evidence_file']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = PUBLIC_PATH . '/uploads/evidence/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                $ext = pathinfo($_FILES['evidence_file']['name'], PATHINFO_EXTENSION);
+                $filename = 'evidence_' . time() . '_' . uniqid() . '.' . $ext;
+                if (move_uploaded_file($_FILES['evidence_file']['tmp_name'], $uploadDir . $filename)) {
+                    $movementData['evidence_file'] = 'uploads/evidence/' . $filename;
+                }
+            }
             
             if ($this->financialModel->update($id, $movementData)) {
                 AuditController::log('update', 'Movimiento financiero actualizado: ' . $movementData['description'], 'financial_movements', $id);
@@ -317,10 +347,233 @@ class FinancialController extends Controller {
     }
     
     /**
+     * Presupuesto y Proyecciones
+     */
+    public function budget() {
+        $currentMonth = date('Y-m');
+        $nextMonth = date('Y-m', strtotime('+1 month'));
+        
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total
+            FROM maintenance_fees 
+            WHERE period = ? AND status = 'paid'
+        ");
+        $stmt->execute([$currentMonth]);
+        $paidCurrent = $stmt->fetch();
+        
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total
+            FROM maintenance_fees 
+            WHERE period = ? AND status IN ('pending', 'overdue')
+        ");
+        $stmt->execute([$currentMonth]);
+        $pendingCurrent = $stmt->fetch();
+        
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total
+            FROM maintenance_fees 
+            WHERE period = ?
+        ");
+        $stmt->execute([$nextMonth]);
+        $nextMonthFees = $stmt->fetch();
+        
+        $stmt = $this->db->query("
+            SELECT COALESCE(AVG(monthly_total), 0) as avg_income
+            FROM (
+                SELECT DATE_FORMAT(transaction_date, '%Y-%m') as month, SUM(amount) as monthly_total
+                FROM financial_movements
+                WHERE transaction_type = 'ingreso'
+                AND transaction_date >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+                GROUP BY month
+            ) as monthly_data
+        ");
+        $avgIncome = $stmt->fetch()['avg_income'];
+        
+        $stmt = $this->db->query("SELECT COUNT(*) as total FROM properties");
+        $totalProperties = $stmt->fetch()['total'];
+        
+        $stmt = $this->db->prepare("
+            SELECT status, COUNT(*) as count, COALESCE(SUM(amount), 0) as total
+            FROM maintenance_fees
+            WHERE period = ?
+            GROUP BY status
+        ");
+        $stmt->execute([$currentMonth]);
+        $currentMonthStats = $stmt->fetchAll();
+        
+        $data = [
+            'title' => 'Presupuesto y Proyecciones',
+            'currentMonth' => $currentMonth,
+            'nextMonth' => $nextMonth,
+            'paidCurrent' => $paidCurrent,
+            'pendingCurrent' => $pendingCurrent,
+            'nextMonthFees' => $nextMonthFees,
+            'avgIncome' => $avgIncome,
+            'totalProperties' => $totalProperties,
+            'currentMonthStats' => $currentMonthStats
+        ];
+        
+        $this->view('financial/budget', $data);
+    }
+    
+    /**
+     * Cartera Vencida
+     */
+    public function overdueAccounts() {
+        $page = max(1, intval($this->get('page', 1)));
+        $per_page = 20;
+        $offset = ($page - 1) * $per_page;
+        $search = $this->get('search', '');
+        $date_from = $this->get('date_from', date('Y-m-01'));
+        $date_to = $this->get('date_to', date('Y-m-d'));
+        
+        $where = ["mf.status IN ('pending', 'overdue')"];
+        $params = [];
+        
+        if (!empty($search)) {
+            $where[] = "(p.property_number LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?)";
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
+        }
+        
+        if (!empty($date_from)) {
+            $where[] = "mf.due_date >= ?";
+            $params[] = $date_from;
+        }
+        
+        if (!empty($date_to)) {
+            $where[] = "mf.due_date <= ?";
+            $params[] = $date_to;
+        }
+        
+        $whereClause = 'WHERE ' . implode(' AND ', $where);
+        
+        $countParams = $params;
+        $stmt = $this->db->prepare("
+            SELECT COUNT(*) as total
+            FROM maintenance_fees mf
+            INNER JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1
+            LEFT JOIN users u ON r.user_id = u.id
+            $whereClause
+        ");
+        $stmt->execute($countParams);
+        $total = $stmt->fetch()['total'];
+        $total_pages = ceil($total / $per_page);
+        
+        $params[] = $per_page;
+        $params[] = $offset;
+        
+        $stmt = $this->db->prepare("
+            SELECT mf.*, p.property_number,
+                   CONCAT(u.first_name, ' ', u.last_name) as resident_name,
+                   u.phone as resident_phone,
+                   DATEDIFF(NOW(), mf.due_date) as days_overdue
+            FROM maintenance_fees mf
+            INNER JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1
+            LEFT JOIN users u ON r.user_id = u.id
+            $whereClause
+            ORDER BY mf.due_date ASC
+            LIMIT ? OFFSET ?
+        ");
+        $stmt->execute($params);
+        $records = $stmt->fetchAll();
+        
+        $stmt = $this->db->query("
+            SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total
+            FROM maintenance_fees WHERE status IN ('pending', 'overdue')
+        ");
+        $overallStats = $stmt->fetch();
+        
+        $data = [
+            'title' => 'Cartera Vencida',
+            'records' => $records,
+            'total' => $total,
+            'total_pages' => $total_pages,
+            'page' => $page,
+            'search' => $search,
+            'date_from' => $date_from,
+            'date_to' => $date_to,
+            'overallStats' => $overallStats
+        ];
+        
+        $this->view('financial/overdue', $data);
+    }
+    
+    /**
+     * Importar CSV Bancario
+     */
+    public function importCSV() {
+        $data = [
+            'title' => 'Importar CSV Bancario',
+            'error' => '',
+            'preview' => [],
+            'movementTypes' => $this->financialModel->getMovementTypes()
+        ];
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
+            $file = $_FILES['csv_file'];
+            
+            if ($file['error'] === UPLOAD_ERR_OK) {
+                $handle = fopen($file['tmp_name'], 'r');
+                $rows = [];
+                $headers = null;
+                
+                while (($row = fgetcsv($handle, 1000, ',')) !== false) {
+                    if (!$headers) {
+                        $headers = $row;
+                        continue;
+                    }
+                    $rows[] = $row;
+                }
+                fclose($handle);
+                
+                if (isset($_POST['confirm_import'])) {
+                    $imported = 0;
+                    foreach ($rows as $rowIndex => $row) {
+                        $amount = floatval(str_replace(['$', ',', ' '], '', $row[2] ?? 0));
+                        $transType = $amount >= 0 ? 'ingreso' : 'egreso';
+                        $amount = abs($amount);
+                        
+                        $movTypeId = isset($_POST['movement_type_id_' . $rowIndex]) ? intval($_POST['movement_type_id_' . $rowIndex]) : 1;
+                        
+                        $stmt = $this->db->prepare("
+                            INSERT INTO financial_movements 
+                            (movement_type_id, transaction_type, amount, description, transaction_date, created_by, notes)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ");
+                        $stmt->execute([
+                            $movTypeId,
+                            $transType,
+                            $amount,
+                            $row[3] ?? 'Importado de CSV',
+                            !empty($row[0]) ? date('Y-m-d', strtotime($row[0])) : date('Y-m-d'),
+                            $_SESSION['user_id'],
+                            'Importado desde CSV bancario'
+                        ]);
+                        $imported++;
+                    }
+                    
+                    AuditController::log('create', "Importación CSV: $imported movimientos", 'financial_movements', null);
+                    $_SESSION['success_message'] = "Se importaron $imported movimientos exitosamente";
+                    $this->redirect('financial');
+                } else {
+                    $data['preview'] = $rows;
+                    $data['headers'] = $headers ?? [];
+                }
+            } else {
+                $data['error'] = 'Error al cargar el archivo CSV';
+            }
+        }
+        
+        $this->view('financial/import_csv', $data);
+    }
+    
+    /**
      * Catálogo de tipos de movimiento
      */
     public function movementTypes() {
-        // Handle POST for creating new movement type
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create') {
             $name = $this->post('name');
             $description = $this->post('description');

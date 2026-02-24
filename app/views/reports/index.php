@@ -91,6 +91,19 @@
                         </div>
                     </div>
                 </a>
+
+                <!-- Reporte de Imprevistos -->
+                <a href="<?php echo BASE_URL; ?>/reports/unforeseen" class="bg-white rounded-lg shadow hover:shadow-lg transition p-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="p-4 bg-orange-100 rounded-full">
+                            <i class="fas fa-exclamation-triangle text-orange-600 text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-900">Reporte de Imprevistos</h3>
+                            <p class="text-sm text-gray-600">Egresos no planeados</p>
+                        </div>
+                    </div>
+                </a>
             </div>
 
             <!-- Información Adicional -->
