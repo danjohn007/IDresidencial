@@ -85,7 +85,7 @@
                                 <?php
                                 $evFile = $record['evidence_file'] ?? '';
                                 // Only allow safe relative paths within uploads/evidence/
-                                $safePath = (preg_match('#^uploads/evidence/[\w\-\.]+$#', $evFile)) ? $evFile : '';
+                                $safePath = (preg_match('#^uploads/evidence/[\w\-]+\.[\w]+$#', $evFile)) ? $evFile : '';
                                 ?>
                                 <?php if ($safePath): ?>
                                 <a href="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($safePath); ?>" 

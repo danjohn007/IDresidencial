@@ -153,7 +153,7 @@
                                 </label>
                                 <?php
                                 $evFile = $movement['evidence_file'] ?? '';
-                                $safePath = (preg_match('#^uploads/evidence/[\w\-\.]+$#', $evFile)) ? $evFile : '';
+                                $safePath = (preg_match('#^uploads/evidence/[\w\-]+\.[\w]+$#', $evFile)) ? $evFile : '';
                                 ?>
                                 <?php if ($safePath): ?>
                                 <p class="text-sm text-blue-600 mb-2">

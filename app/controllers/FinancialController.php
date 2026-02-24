@@ -29,7 +29,7 @@ class FinancialController extends Controller {
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
-        $filename = 'evidence_' . time() . '_' . uniqid() . '.' . $ext;
+        $filename = 'evidence_' . bin2hex(random_bytes(16)) . '.' . $ext;
         if (move_uploaded_file($_FILES['evidence_file']['tmp_name'], $uploadDir . $filename)) {
             return ltrim(self::EVIDENCE_UPLOAD_DIR, '/') . $filename;
         }
@@ -555,12 +555,21 @@ class FinancialController extends Controller {
                             (movement_type_id, transaction_type, amount, description, transaction_date, created_by, notes)
                             VALUES (?, ?, ?, ?, ?, ?, ?)
                         ");
+                        $txDate = date('Y-m-d');
+                        if (!empty($row[0])) {
+                            $parsedDate = DateTime::createFromFormat('d/m/Y', trim($row[0]))
+                                       ?: DateTime::createFromFormat('Y-m-d', trim($row[0]))
+                                       ?: DateTime::createFromFormat('m/d/Y', trim($row[0]));
+                            if ($parsedDate) {
+                                $txDate = $parsedDate->format('Y-m-d');
+                            }
+                        }
                         $stmt->execute([
                             $movTypeId,
                             $transType,
                             $amount,
                             $row[3] ?? 'Importado de CSV',
-                            !empty($row[0]) ? date('Y-m-d', strtotime($row[0])) : date('Y-m-d'),
+                            $txDate,
                             $_SESSION['user_id'],
                             'Importado desde CSV bancario'
                         ]);
