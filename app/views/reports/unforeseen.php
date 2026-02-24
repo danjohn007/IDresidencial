@@ -82,8 +82,13 @@
                             <td class="px-6 py-4 text-sm font-medium text-red-600">$<?php echo number_format($record['amount'], 2); ?></td>
                             <td class="px-6 py-4 text-sm text-gray-500"><?php echo htmlspecialchars($record['created_by_name'] ?? '-'); ?></td>
                             <td class="px-6 py-4 text-sm">
-                                <?php if (!empty($record['evidence_file'])): ?>
-                                <a href="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($record['evidence_file']); ?>" 
+                                <?php
+                                $evFile = $record['evidence_file'] ?? '';
+                                // Only allow safe relative paths within uploads/evidence/
+                                $safePath = (preg_match('#^uploads/evidence/[\w\-\.]+$#', $evFile)) ? $evFile : '';
+                                ?>
+                                <?php if ($safePath): ?>
+                                <a href="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($safePath); ?>" 
                                    target="_blank" class="text-blue-600 hover:text-blue-900">
                                     <i class="fas fa-paperclip mr-1"></i>Ver
                                 </a>

@@ -9,6 +9,32 @@ class FinancialController extends Controller {
     
     private $financialModel;
     private $db;
+    private const EVIDENCE_UPLOAD_DIR = '/uploads/evidence/';
+    private const EVIDENCE_ALLOWED_EXT = ['pdf', 'jpg', 'jpeg', 'png'];
+    private const EVIDENCE_ALLOWED_MIME = ['application/pdf', 'image/jpeg', 'image/png'];
+    
+    /**
+     * Upload evidence file with validation. Returns relative path or null.
+     */
+    private function uploadEvidenceFile(): ?string {
+        if (empty($_FILES['evidence_file']['name']) || $_FILES['evidence_file']['error'] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+        $ext = strtolower(pathinfo($_FILES['evidence_file']['name'], PATHINFO_EXTENSION));
+        $mime = mime_content_type($_FILES['evidence_file']['tmp_name']);
+        if (!in_array($ext, self::EVIDENCE_ALLOWED_EXT) || !in_array($mime, self::EVIDENCE_ALLOWED_MIME)) {
+            return null;
+        }
+        $uploadDir = PUBLIC_PATH . self::EVIDENCE_UPLOAD_DIR;
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        $filename = 'evidence_' . time() . '_' . uniqid() . '.' . $ext;
+        if (move_uploaded_file($_FILES['evidence_file']['tmp_name'], $uploadDir . $filename)) {
+            return ltrim(self::EVIDENCE_UPLOAD_DIR, '/') . $filename;
+        }
+        return null;
+    }
     
     public function __construct() {
         $this->requireAuth();
@@ -101,17 +127,10 @@ class FinancialController extends Controller {
                 'evidence_file' => null
             ];
             
-            // Handle evidence file upload
-            if (!empty($_FILES['evidence_file']['name']) && $_FILES['evidence_file']['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = PUBLIC_PATH . '/uploads/evidence/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
-                }
-                $ext = pathinfo($_FILES['evidence_file']['name'], PATHINFO_EXTENSION);
-                $filename = 'evidence_' . time() . '_' . uniqid() . '.' . $ext;
-                if (move_uploaded_file($_FILES['evidence_file']['tmp_name'], $uploadDir . $filename)) {
-                    $movementData['evidence_file'] = 'uploads/evidence/' . $filename;
-                }
+            // Handle evidence file upload (validated)
+            $uploadedFile = $this->uploadEvidenceFile();
+            if ($uploadedFile !== null) {
+                $movementData['evidence_file'] = $uploadedFile;
             }
             
             $movementId = $this->financialModel->create($movementData);
@@ -275,17 +294,10 @@ class FinancialController extends Controller {
                 'evidence_file' => $movement['evidence_file'] ?? null
             ];
             
-            // Handle evidence file upload
-            if (!empty($_FILES['evidence_file']['name']) && $_FILES['evidence_file']['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = PUBLIC_PATH . '/uploads/evidence/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
-                }
-                $ext = pathinfo($_FILES['evidence_file']['name'], PATHINFO_EXTENSION);
-                $filename = 'evidence_' . time() . '_' . uniqid() . '.' . $ext;
-                if (move_uploaded_file($_FILES['evidence_file']['tmp_name'], $uploadDir . $filename)) {
-                    $movementData['evidence_file'] = 'uploads/evidence/' . $filename;
-                }
+            // Handle evidence file upload (validated)
+            $uploadedFile = $this->uploadEvidenceFile();
+            if ($uploadedFile !== null) {
+                $movementData['evidence_file'] = $uploadedFile;
             }
             
             if ($this->financialModel->update($id, $movementData)) {

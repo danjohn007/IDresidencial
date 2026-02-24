@@ -151,9 +151,13 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     <i class="fas fa-paperclip mr-1"></i>Adjuntar Evidencia
                                 </label>
-                                <?php if (!empty($movement['evidence_file'])): ?>
+                                <?php
+                                $evFile = $movement['evidence_file'] ?? '';
+                                $safePath = (preg_match('#^uploads/evidence/[\w\-\.]+$#', $evFile)) ? $evFile : '';
+                                ?>
+                                <?php if ($safePath): ?>
                                 <p class="text-sm text-blue-600 mb-2">
-                                    <a href="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($movement['evidence_file']); ?>" target="_blank">
+                                    <a href="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($safePath); ?>" target="_blank">
                                         <i class="fas fa-file mr-1"></i>Ver archivo actual
                                     </a>
                                 </p>

@@ -78,7 +78,7 @@
                             <td class="px-6 py-4 text-sm font-medium text-gray-900"><?php echo htmlspecialchars($payment['period']); ?></td>
                             <td class="px-6 py-4 text-sm font-medium text-gray-900">$<?php echo number_format($payment['amount'], 2); ?></td>
                             <td class="px-6 py-4 text-sm text-gray-900">
-                                <?php echo $payment['paid_date'] ? date('d/m/Y', strtotime($payment['paid_date'])) : '-'; ?>
+                                <?php echo $payment['paid_date'] ? date('d/m/Y', strtotime($payment['paid_date'])) : (isset($payment['payment_date']) ? date('d/m/Y', strtotime($payment['payment_date'])) : '-'); ?>
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500"><?php echo htmlspecialchars($payment['payment_method'] ?? '-'); ?></td>
                             <td class="px-6 py-4">
