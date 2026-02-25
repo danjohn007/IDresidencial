@@ -41,21 +41,27 @@ class User {
      * Crear nuevo usuario
      */
     public function create($data) {
-        $sql = "INSERT INTO users (username, email, password, role, first_name, last_name, phone, house_number, status) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO users (username, email, password, role, first_name, last_name, phone, house_number, status, is_vigilance_committee) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([
-            $data['username'],
-            $data['email'],
-            password_hash($data['password'], PASSWORD_DEFAULT),
-            $data['role'] ?? 'residente',
-            $data['first_name'],
-            $data['last_name'],
-            $data['phone'] ?? null,
-            $data['house_number'] ?? null,
-            $data['status'] ?? 'active'
-        ]);
+        try {
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                $data['username'],
+                $data['email'],
+                password_hash($data['password'], PASSWORD_DEFAULT),
+                $data['role'] ?? 'residente',
+                $data['first_name'],
+                $data['last_name'],
+                $data['phone'] ?? null,
+                $data['house_number'] ?? null,
+                $data['status'] ?? 'active',
+                $data['is_vigilance_committee'] ?? 0
+            ]);
+        } catch (PDOException $e) {
+            error_log("Error creating user: " . $e->getMessage());
+            return false;
+        }
     }
     
     /**

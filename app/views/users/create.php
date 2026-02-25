@@ -90,6 +90,18 @@
                                     <option value="inactive">Inactivo</option>
                                 </select>
                             </div>
+
+                            <div class="md:col-span-2">
+                                <label class="flex items-center space-x-3 cursor-pointer">
+                                    <input type="checkbox" name="is_vigilance_committee" value="1"
+                                           class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                                    <span class="text-sm font-medium text-gray-700">
+                                        <i class="fas fa-shield-alt text-blue-500 mr-1"></i>
+                                        Comité de Vigilancia
+                                    </span>
+                                </label>
+                                <p class="text-xs text-gray-500 mt-1 ml-7">Marcar si este usuario pertenece al Comité de Vigilancia</p>
+                            </div>
                         </div>
 
                         <!-- Buttons -->
