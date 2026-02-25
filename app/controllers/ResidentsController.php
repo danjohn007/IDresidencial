@@ -197,6 +197,11 @@ class ResidentsController extends Controller {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Auto-generate username from email
             $email = $this->post('email');
+
+            // Check for duplicate email before attempting to create
+            if ($this->userModel->findByEmail($email)) {
+                $data['error'] = 'El correo electrónico ya está registrado en el sistema. Por favor utilice otro correo.';
+            } else {
             $baseUsername = strstr($email, '@', true);
             
             // Ensure username is unique by adding suffix if needed
@@ -241,6 +246,7 @@ class ResidentsController extends Controller {
             } else {
                 $data['error'] = 'Error al crear el usuario';
             }
+            } // end else (email not duplicate)
         }
         
         // Obtener propiedades disponibles
