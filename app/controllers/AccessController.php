@@ -541,32 +541,17 @@ class AccessController extends Controller {
                 $device = $stmt->fetch();
             }
 
-            // Buscar dispositivo activo y habilitado por propiedad
-            if (!$device && $propertyId) {
-                $stmt = $db->prepare("
-                    SELECT d.* 
-                    FROM access_devices d
-                    INNER JOIN properties p ON d.branch = p.section
-                    WHERE p.id = ? 
-                      AND d.enabled = 1 
-                      AND d.status = 'online'
-                    ORDER BY d.id DESC
+            // Buscar dispositivo activo sin sucursal asignada como fallback por propiedad
+            if (!$device) {
+                $stmt = $db->query("
+                    SELECT * FROM access_devices 
+                    WHERE enabled = 1 
+                      AND status = 'online'
+                      AND branch_id IS NULL
+                    ORDER BY id DESC
                     LIMIT 1
                 ");
-                $stmt->execute([$propertyId]);
                 $device = $stmt->fetch();
-                
-                if (!$device) {
-                    $stmt = $db->query("
-                        SELECT * FROM access_devices 
-                        WHERE enabled = 1 
-                          AND status = 'online'
-                          AND (branch IS NULL OR branch = '')
-                        ORDER BY id DESC
-                        LIMIT 1
-                    ");
-                    $device = $stmt->fetch();
-                }
             }
 
             // Fallback: cualquier dispositivo activo
