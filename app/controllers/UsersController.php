@@ -120,7 +120,8 @@ class UsersController extends Controller {
                 'last_name' => $this->post('last_name'),
                 'phone' => $this->post('phone'),
                 'role' => $role,
-                'status' => $this->post('status', 'active')
+                'status' => $this->post('status', 'active'),
+                'is_vigilance_committee' => $this->post('is_vigilance_committee') ? 1 : 0
             ];
             
             if ($this->userModel->create($userData)) {
@@ -158,7 +159,8 @@ class UsersController extends Controller {
                 'last_name' => $this->post('last_name'),
                 'phone' => $this->post('phone'),
                 'role' => $this->post('role'),
-                'status' => $this->post('status')
+                'status' => $this->post('status'),
+                'is_vigilance_committee' => $this->post('is_vigilance_committee') ? 1 : 0
             ];
             
             // Actualizar contraseña si se proporcionó

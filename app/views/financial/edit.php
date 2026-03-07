@@ -20,7 +20,7 @@
                 <?php endif; ?>
 
                 <div class="bg-white rounded-lg shadow p-6">
-                    <form method="POST" action="<?php echo BASE_URL; ?>/financial/edit/<?php echo $movement['id']; ?>">
+                    <form method="POST" action="<?php echo BASE_URL; ?>/financial/edit/<?php echo $movement['id']; ?>" enctype="multipart/form-data">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -131,6 +131,41 @@
                                 <textarea name="notes" rows="2" 
                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg"><?php echo htmlspecialchars($movement['notes'] ?? ''); ?></textarea>
                             </div>
+
+                            <!-- Imprevisto (visible only for egreso) -->
+                            <div class="md:col-span-2" id="unforeseen_div" style="display:<?php echo $movement['transaction_type'] === 'egreso' ? 'block' : 'none'; ?>;">
+                                <label class="flex items-center space-x-3 cursor-pointer">
+                                    <input type="checkbox" name="is_unforeseen" value="1"
+                                           <?php echo !empty($movement['is_unforeseen']) ? 'checked' : ''; ?>
+                                           class="w-4 h-4 text-orange-600 border-gray-300 rounded">
+                                    <span class="text-sm font-medium text-gray-700">
+                                        <i class="fas fa-exclamation-triangle text-orange-500 mr-1"></i>
+                                        Marcar como Imprevisto
+                                    </span>
+                                </label>
+                                <p class="text-xs text-gray-500 mt-1 ml-7">Activa esta opción si este egreso no estaba planeado</p>
+                            </div>
+
+                            <!-- Adjuntar Evidencia -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-paperclip mr-1"></i>Adjuntar Evidencia
+                                </label>
+                                <?php
+                                $evFile = $movement['evidence_file'] ?? '';
+                                $safePath = (preg_match('#^uploads/evidence/[\w\-]+\.[\w]+$#', $evFile)) ? $evFile : '';
+                                ?>
+                                <?php if ($safePath): ?>
+                                <p class="text-sm text-blue-600 mb-2">
+                                    <a href="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($safePath); ?>" target="_blank">
+                                        <i class="fas fa-file mr-1"></i>Ver archivo actual
+                                    </a>
+                                </p>
+                                <?php endif; ?>
+                                <input type="file" name="evidence_file" accept=".pdf,.jpg,.jpeg,.png"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                <p class="text-xs text-gray-500 mt-1">Opcional. Deja vacío para mantener el archivo actual.</p>
+                            </div>
                         </div>
 
                         <div class="flex justify-end space-x-3 mt-6">
@@ -158,6 +193,15 @@ const currentMovementTypeId = <?php echo json_encode($movement['movement_type_id
 document.getElementById('transaction_type').addEventListener('change', function() {
     const transactionType = this.value;
     const movementTypeSelect = document.getElementById('movement_type_id');
+    const unforeseenDiv = document.getElementById('unforeseen_div');
+    
+    // Show/hide imprevisto checkbox
+    if (unforeseenDiv) {
+        unforeseenDiv.style.display = transactionType === 'egreso' ? 'block' : 'none';
+        if (transactionType !== 'egreso') {
+            unforeseenDiv.querySelector('input[type="checkbox"]').checked = false;
+        }
+    }
     
     // Limpiar opciones
     movementTypeSelect.innerHTML = '<option value="">Seleccionar...</option>';

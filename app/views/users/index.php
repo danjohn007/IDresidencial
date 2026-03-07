@@ -112,6 +112,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rol</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Último Login</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">C. Vigilancia</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                         </tr>
                     </thead>
@@ -155,6 +156,13 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     <?php echo $user['last_login'] ? date('d/m/Y H:i', strtotime($user['last_login'])) : 'Nunca'; ?>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                    <?php if (!empty($user['is_vigilance_committee'])): ?>
+                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">Sí</span>
+                                    <?php else: ?>
+                                    <span class="text-gray-400">—</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                                     <a href="<?php echo BASE_URL; ?>/users/viewDetails/<?php echo $user['id']; ?>" 

@@ -20,7 +20,7 @@
                 <?php endif; ?>
 
                 <div class="bg-white rounded-lg shadow p-6">
-                    <form method="POST" action="<?php echo BASE_URL; ?>/financial/create">
+                    <form method="POST" action="<?php echo BASE_URL; ?>/financial/create" enctype="multipart/form-data">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -129,6 +129,29 @@
                                 <textarea name="notes" rows="2" 
                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg"></textarea>
                             </div>
+
+                            <!-- Imprevisto (visible only for egreso) -->
+                            <div class="md:col-span-2" id="unforeseen_div" style="display:none;">
+                                <label class="flex items-center space-x-3 cursor-pointer">
+                                    <input type="checkbox" name="is_unforeseen" value="1"
+                                           class="w-4 h-4 text-orange-600 border-gray-300 rounded">
+                                    <span class="text-sm font-medium text-gray-700">
+                                        <i class="fas fa-exclamation-triangle text-orange-500 mr-1"></i>
+                                        Marcar como Imprevisto
+                                    </span>
+                                </label>
+                                <p class="text-xs text-gray-500 mt-1 ml-7">Activa esta opción si este egreso no estaba planeado</p>
+                            </div>
+
+                            <!-- Adjuntar Evidencia -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-paperclip mr-1"></i>Adjuntar Evidencia
+                                </label>
+                                <input type="file" name="evidence_file" accept=".pdf,.jpg,.jpeg,.png"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                <p class="text-xs text-gray-500 mt-1">Opcional. Formatos aceptados: PDF, JPG, PNG</p>
+                            </div>
                         </div>
 
                         <div class="flex justify-end space-x-3 mt-6">
@@ -155,6 +178,15 @@ const movementTypes = <?php echo json_encode($movementTypes); ?>;
 document.getElementById('transaction_type').addEventListener('change', function() {
     const transactionType = this.value;
     const movementTypeSelect = document.getElementById('movement_type_id');
+    const unforeseenDiv = document.getElementById('unforeseen_div');
+    
+    // Show/hide imprevisto checkbox
+    if (unforeseenDiv) {
+        unforeseenDiv.style.display = transactionType === 'egreso' ? 'block' : 'none';
+        if (transactionType !== 'egreso') {
+            unforeseenDiv.querySelector('input[type="checkbox"]').checked = false;
+        }
+    }
     
     // Limpiar opciones
     movementTypeSelect.innerHTML = '<option value="">Seleccionar...</option>';

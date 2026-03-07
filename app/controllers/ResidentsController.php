@@ -197,6 +197,11 @@ class ResidentsController extends Controller {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Auto-generate username from email
             $email = $this->post('email');
+
+            // Check for duplicate email before attempting to create
+            if ($this->userModel->findByEmail($email)) {
+                $data['error'] = 'El correo electrónico ya está registrado en el sistema. Por favor utilice otro correo.';
+            } else {
             $baseUsername = strstr($email, '@', true);
             
             // Ensure username is unique by adding suffix if needed
@@ -241,6 +246,7 @@ class ResidentsController extends Controller {
             } else {
                 $data['error'] = 'Error al crear el usuario';
             }
+            } // end else (email not duplicate)
         }
         
         // Obtener propiedades disponibles
@@ -1553,5 +1559,69 @@ class ResidentsController extends Controller {
         ];
         
         $this->view('residents/print_fee_payment', $data);
+    }
+    
+    /**
+     * Reporte financiero del residente (mis ingresos y egresos)
+     */
+    public function financialReport() {
+        $this->requireAuth();
+        
+        $userId = $_SESSION['user_id'];
+        $date_from = $this->get('date_from', date('Y-m-01'));
+        $date_to = $this->get('date_to', date('Y-m-d'));
+        
+        // Get resident's property
+        $stmt = $this->db->prepare("
+            SELECT r.id as resident_id, r.property_id, p.property_number
+            FROM residents r
+            INNER JOIN properties p ON r.property_id = p.id
+            WHERE r.user_id = ? AND r.status = 'active'
+            LIMIT 1
+        ");
+        $stmt->execute([$userId]);
+        $residentInfo = $stmt->fetch();
+        
+        $payments = [];
+        $totalPaid = 0;
+        $totalPending = 0;
+        
+        if ($residentInfo) {
+            // Cuotas pagadas
+            $stmt = $this->db->prepare("
+                SELECT mf.*, fm.transaction_date as payment_date, fm.payment_method, fm.amount as paid_amount
+                FROM maintenance_fees mf
+                LEFT JOIN financial_movements fm ON fm.reference_type = 'maintenance_fee' AND fm.reference_id = mf.id
+                WHERE mf.property_id = ?
+                AND mf.status = 'paid'
+                AND (mf.paid_date BETWEEN ? AND ? OR fm.transaction_date BETWEEN ? AND ?)
+                ORDER BY mf.period DESC
+            ");
+            $stmt->execute([$residentInfo['property_id'], $date_from, $date_to, $date_from, $date_to]);
+            $payments = $stmt->fetchAll();
+            $totalPaid = array_sum(array_column($payments, 'amount'));
+            
+            // Cuotas pendientes/vencidas
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total
+                FROM maintenance_fees
+                WHERE property_id = ? AND status IN ('pending', 'overdue')
+            ");
+            $stmt->execute([$residentInfo['property_id']]);
+            $pendingInfo = $stmt->fetch();
+            $totalPending = $pendingInfo['total'];
+        }
+        
+        $data = [
+            'title' => 'Mis Ingresos y Egresos',
+            'residentInfo' => $residentInfo,
+            'payments' => $payments,
+            'totalPaid' => $totalPaid,
+            'totalPending' => $totalPending,
+            'date_from' => $date_from,
+            'date_to' => $date_to
+        ];
+        
+        $this->view('residents/financial_report', $data);
     }
 }

@@ -57,6 +57,7 @@
                                 <option value="all">Todos los residentes</option>
                                 <option value="propietarios">Solo propietarios</option>
                                 <option value="inquilinos">Solo inquilinos</option>
+                                <option value="comite_vigilancia">Comité de Vigilancia</option>
                             </select>
                         </div>
 
