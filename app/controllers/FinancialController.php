@@ -517,78 +517,228 @@ class FinancialController extends Controller {
      * Importar CSV Bancario
      */
     public function importCSV() {
+        $movementTypes = $this->financialModel->getMovementTypes();
         $data = [
             'title' => 'Importar CSV Bancario',
             'error' => '',
             'preview' => [],
-            'movementTypes' => $this->financialModel->getMovementTypes()
+            'movementTypes' => $movementTypes
         ];
-        
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
-            $file = $_FILES['csv_file'];
-            
-            if ($file['error'] === UPLOAD_ERR_OK) {
-                $handle = fopen($file['tmp_name'], 'r');
-                $rows = [];
-                $headers = null;
-                
-                while (($row = fgetcsv($handle, 1000, ',')) !== false) {
-                    if (!$headers) {
-                        $headers = $row;
-                        continue;
-                    }
-                    $rows[] = $row;
-                }
-                fclose($handle);
-                
-                if (isset($_POST['confirm_import'])) {
-                    $imported = 0;
-                    foreach ($rows as $rowIndex => $row) {
+
+        // Handle confirmation (rows stored in session from preview step)
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
+            $rows = $_SESSION['csv_import_rows'] ?? [];
+            $headers = $_SESSION['csv_import_headers'] ?? [];
+            unset($_SESSION['csv_import_rows'], $_SESSION['csv_import_headers']);
+
+            if (empty($rows)) {
+                $data['error'] = 'No hay datos para importar. Por favor carga el archivo nuevamente.';
+            } else {
+                $imported = 0;
+                foreach ($rows as $rowIndex => $row) {
+                    $cargoRaw = floatval(str_replace(['$', ',', ' '], '', $row[4] ?? 0));
+                    $abonoRaw = floatval(str_replace(['$', ',', ' '], '', $row[5] ?? 0));
+                    // Determine transaction type and amount
+                    if ($abonoRaw > 0) {
+                        $transType = 'ingreso';
+                        $amount = $abonoRaw;
+                    } elseif ($cargoRaw > 0) {
+                        $transType = 'egreso';
+                        $amount = $cargoRaw;
+                    } else {
+                        // Fallback: use monto column (col 2)
                         $amount = floatval(str_replace(['$', ',', ' '], '', $row[2] ?? 0));
                         $transType = $amount >= 0 ? 'ingreso' : 'egreso';
                         $amount = abs($amount);
-                        
-                        $movTypeId = isset($_POST['movement_type_id_' . $rowIndex]) ? intval($_POST['movement_type_id_' . $rowIndex]) : 1;
-                        
-                        $stmt = $this->db->prepare("
-                            INSERT INTO financial_movements 
-                            (movement_type_id, transaction_type, amount, description, transaction_date, created_by, notes)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
-                        ");
-                        $txDate = date('Y-m-d');
-                        if (!empty($row[0])) {
-                            $parsedDate = DateTime::createFromFormat('d/m/Y', trim($row[0]))
-                                       ?: DateTime::createFromFormat('Y-m-d', trim($row[0]))
-                                       ?: DateTime::createFromFormat('m/d/Y', trim($row[0]));
-                            if ($parsedDate) {
-                                $txDate = $parsedDate->format('Y-m-d');
+                    }
+
+                    $movTypeId = isset($_POST['movement_type_id_' . $rowIndex]) ? intval($_POST['movement_type_id_' . $rowIndex]) : 1;
+
+                    $txDate = date('Y-m-d');
+                    if (!empty($row[0])) {
+                        $parsedDate = DateTime::createFromFormat('d/m/Y', trim($row[0]))
+                                   ?: DateTime::createFromFormat('Y-m-d', trim($row[0]))
+                                   ?: DateTime::createFromFormat('m/d/Y', trim($row[0]));
+                        if ($parsedDate) {
+                            $txDate = $parsedDate->format('Y-m-d');
+                        }
+                    }
+
+                    $description = !empty($row[3]) ? trim($row[3]) : (!empty($row[1]) ? trim($row[1]) : 'Importado de archivo');
+
+                    $stmt = $this->db->prepare("
+                        INSERT INTO financial_movements 
+                        (movement_type_id, transaction_type, amount, description, transaction_date, created_by, notes, is_imported)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                    ");
+                    $stmt->execute([
+                        $movTypeId,
+                        $transType,
+                        $amount,
+                        $description,
+                        $txDate,
+                        $_SESSION['user_id'],
+                        'Importado desde archivo bancario'
+                    ]);
+                    $imported++;
+                }
+
+                AuditController::log('create', "Importación archivo bancario: $imported movimientos", 'financial_movements', null);
+                $_SESSION['success_message'] = "Se importaron $imported movimientos exitosamente";
+                $this->redirect('financial');
+            }
+        } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
+            $file = $_FILES['csv_file'];
+
+            if ($file['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $rows = [];
+                $headers = null;
+
+                if ($ext === 'xlsx') {
+                    // Parse Excel file using ZipArchive + SimpleXML
+                    $result = $this->parseXlsx($file['tmp_name']);
+                    if ($result === false) {
+                        $data['error'] = 'Error al procesar el archivo Excel. Verifica que sea un archivo .xlsx válido y que la extensión ZipArchive de PHP esté habilitada.';
+                    } else {
+                        $headers = array_shift($result);
+                        $rows = $result;
+                    }
+                } elseif ($ext === 'csv' || $ext === 'txt') {
+                    $handle = fopen($file['tmp_name'], 'r');
+                    while (($row = fgetcsv($handle, 0, ',')) !== false) {
+                        if (!$headers) {
+                            $headers = $row;
+                            continue;
+                        }
+                        $rows[] = $row;
+                    }
+                    fclose($handle);
+                } else {
+                    $data['error'] = 'Formato de archivo no soportado. Use .csv o .xlsx';
+                }
+
+                if (empty($data['error'])) {
+                    // Auto-detect movement type from CONCEPTO column (col index 1)
+                    $typesByName = [];
+                    foreach ($movementTypes as $mt) {
+                        $typesByName[mb_strtolower($mt['name'])] = $mt;
+                    }
+
+                    $suggestedTypes = [];
+                    foreach ($rows as $idx => $row) {
+                        $concepto = mb_strtolower(trim($row[1] ?? ''));
+                        $cargoRaw = floatval(str_replace(['$', ',', ' '], '', $row[4] ?? 0));
+                        $abonoRaw = floatval(str_replace(['$', ',', ' '], '', $row[5] ?? 0));
+                        $isIngreso = $abonoRaw > 0 || ($cargoRaw == 0 && $abonoRaw == 0);
+
+                        // Try to find matching type name
+                        $matched = null;
+                        foreach ($typesByName as $typeName => $mt) {
+                            // Match if concepto contains the type name or vice versa
+                            $allowed = ($isIngreso
+                                ? in_array($mt['category'], ['ingreso', 'ambos'])
+                                : in_array($mt['category'], ['egreso', 'ambos']));
+                            if ($allowed && (str_contains($concepto, $typeName) || str_contains($typeName, $concepto))) {
+                                $matched = $mt;
+                                break;
                             }
                         }
-                        $stmt->execute([
-                            $movTypeId,
-                            $transType,
-                            $amount,
-                            $row[3] ?? 'Importado de CSV',
-                            $txDate,
-                            $_SESSION['user_id'],
-                            'Importado desde CSV bancario'
-                        ]);
-                        $imported++;
+                        $suggestedTypes[$idx] = $matched ? $matched['id'] : null;
                     }
-                    
-                    AuditController::log('create', "Importación CSV: $imported movimientos", 'financial_movements', null);
-                    $_SESSION['success_message'] = "Se importaron $imported movimientos exitosamente";
-                    $this->redirect('financial');
-                } else {
+
+                    // Store in session for confirmation step
+                    $_SESSION['csv_import_rows'] = $rows;
+                    $_SESSION['csv_import_headers'] = $headers ?? [];
+
                     $data['preview'] = $rows;
                     $data['headers'] = $headers ?? [];
+                    $data['suggestedTypes'] = $suggestedTypes;
                 }
             } else {
-                $data['error'] = 'Error al cargar el archivo CSV';
+                $data['error'] = 'Error al cargar el archivo';
             }
         }
-        
+
         $this->view('financial/import_csv', $data);
+    }
+
+    /**
+     * Parse an .xlsx file and return rows as array of arrays.
+     * Returns false on failure.
+     */
+    private function parseXlsx(string $filePath) {
+        if (!class_exists('ZipArchive')) {
+            error_log('ZipArchive PHP extension is required to read .xlsx files');
+            return false;
+        }
+        $zip = new ZipArchive();
+        if ($zip->open($filePath) !== true) {
+            return false;
+        }
+        // Read shared strings
+        $sharedStrings = [];
+        $ssXml = $zip->getFromName('xl/sharedStrings.xml');
+        if ($ssXml !== false) {
+            $ss = simplexml_load_string($ssXml);
+            if ($ss) {
+                foreach ($ss->si as $si) {
+                    if (isset($si->t)) {
+                        $sharedStrings[] = (string)$si->t;
+                    } else {
+                        // richText: concatenate all <t> elements
+                        $text = '';
+                        foreach ($si->r as $r) {
+                            $text .= (string)$r->t;
+                        }
+                        $sharedStrings[] = $text;
+                    }
+                }
+            }
+        }
+        // Read worksheet
+        $wsXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+        if ($wsXml === false) {
+            return false;
+        }
+        $ws = simplexml_load_string($wsXml);
+        if (!$ws) {
+            return false;
+        }
+        $rows = [];
+        foreach ($ws->sheetData->row as $row) {
+            $rowData = [];
+            $lastCol = -1;
+            foreach ($row->c as $c) {
+                // Determine column index from cell reference (e.g. A1, B2)
+                $cellRef = (string)$c['r'];
+                preg_match('/^([A-Z]+)/', $cellRef, $colMatch);
+                $colLetters = $colMatch[1] ?? 'A';
+                $colIdx = 0;
+                for ($i = 0; $i < strlen($colLetters); $i++) {
+                    $colIdx = $colIdx * 26 + (ord($colLetters[$i]) - ord('A') + 1);
+                }
+                $colIdx--; // 0-based
+                // Fill gaps with empty strings
+                while ($lastCol < $colIdx - 1) {
+                    $rowData[] = '';
+                    $lastCol++;
+                }
+                $lastCol = $colIdx;
+                $type = (string)$c['t'];
+                $val = (string)$c->v;
+                if ($type === 's') {
+                    // Shared string
+                    $val = $sharedStrings[(int)$val] ?? '';
+                } elseif ($type === 'inlineStr') {
+                    $val = (string)$c->is->t;
+                }
+                $rowData[] = $val;
+            }
+            $rows[] = $rowData;
+        }
+        return $rows;
     }
     
     /**

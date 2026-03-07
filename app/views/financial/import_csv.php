@@ -22,9 +22,9 @@
                 <?php if (empty($preview)): ?>
                 <!-- Upload form -->
                 <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Seleccionar archivo CSV</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Seleccionar archivo CSV o Excel</h3>
                     <p class="text-sm text-gray-600 mb-2">
-                        El archivo CSV debe tener las columnas: <strong>Fecha, Concepto, Monto, Descripción, Cargo, Abono</strong> (separadas por comas).
+                        El archivo debe tener las columnas: <strong>Fecha, Concepto, Monto, Descripción, Cargo, Abono</strong>.
                     </p>
                     <p class="text-sm text-gray-500 mb-4">
                         <strong>Cargo</strong> = Egreso (salida de dinero) | <strong>Abono</strong> = Ingreso (entrada de dinero)
@@ -37,8 +37,8 @@
                     </div>
                     <form method="POST" action="<?php echo BASE_URL; ?>/financial/importCSV" enctype="multipart/form-data">
                         <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Archivo CSV</label>
-                            <input type="file" name="csv_file" accept=".csv" required
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Archivo CSV o Excel (.xlsx)</label>
+                            <input type="file" name="csv_file" accept=".csv,.xlsx,.xls,.txt" required
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                         </div>
                         <div class="flex justify-end space-x-3">
@@ -55,7 +55,7 @@
                 <!-- Preview table -->
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Vista Previa (<?php echo count($preview); ?> registros)</h3>
-                    <form method="POST" action="<?php echo BASE_URL; ?>/financial/importCSV" enctype="multipart/form-data">
+                    <form method="POST" action="<?php echo BASE_URL; ?>/financial/importCSV">
                         <input type="hidden" name="confirm_import" value="1">
                         <div class="overflow-x-auto mb-6">
                             <table class="min-w-full divide-y divide-gray-200 text-sm">
@@ -66,19 +66,32 @@
                                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase"><?php echo htmlspecialchars($header); ?></th>
                                         <?php endforeach; ?>
                                         <?php endif; ?>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo de Movimiento</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     <?php foreach ($preview as $idx => $row): ?>
-                                    <tr>
+                                    <?php
+                                        // Determine if this row is ingreso or egreso
+                                        $cargoRaw = floatval(str_replace(['$', ',', ' '], '', $row[4] ?? 0));
+                                        $abonoRaw = floatval(str_replace(['$', ',', ' '], '', $row[5] ?? 0));
+                                        $rowIsIngreso = $abonoRaw > 0 || ($cargoRaw == 0);
+                                        $suggestedTypeId = $suggestedTypes[$idx] ?? null;
+                                    ?>
+                                    <tr class="<?php echo $rowIsIngreso ? '' : 'bg-red-50'; ?>">
                                         <?php foreach ($row as $cell): ?>
                                         <td class="px-4 py-3 text-gray-900"><?php echo htmlspecialchars($cell); ?></td>
                                         <?php endforeach; ?>
                                         <td class="px-4 py-3">
                                             <select name="movement_type_id_<?php echo $idx; ?>" class="px-2 py-1 border border-gray-300 rounded text-sm">
                                                 <?php foreach ($movementTypes as $mt): ?>
-                                                <option value="<?php echo $mt['id']; ?>"><?php echo htmlspecialchars($mt['name']); ?></option>
+                                                <?php
+                                                    // Filter: show only ingreso types for abono rows, egreso for cargo rows
+                                                    $allowedCats = $rowIsIngreso ? ['ingreso', 'ambos'] : ['egreso', 'ambos'];
+                                                    if (!in_array($mt['category'], $allowedCats)) continue;
+                                                    $selected = ($mt['id'] == $suggestedTypeId) ? 'selected' : '';
+                                                ?>
+                                                <option value="<?php echo $mt['id']; ?>" <?php echo $selected; ?>><?php echo htmlspecialchars($mt['name']); ?></option>
                                                 <?php endforeach; ?>
                                             </select>
                                         </td>

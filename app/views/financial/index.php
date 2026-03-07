@@ -196,7 +196,7 @@
                             </tr>
                         <?php else: ?>
                             <?php foreach ($movements as $movement): ?>
-                                <tr class="hover:bg-gray-50">
+                                <tr class="hover:bg-gray-50 <?php echo !empty($movement['is_imported']) ? 'bg-blue-50' : ''; ?>">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         <?php echo date('d/m/Y', strtotime($movement['transaction_date'])); ?>
                                     </td>

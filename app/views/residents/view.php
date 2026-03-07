@@ -14,6 +14,10 @@
                         <h1 class="text-3xl font-bold text-gray-900">👤 Detalles del Residente</h1>
                         <p class="text-gray-600 mt-1">Información completa del residente</p>
                     </div>
+                    <a href="<?php echo BASE_URL; ?>/residents/edit/<?php echo $resident['id']; ?>"
+                       class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600">
+                        <i class="fas fa-edit mr-2"></i>Editar
+                    </a>
                     <a href="<?php echo BASE_URL; ?>/residents" 
                        class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
                         <i class="fas fa-arrow-left mr-2"></i>Volver
