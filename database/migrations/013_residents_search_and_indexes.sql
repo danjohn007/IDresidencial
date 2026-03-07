@@ -1,36 +1,70 @@
 -- ============================================
 -- Migración 013: Índices para búsqueda de residentes
 -- Fecha: 2026-03-07
--- Descripción:
---   Agrega índices para mejorar el rendimiento de las nuevas
---   búsquedas/filtros en el módulo de Residentes (/residents):
---     - Búsqueda por nombre, teléfono y correo en users
---     - Filtro por sección en properties
---     - Filtro por is_vigilance_committee en users
---
---   También incluye notas sobre los cambios de lógica aplicados:
---     1. FinancialController::edit() – cuando se asigna una propiedad
---        a un movimiento importado (sin referencia) de tipo cuota de
---        mantenimiento, se busca y marca como PAGADA la cuota
---        PENDIENTE más antigua de esa propiedad.
---     2. ResidentsController::payments() – la generación automática
---        de cuotas ya no requiere que la propiedad tenga
---        status = 'ocupada'; ahora se genera para cualquier
---        propiedad con residente principal activo.
+-- MySQL 5.7.x: NO soporta "ADD INDEX IF NOT EXISTS"
+-- Se implementa con INFORMATION_SCHEMA + SQL dinámico
 -- ============================================
 
--- Índice compuesto para búsquedas por nombre y apellido
-ALTER TABLE `users`
-  ADD INDEX IF NOT EXISTS `idx_name_search` (`first_name`, `last_name`);
+-- users.idx_name_search (first_name, last_name)
+SET @sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1
+      FROM information_schema.statistics
+      WHERE table_schema = DATABASE()
+        AND table_name = 'users'
+        AND index_name = 'idx_name_search'
+    ),
+    'SELECT ''idx_name_search already exists'';',
+    'ALTER TABLE `users` ADD INDEX `idx_name_search` (`first_name`, `last_name`);'
+  )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- Índice para filtro de comité de vigilancia
-ALTER TABLE `users`
-  ADD INDEX IF NOT EXISTS `idx_vigilance_committee` (`is_vigilance_committee`);
+-- users.idx_vigilance_committee (is_vigilance_committee)
+SET @sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1
+      FROM information_schema.statistics
+      WHERE table_schema = DATABASE()
+        AND table_name = 'users'
+        AND index_name = 'idx_vigilance_committee'
+    ),
+    'SELECT ''idx_vigilance_committee already exists'';',
+    'ALTER TABLE `users` ADD INDEX `idx_vigilance_committee` (`is_vigilance_committee`);'
+  )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- Índice para búsqueda por teléfono
-ALTER TABLE `users`
-  ADD INDEX IF NOT EXISTS `idx_phone` (`phone`);
+-- users.idx_phone (phone)
+SET @sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1
+      FROM information_schema.statistics
+      WHERE table_schema = DATABASE()
+        AND table_name = 'users'
+        AND index_name = 'idx_phone'
+    ),
+    'SELECT ''idx_phone already exists'';',
+    'ALTER TABLE `users` ADD INDEX `idx_phone` (`phone`);'
+  )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- Índice para sección en propiedades (si no existe ya)
-ALTER TABLE `properties`
-  ADD INDEX IF NOT EXISTS `idx_section_status` (`section`, `status`);
+-- properties.idx_section_status (section, status)
+SET @sql := (
+  SELECT IF(
+    EXISTS (
+      SELECT 1
+      FROM information_schema.statistics
+      WHERE table_schema = DATABASE()
+        AND table_name = 'properties'
+        AND index_name = 'idx_section_status'
+    ),
+    'SELECT ''idx_section_status already exists'';',
+    'ALTER TABLE `properties` ADD INDEX `idx_section_status` (`section`, `status`);'
+  )
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
