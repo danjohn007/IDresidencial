@@ -35,7 +35,17 @@ class ResidentsController extends Controller {
      * Vista principal de residentes
      */
     public function index() {
-        $residents = $this->residentModel->getAll();
+        $filters = [
+            'search'                => $this->get('search', ''),
+            'status'                => $this->get('status', ''),
+            'relationship'          => $this->get('relationship', ''),
+            'section'               => $this->get('section', ''),
+            'is_vigilance_committee'=> $this->get('is_vigilance_committee', '')
+        ];
+
+        // Remove empty filters so getAll() doesn't apply them
+        $activeFilters = array_filter($filters, fn($v) => $v !== '');
+        $residents = $this->residentModel->getAll($activeFilters);
         
         // Obtener estadísticas
         $stats = [
@@ -44,11 +54,17 @@ class ResidentsController extends Controller {
             'inquilinos' => $this->residentModel->count(['relationship' => 'inquilino']),
             'familiares' => $this->residentModel->count(['relationship' => 'familiar'])
         ];
+
+        // Obtener secciones disponibles para el filtro
+        $sectionsStmt = $this->db->query("SELECT DISTINCT section FROM properties WHERE section IS NOT NULL AND section != '' ORDER BY section");
+        $sections = $sectionsStmt->fetchAll(PDO::FETCH_COLUMN);
         
         $data = [
             'title' => 'Residentes',
             'residents' => $residents,
-            'stats' => $stats
+            'stats' => $stats,
+            'filters' => $filters,
+            'sections' => $sections
         ];
         
         $this->view('residents/index', $data);
@@ -415,8 +431,7 @@ class ResidentsController extends Controller {
                 SELECT p.id, p.property_number
                 FROM properties p
                 INNER JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
-                WHERE p.status = 'ocupada'
-                  AND NOT EXISTS (
+                WHERE NOT EXISTS (
                       SELECT 1 FROM maintenance_fees mf 
                       WHERE mf.property_id = p.id AND mf.period = ?
                   )
@@ -1673,9 +1688,14 @@ class ResidentsController extends Controller {
         $status_filter = $this->get('status_filter', '');
 
         $whereExtra = '';
-        $params = [$resident['property_id'], $year . '%'];
+        if ($year === 'all') {
+            $params = [$resident['property_id']];
+        } else {
+            $params = [$resident['property_id'], $year . '%'];
+            $whereExtra = 'AND mf.period LIKE ?';
+        }
         if ($status_filter !== '') {
-            $whereExtra = ' AND mf.status = ?';
+            $whereExtra .= ' AND mf.status = ?';
             $params[] = $status_filter;
         }
 
@@ -1688,7 +1708,6 @@ class ResidentsController extends Controller {
             FROM maintenance_fees mf
             LEFT JOIN financial_movements fm ON fm.reference_type = 'maintenance_fee' AND fm.reference_id = mf.id
             WHERE mf.property_id = ?
-              AND mf.period LIKE ?
               $whereExtra
             ORDER BY mf.period DESC
         ");
