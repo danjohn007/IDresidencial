@@ -111,6 +111,19 @@ class Resident {
         }
         
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        // Sorting
+        $allowedSortBy = [
+            'nombre'    => 'u.first_name, u.last_name',
+            'propiedad' => 'p.property_number',
+            'seccion'   => 'p.section',
+            'relacion'  => 'r.relationship',
+            'estado'    => 'r.status',
+            'fecha'     => 'u.created_at',
+        ];
+        $sortByKey = $filters['sort_by'] ?? 'fecha';
+        $sortByCol = $allowedSortBy[$sortByKey] ?? 'u.created_at';
+        $sortOrder = strtoupper($filters['sort_order'] ?? 'desc') === 'ASC' ? 'ASC' : 'DESC';
         
         $sql = "SELECT r.*, 
                        u.username, u.email, u.first_name, u.last_name, u.phone,
@@ -120,7 +133,7 @@ class Resident {
                 JOIN users u ON r.user_id = u.id
                 JOIN properties p ON r.property_id = p.id
                 $whereClause
-                ORDER BY p.property_number, r.is_primary DESC";
+                ORDER BY $sortByCol $sortOrder, r.is_primary DESC";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

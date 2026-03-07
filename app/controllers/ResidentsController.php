@@ -40,7 +40,9 @@ class ResidentsController extends Controller {
             'status'                => $this->get('status', ''),
             'relationship'          => $this->get('relationship', ''),
             'section'               => $this->get('section', ''),
-            'is_vigilance_committee'=> $this->get('is_vigilance_committee', '')
+            'is_vigilance_committee'=> $this->get('is_vigilance_committee', ''),
+            'sort_by'               => $this->get('sort_by', 'fecha'),
+            'sort_order'            => $this->get('sort_order', 'desc'),
         ];
 
         // Remove empty filters so getAll() doesn't apply them
@@ -457,13 +459,15 @@ class ResidentsController extends Controller {
                     $membershipAmount = $amountStmt->fetch();
                     $amount = $membershipAmount ? $membershipAmount['monthly_cost'] : $defaultAmount;
                     
-                    // Insert fee
+                    // Insert fee (IGNORE prevents duplicate if unique constraint exists)
                     $insertStmt = $this->db->prepare("
-                        INSERT INTO maintenance_fees (property_id, period, amount, due_date, status)
+                        INSERT IGNORE INTO maintenance_fees (property_id, period, amount, due_date, status)
                         VALUES (?, ?, ?, ?, 'pending')
                     ");
                     $insertStmt->execute([$property['id'], $period, $amount, $dueDate]);
-                    $generatedCount++;
+                    if ($insertStmt->rowCount() > 0) {
+                        $generatedCount++;
+                    }
                 }
             }
         }

@@ -108,14 +108,55 @@
             <div class="bg-white rounded-lg shadow overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
+                        <?php
+                        // Helper to build sort URL
+                        $sortParams = $filters;
+                        function buildSortUrl($baseUrl, $sortParams, $col) {
+                            $currentSort = $sortParams['sort_by'] ?? 'fecha';
+                            $currentOrder = $sortParams['sort_order'] ?? 'desc';
+                            $newOrder = ($currentSort === $col && $currentOrder === 'asc') ? 'desc' : 'asc';
+                            $params = array_merge($sortParams, ['sort_by' => $col, 'sort_order' => $newOrder]);
+                            return $baseUrl . '/residents?' . http_build_query(array_filter($params, fn($v) => $v !== '' && $v !== null));
+                        }
+                        function sortIcon($sortParams, $col) {
+                            if (($sortParams['sort_by'] ?? '') !== $col) return '<i class="fas fa-sort text-gray-300 ml-1"></i>';
+                            return ($sortParams['sort_order'] ?? '') === 'asc'
+                                ? '<i class="fas fa-sort-up text-blue-500 ml-1"></i>'
+                                : '<i class="fas fa-sort-down text-blue-500 ml-1"></i>';
+                        }
+                        ?>
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Propiedad</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sección</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Relación</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                <a href="<?php echo buildSortUrl(BASE_URL, $sortParams, 'nombre'); ?>" class="flex items-center hover:text-gray-700">
+                                    Nombre <?php echo sortIcon($sortParams, 'nombre'); ?>
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                <a href="<?php echo buildSortUrl(BASE_URL, $sortParams, 'propiedad'); ?>" class="flex items-center hover:text-gray-700">
+                                    Propiedad <?php echo sortIcon($sortParams, 'propiedad'); ?>
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                <a href="<?php echo buildSortUrl(BASE_URL, $sortParams, 'seccion'); ?>" class="flex items-center hover:text-gray-700">
+                                    Sección <?php echo sortIcon($sortParams, 'seccion'); ?>
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                <a href="<?php echo buildSortUrl(BASE_URL, $sortParams, 'relacion'); ?>" class="flex items-center hover:text-gray-700">
+                                    Relación <?php echo sortIcon($sortParams, 'relacion'); ?>
+                                </a>
+                            </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contacto</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha de Ingreso</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                <a href="<?php echo buildSortUrl(BASE_URL, $sortParams, 'fecha'); ?>" class="flex items-center hover:text-gray-700">
+                                    Fecha de Ingreso <?php echo sortIcon($sortParams, 'fecha'); ?>
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                <a href="<?php echo buildSortUrl(BASE_URL, $sortParams, 'estado'); ?>" class="flex items-center hover:text-gray-700">
+                                    Estado <?php echo sortIcon($sortParams, 'estado'); ?>
+                                </a>
+                            </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                         </tr>
                     </thead>
