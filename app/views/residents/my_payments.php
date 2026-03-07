@@ -9,8 +9,8 @@
         <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
             <div class="max-w-7xl mx-auto">
                 <div class="mb-6">
-                    <h1 class="text-3xl font-bold text-gray-900">💳 Mis Pagos</h1>
-                    <p class="text-gray-600 mt-1">Historial de pagos y adeudos de tu propiedad</p>
+                    <h1 class="text-3xl font-bold text-gray-900">💳 Estado de Cuenta</h1>
+                    <p class="text-gray-600 mt-1">Estado de cuenta y adeudos de tu propiedad</p>
                 </div>
 
                 <?php if (isset($_SESSION['success_message'])): ?>

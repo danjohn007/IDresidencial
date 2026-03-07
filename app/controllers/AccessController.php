@@ -300,7 +300,8 @@ class AccessController extends Controller {
         $deviceMessage = '';
         
         if ($accessType === 'entry') {
-            $deviceResult = $this->activateAccessDevice($visit['property_id'] ?? null);
+            $area = $this->post('area');
+            $deviceResult = $this->activateAccessDevice($visit['property_id'] ?? null, $area ?: null);
             $deviceActivated = $deviceResult['activated'];
             $deviceMessage = $deviceResult['message'];
         }
@@ -431,12 +432,27 @@ class AccessController extends Controller {
     /**
      * Activar dispositivo de acceso automáticamente
      */
-    private function activateAccessDevice($propertyId = null) {
+    private function activateAccessDevice($propertyId = null, $area = null) {
         try {
             $db = Database::getInstance()->getConnection();
-            
-            // Buscar dispositivo activo y habilitado
-            if ($propertyId) {
+            $device = null;
+
+            // Si se especificó área, buscar por área primero
+            if ($area) {
+                $stmt = $db->prepare("
+                    SELECT * FROM access_devices
+                    WHERE area = ?
+                      AND enabled = 1
+                      AND status = 'online'
+                    ORDER BY id DESC
+                    LIMIT 1
+                ");
+                $stmt->execute([$area]);
+                $device = $stmt->fetch();
+            }
+
+            // Buscar dispositivo activo y habilitado por propiedad
+            if (!$device && $propertyId) {
                 $stmt = $db->prepare("
                     SELECT d.* 
                     FROM access_devices d
@@ -461,7 +477,10 @@ class AccessController extends Controller {
                     ");
                     $device = $stmt->fetch();
                 }
-            } else {
+            }
+
+            // Fallback: cualquier dispositivo activo
+            if (!$device) {
                 $stmt = $db->query("
                     SELECT * FROM access_devices 
                     WHERE enabled = 1 
@@ -640,5 +659,111 @@ class AccessController extends Controller {
         }
         
         return ['success' => true, 'message' => 'Puerta abierta'];
+    }
+
+    /**
+     * Validar código QR via AJAX (para quick scan)
+     * Verifica tanto visits como resident_access_passes
+     */
+    public function validateQR() {
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+            return;
+        }
+
+        $this->requireRole(['superadmin', 'administrador', 'guardia']);
+
+        $qrCode = trim($this->post('qr_code', ''));
+
+        if (empty($qrCode)) {
+            echo json_encode(['success' => false, 'message' => 'Código QR requerido']);
+            return;
+        }
+
+        // Validar formato esperado
+        if (!preg_match('/^VIS-\d{8}-[A-F0-9]{8}$/i', $qrCode)) {
+            echo json_encode(['success' => false, 'message' => 'Código QR no válido. Formato esperado: VIS-YYYYMMDD-XXXXXXXX']);
+            return;
+        }
+
+        $db = Database::getInstance()->getConnection();
+
+        // Primero buscar en visits (pases generados por admin/guardia)
+        $visit = $this->visitModel->validateVisit($qrCode);
+        if ($visit) {
+            $details = $this->visitModel->findByQR($qrCode);
+            echo json_encode([
+                'success' => true,
+                'type' => 'visit',
+                'visit' => [
+                    'id' => $details['id'],
+                    'visitor_name' => $details['visitor_name'],
+                    'property_number' => $details['property_number'],
+                    'resident_name' => $details['first_name'] . ' ' . $details['last_name'],
+                    'valid_from' => $details['valid_from'],
+                    'valid_until' => $details['valid_until']
+                ]
+            ]);
+            return;
+        }
+
+        // Buscar en resident_access_passes (pases generados por residentes)
+        $stmt = $db->prepare("
+            SELECT rap.*,
+                   u.first_name, u.last_name,
+                   p.property_number, p.id as property_id
+            FROM resident_access_passes rap
+            INNER JOIN residents r ON rap.resident_id = r.id
+            INNER JOIN users u ON r.user_id = u.id
+            INNER JOIN properties p ON r.property_id = p.id
+            WHERE rap.qr_code = ?
+              AND rap.status = 'active'
+              AND NOW() BETWEEN rap.valid_from AND COALESCE(rap.valid_until, '9999-12-31')
+              AND (rap.max_uses = 0 OR rap.uses_count < rap.max_uses)
+              -- max_uses = 0 means unlimited uses (permanent pass)
+        ");
+        $stmt->execute([$qrCode]);
+        $pass = $stmt->fetch();
+
+        if ($pass) {
+            // Incrementar contador de usos; si max_uses > 0 y se alcanzó el límite en single_use, marcar como usado
+            $stmtUpdate = $db->prepare("
+                UPDATE resident_access_passes
+                SET uses_count = uses_count + 1,
+                    status = IF(max_uses > 0 AND (uses_count + 1) >= max_uses AND pass_type = 'single_use', 'used', status)
+                WHERE id = ?
+            ");
+            $stmtUpdate->execute([$pass['id']]);
+
+            // Log the access entry in access_log
+            $this->accessLogModel->create([
+                'log_type' => 'resident_pass',
+                'reference_id' => $pass['id'],
+                'access_type' => 'entry',
+                'access_method' => 'qr',
+                'property_id' => $pass['property_id'] ?? null,
+                'name' => $pass['first_name'] . ' ' . $pass['last_name'],
+                'vehicle_plate' => null,
+                'guard_id' => $_SESSION['user_id']
+            ]);
+
+            echo json_encode([
+                'success' => true,
+                'type' => 'resident_pass',
+                'visit' => [
+                    'id' => null,
+                    'visitor_name' => $pass['first_name'] . ' ' . $pass['last_name'],
+                    'property_number' => $pass['property_number'],
+                    'resident_name' => $pass['first_name'] . ' ' . $pass['last_name'],
+                    'valid_from' => $pass['valid_from'],
+                    'valid_until' => $pass['valid_until'] ?? 'Sin vencimiento'
+                ]
+            ]);
+            return;
+        }
+
+        echo json_encode(['success' => false, 'message' => 'Código QR no válido o expirado']);
     }
 }
