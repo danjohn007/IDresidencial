@@ -21,6 +21,27 @@
 
             <div class="max-w-2xl mx-auto">
                 <div class="bg-white rounded-lg shadow-lg p-6">
+                    <!-- Area Selection (required) -->
+                    <div class="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <label class="block text-sm font-semibold text-blue-800 mb-2">
+                            <i class="fas fa-map-marker-alt mr-1"></i> Seleccionar Área <span class="text-red-500">*</span>
+                        </label>
+                        <select id="selectedArea" onchange="saveAreaSelection()"
+                                class="w-full px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="">-- Seleccione el área de validación --</option>
+                            <?php if (!empty($areas)): ?>
+                                <?php foreach ($areas as $area): ?>
+                                    <option value="<?php echo htmlspecialchars($area['name']); ?>">
+                                        <?php echo htmlspecialchars($area['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <option value="Entrada Principal">Entrada Principal</option>
+                            <?php endif; ?>
+                        </select>
+                        <p class="text-xs text-blue-600 mt-1">La selección se mantiene para próximas validaciones en esta sesión.</p>
+                    </div>
+
                     <!-- Scanner Container -->
                     <div id="scanner-container" class="mb-4">
                         <div id="reader" class="border-4 border-blue-500 rounded-lg overflow-hidden"></div>
@@ -55,6 +76,18 @@ let html5QrcodeScanner;
 
 // Initialize QR Scanner
 document.addEventListener('DOMContentLoaded', function() {
+    // Restore last selected area from localStorage
+    const lastArea = localStorage.getItem('lastSelectedArea');
+    if (lastArea) {
+        const select = document.getElementById('selectedArea');
+        for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value === lastArea) {
+                select.selectedIndex = i;
+                break;
+            }
+        }
+    }
+
     html5QrcodeScanner = new Html5QrcodeScanner(
         "reader",
         { 
@@ -69,6 +102,17 @@ document.addEventListener('DOMContentLoaded', function() {
     html5QrcodeScanner.render(onScanSuccess, onScanError);
 });
 
+function saveAreaSelection() {
+    const area = document.getElementById('selectedArea').value;
+    if (area) {
+        localStorage.setItem('lastSelectedArea', area);
+    }
+}
+
+function getSelectedArea() {
+    return document.getElementById('selectedArea').value;
+}
+
 function onScanSuccess(decodedText, decodedResult) {
     // Stop scanning
     html5QrcodeScanner.clear();
@@ -82,6 +126,17 @@ function onScanError(error) {
 }
 
 function validateQRCode(qrCode) {
+    const area = getSelectedArea();
+    if (!area) {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = `
+            <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 text-center">
+                <i class="fas fa-exclamation-circle text-yellow-500 text-3xl mb-2"></i>
+                <p class="text-yellow-700 font-semibold">Debe seleccionar un área antes de validar.</p>
+            </div>`;
+        return;
+    }
+
     const resultDiv = document.getElementById('result');
     resultDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-3xl text-blue-600"></i><p class="mt-2">Validando...</p></div>';
     
@@ -90,7 +145,7 @@ function validateQRCode(qrCode) {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: 'qr_code=' + encodeURIComponent(qrCode)
+        body: 'qr_code=' + encodeURIComponent(qrCode) + '&area=' + encodeURIComponent(area)
     })
     .then(response => response.json())
     .then(data => {
@@ -100,6 +155,7 @@ function validateQRCode(qrCode) {
                     <div class="text-center mb-4">
                         <i class="fas fa-check-circle text-6xl text-green-500"></i>
                         <h3 class="text-2xl font-bold text-green-700 mt-2">¡Acceso Autorizado!</h3>
+                        <p class="text-sm text-green-600 mt-1">Área: ${area}</p>
                     </div>
                     <div class="text-left space-y-2">
                         <p><strong>Visitante:</strong> ${data.visit.visitor_name}</p>
@@ -108,10 +164,10 @@ function validateQRCode(qrCode) {
                         <p><strong>Válido:</strong> ${data.visit.valid_from} - ${data.visit.valid_until}</p>
                     </div>
                     <div class="mt-4 flex gap-2">
-                        <button onclick="registerEntry('${data.visit.id}')" 
+                        ${data.type === 'visit' ? `<button onclick="registerEntry('${data.visit.id}')" 
                                 class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
                             Registrar Entrada
-                        </button>
+                        </button>` : ''}
                         <button onclick="location.reload()" 
                                 class="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
                             Escanear Otro
@@ -157,12 +213,13 @@ function validateManualCode() {
 }
 
 function registerEntry(visitId) {
+    const area = getSelectedArea();
     fetch('<?php echo BASE_URL; ?>/access/registerAccess', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `visit_id=${visitId}&access_type=entry`
+        body: `visit_id=${visitId}&access_type=entry&area=${encodeURIComponent(area)}`
     })
     .then(response => response.json())
     .then(data => {

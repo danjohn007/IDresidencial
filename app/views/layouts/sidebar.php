@@ -158,6 +158,18 @@
                                 <span>Cartera Vencida</span>
                             </a>
                         </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/penaltyRules" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-percentage w-5"></i>
+                                <span>Reglas de Penalización</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/residents/delinquencyReport" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-user-times w-5"></i>
+                                <span>Reporte de Morosidad</span>
+                            </a>
+                        </li>
                     </ul>
                 </li>
                 
@@ -180,19 +192,19 @@
                 
                 <!-- Resident-specific menu items -->
                 <?php if ($_SESSION['role'] === 'residente'): ?>
-                <!-- Mis Pagos -->
+                <!-- Estado de Cuenta -->
                 <li>
                     <a href="<?php echo BASE_URL; ?>/residents/myPayments" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
-                        <i class="fas fa-credit-card w-5"></i>
-                        <span>Mis Pagos</span>
+                        <i class="fas fa-file-invoice-dollar w-5"></i>
+                        <span>Estado de Cuenta</span>
                     </a>
                 </li>
                 
-                <!-- Mis Ingresos y Egresos -->
+                <!-- Informe Financiero -->
                 <li>
                     <a href="<?php echo BASE_URL; ?>/residents/financialReport" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
                         <i class="fas fa-chart-line w-5"></i>
-                        <span>Mis Ingresos y Egresos</span>
+                        <span>Informe Financiero</span>
                     </a>
                 </li>
                 
@@ -274,10 +286,27 @@
                 
                 <!-- Dispositivos -->
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/devices" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
-                        <i class="fas fa-microchip w-5"></i>
-                        <span>Dispositivos</span>
-                    </a>
+                    <button onclick="toggleSubmenu('devices-submenu')" class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-microchip w-5"></i>
+                            <span>Dispositivos</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm" id="devices-submenu-icon"></i>
+                    </button>
+                    <ul id="devices-submenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/devices" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-list w-5"></i>
+                                <span>Dispositivos</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/devices/areas" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-map-marker-alt w-5"></i>
+                                <span>Alta de Áreas</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                 
                 <!-- Configuración -->

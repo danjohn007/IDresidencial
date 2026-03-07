@@ -86,9 +86,14 @@ class GuardController extends Controller {
      * Escanear QR rápido
      */
     public function quickScan() {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->query("SELECT * FROM device_areas WHERE is_active = 1 ORDER BY name");
+        $areas = $stmt->fetchAll();
+
         $data = [
             'title' => 'Escaneo Rápido QR',
-            'result' => null
+            'result' => null,
+            'areas' => $areas
         ];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -729,4 +729,25 @@ class FinancialController extends Controller {
         
         $this->view('financial/movement_types', $data);
     }
+
+    /**
+     * Descargar plantilla CSV
+     */
+    public function downloadCSVTemplate() {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="plantilla_importacion_bancaria.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $output = fopen('php://output', 'w');
+        // BOM for UTF-8 Excel compatibility
+        fputs($output, "\xEF\xBB\xBF");
+        // Headers
+        fputcsv($output, ['Fecha', 'Concepto', 'Monto', 'Descripcion', 'Cargo', 'Abono']);
+        // Example rows
+        fputcsv($output, [date('d/m/Y'), 'Cuota de mantenimiento', '1500.00', 'Pago mensual', '0.00', '1500.00']);
+        fputcsv($output, [date('d/m/Y'), 'Pago de servicio', '500.00', 'Servicio de limpieza', '500.00', '0.00']);
+        fclose($output);
+        exit;
+    }
 }

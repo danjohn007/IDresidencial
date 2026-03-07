@@ -134,6 +134,10 @@ class DevicesController extends Controller {
         // Obtener sucursales para el dropdown
         $stmt = $this->db->query("SELECT DISTINCT section FROM properties WHERE section IS NOT NULL AND section != '' ORDER BY section");
         $data['branches'] = $stmt->fetchAll();
+
+        // Obtener áreas del catálogo
+        $stmt = $this->db->query("SELECT * FROM device_areas WHERE is_active = 1 ORDER BY name");
+        $data['deviceAreas'] = $stmt->fetchAll();
         
         $this->view('devices/createShelly', $data);
     }
@@ -307,6 +311,71 @@ class DevicesController extends Controller {
         ];
         
         $this->view('devices/disabled', $data);
+    }
+
+    /**
+     * Catálogo de Áreas
+     */
+    public function areas() {
+        $data = [
+            'title' => 'Alta de Áreas',
+            'areas' => [],
+            'error' => ''
+        ];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $action = $this->post('action', 'create');
+
+            if ($action === 'create') {
+                $name = trim($this->post('name', ''));
+                $description = trim($this->post('description', ''));
+                if (empty($name)) {
+                    $data['error'] = 'El nombre del área es obligatorio';
+                } else {
+                    try {
+                        $stmt = $this->db->prepare("INSERT INTO device_areas (name, description, created_by) VALUES (?, ?, ?)");
+                        $stmt->execute([$name, $description, $_SESSION['user_id']]);
+                        AuditController::log('create', 'Área creada: ' . $name, 'device_areas', $this->db->lastInsertId());
+                        $_SESSION['success_message'] = 'Área creada exitosamente';
+                        $this->redirect('devices/areas');
+                        return;
+                    } catch (Exception $e) {
+                        $data['error'] = 'Error al crear el área. El nombre puede estar duplicado.';
+                    }
+                }
+            } elseif ($action === 'delete') {
+                $areaId = intval($this->post('area_id'));
+                $stmt = $this->db->prepare("DELETE FROM device_areas WHERE id = ?");
+                $stmt->execute([$areaId]);
+                AuditController::log('delete', 'Área eliminada ID: ' . $areaId, 'device_areas', $areaId);
+                $_SESSION['success_message'] = 'Área eliminada exitosamente';
+                $this->redirect('devices/areas');
+                return;
+            } elseif ($action === 'edit') {
+                $areaId = intval($this->post('area_id'));
+                $name = trim($this->post('name', ''));
+                $description = trim($this->post('description', ''));
+                if (empty($name)) {
+                    $data['error'] = 'El nombre del área es obligatorio';
+                } else {
+                    try {
+                        $stmt = $this->db->prepare("UPDATE device_areas SET name = ?, description = ? WHERE id = ?");
+                        $stmt->execute([$name, $description, $areaId]);
+                        AuditController::log('update', 'Área actualizada: ' . $name, 'device_areas', $areaId);
+                        $_SESSION['success_message'] = 'Área actualizada exitosamente';
+                        $this->redirect('devices/areas');
+                        return;
+                    } catch (Exception $e) {
+                        $data['error'] = 'Error al actualizar el área.';
+                    }
+                }
+            }
+        }
+
+        $stmt = $this->db->query("SELECT * FROM device_areas ORDER BY name");
+        $data['areas'] = $stmt->fetchAll();
+
+        $this->view('devices/areas', $data);
     }
     
     /**

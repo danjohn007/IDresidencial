@@ -122,10 +122,10 @@
                                             <i class="fas fa-user-check"></i>
                                         </button>
                                         <?php endif; ?>
-                                        <button onclick="confirmDelete(<?php echo $resident['id']; ?>, '<?php echo addslashes($resident['first_name'] . ' ' . $resident['last_name']); ?>')" 
-                                                class="text-red-600 hover:text-red-900" title="Eliminar">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                        <a href="<?php echo BASE_URL; ?>/residents/accountStatement/<?php echo $resident['id']; ?>"
+                                           class="text-purple-600 hover:text-purple-900" title="Ver Estado de Cuenta">
+                                            <i class="fas fa-file-invoice-dollar"></i>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>

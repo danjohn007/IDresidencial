@@ -111,6 +111,16 @@
                                         <option value="familiar" <?php echo ($resident['relationship'] === 'familiar') ? 'selected' : ''; ?>>Familiar</option>
                                     </select>
                                 </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="flex items-center space-x-3">
+                                        <input type="checkbox" name="is_vigilance_committee" value="1"
+                                               <?php echo !empty($resident['is_vigilance_committee']) ? 'checked' : ''; ?>
+                                               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                        <span class="text-sm font-medium text-gray-700">Miembro del Comité de Vigilancia y Administración</span>
+                                    </label>
+                                    <p class="text-xs text-gray-500 mt-1 ml-7">Los miembros del comité tienen acceso al Informe Financiero mensual y por rango de fechas con balance.</p>
+                                </div>
                             </div>
                         </div>
 

@@ -8,7 +8,7 @@
         
         <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
             <div class="mb-6">
-                <h1 class="text-3xl font-bold text-gray-900">💰 Mis Ingresos y Egresos</h1>
+                <h1 class="text-3xl font-bold text-gray-900">💰 Informe Financiero</h1>
                 <p class="text-gray-600 mt-1">Historial de pagos de tu propiedad</p>
             </div>
 
@@ -17,6 +17,15 @@
                 <p class="text-yellow-700">No se encontró información de propiedad asociada a tu cuenta.</p>
             </div>
             <?php else: ?>
+
+            <?php if (!empty($dateRangeAdjusted) || (isset($isCommittee) && !$isCommittee && !isset($isAdmin))): ?>
+            <div class="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 rounded text-sm">
+                <i class="fas fa-info-circle mr-1"></i>
+                <?php if (isset($isCommittee) && !$isCommittee && !(isset($isAdmin) && $isAdmin)): ?>
+                    El rango de fechas disponible es el mes actual y los 3 meses anteriores.
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
 
             <!-- Summary Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">

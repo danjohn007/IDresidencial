@@ -38,6 +38,7 @@ class Resident {
         $stmt = $this->db->prepare("
             SELECT r.*, 
                    u.username, u.email, u.first_name, u.last_name, u.phone, u.photo,
+                   u.is_vigilance_committee,
                    p.property_number, p.street, p.section, p.tower
             FROM residents r
             JOIN users u ON r.user_id = u.id

@@ -23,9 +23,18 @@
                 <!-- Upload form -->
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Seleccionar archivo CSV</h3>
-                    <p class="text-sm text-gray-600 mb-4">
-                        El archivo CSV debe tener las columnas: <strong>Fecha, Concepto, Monto, Descripción</strong> (separadas por comas).
+                    <p class="text-sm text-gray-600 mb-2">
+                        El archivo CSV debe tener las columnas: <strong>Fecha, Concepto, Monto, Descripción, Cargo, Abono</strong> (separadas por comas).
                     </p>
+                    <p class="text-sm text-gray-500 mb-4">
+                        <strong>Cargo</strong> = Egreso (salida de dinero) | <strong>Abono</strong> = Ingreso (entrada de dinero)
+                    </p>
+                    <div class="mb-4">
+                        <a href="<?php echo BASE_URL; ?>/financial/downloadCSVTemplate" 
+                           class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm border border-gray-300">
+                            <i class="fas fa-download mr-2"></i> Descargar Plantilla CSV
+                        </a>
+                    </div>
                     <form method="POST" action="<?php echo BASE_URL; ?>/financial/importCSV" enctype="multipart/form-data">
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Archivo CSV</label>

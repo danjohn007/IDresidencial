@@ -19,7 +19,7 @@ class ResidentsController extends Controller {
         $action = isset($url[1]) ? $url[1] : 'index';
         
         // Methods that residents can access
-        $residentMethods = ['myPayments', 'generateAccess', 'myAccesses', 'cancelPass', 'makePayment', 'processPayment'];
+        $residentMethods = ['myPayments', 'generateAccess', 'myAccesses', 'cancelPass', 'makePayment', 'processPayment', 'financialReport'];
         
         // If not a resident method, require admin roles
         if (!in_array($action, $residentMethods)) {
@@ -137,7 +137,7 @@ class ResidentsController extends Controller {
             // Update user data
             $stmt = $this->db->prepare("
                 UPDATE users 
-                SET first_name = ?, last_name = ?, phone = ?, email = ?
+                SET first_name = ?, last_name = ?, phone = ?, email = ?, is_vigilance_committee = ?
                 WHERE id = ?
             ");
             $stmt->execute([
@@ -145,6 +145,7 @@ class ResidentsController extends Controller {
                 $userData['last_name'],
                 $userData['phone'],
                 $userData['email'],
+                $this->post('is_vigilance_committee') ? 1 : 0,
                 $resident['user_id']
             ]);
             
@@ -221,7 +222,8 @@ class ResidentsController extends Controller {
                 'last_name' => $this->post('last_name'),
                 'phone' => $this->post('phone'),
                 'role' => 'residente',
-                'status' => 'active'
+                'status' => 'active',
+                'is_vigilance_committee' => $this->post('is_vigilance_committee') ? 1 : 0
             ];
             
             if ($this->userModel->create($userData)) {
@@ -787,8 +789,12 @@ class ResidentsController extends Controller {
             $maxUses = intval($this->post('max_uses', 1));
             $notes = $this->post('notes', '');
             
-            // Generar código QR único
-            $qrCode = bin2hex(random_bytes(16));
+            // Generar código QR único con formato VIS-YYYYMMDD-XXXXXXXX
+            do {
+                $qrCode = 'VIS-' . date('Ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
+                $stmtCheck = $this->db->prepare("SELECT id FROM resident_access_passes WHERE qr_code = ?");
+                $stmtCheck->execute([$qrCode]);
+            } while ($stmtCheck->fetch());
             
             try {
                 $stmt = $this->db->prepare("
@@ -1568,8 +1574,31 @@ class ResidentsController extends Controller {
         $this->requireAuth();
         
         $userId = $_SESSION['user_id'];
-        $date_from = $this->get('date_from', date('Y-m-01'));
-        $date_to = $this->get('date_to', date('Y-m-d'));
+        
+        // For committee members and admins, allow full range; for regular residents restrict to 4 months
+        $isAdmin = in_array($_SESSION['role'], ['superadmin', 'administrador']);
+        $isCommittee = false;
+        if ($_SESSION['role'] === 'residente') {
+            $stmtC = $this->db->prepare("SELECT is_vigilance_committee FROM users WHERE id = ?");
+            $stmtC->execute([$userId]);
+            $userRow = $stmtC->fetch();
+            $isCommittee = !empty($userRow['is_vigilance_committee']);
+        }
+        
+        // Default date range: current year for admin/committee, current month for regular resident
+        $defaultFrom = ($isAdmin || $isCommittee) ? date('Y-01-01') : date('Y-m-01', strtotime('-3 months'));
+        $defaultTo = date('Y-m-d');
+        
+        $date_from = $this->get('date_from', $defaultFrom);
+        $date_to = $this->get('date_to', $defaultTo);
+        
+        // Restrict non-committee residents to max 4 months (current + 3 previous)
+        if (!$isAdmin && !$isCommittee) {
+            $minAllowed = date('Y-m-01', strtotime('-3 months'));
+            if ($date_from < $minAllowed) {
+                $date_from = $minAllowed;
+            }
+        }
         
         // Get resident's property
         $stmt = $this->db->prepare("
@@ -1613,15 +1642,117 @@ class ResidentsController extends Controller {
         }
         
         $data = [
-            'title' => 'Mis Ingresos y Egresos',
+            'title' => 'Informe Financiero',
             'residentInfo' => $residentInfo,
             'payments' => $payments,
             'totalPaid' => $totalPaid,
             'totalPending' => $totalPending,
             'date_from' => $date_from,
-            'date_to' => $date_to
+            'date_to' => $date_to,
+            'isCommittee' => $isCommittee,
+            'isAdmin' => $isAdmin
         ];
         
         $this->view('residents/financial_report', $data);
+    }
+
+    /**
+     * Estado de cuenta de residente (admin view)
+     */
+    public function accountStatement($id = null) {
+        if (!$id) {
+            $this->redirect('residents');
+        }
+
+        $resident = $this->residentModel->findById($id);
+        if (!$resident) {
+            $_SESSION['error_message'] = 'Residente no encontrado';
+            $this->redirect('residents');
+        }
+
+        $year = $this->get('year', date('Y'));
+        $date_from = $this->get('date_from', $year . '-01-01');
+        $date_to = $this->get('date_to', $year . '-12-31');
+
+        // Cuotas del residente en el período
+        $stmt = $this->db->prepare("
+            SELECT mf.*,
+                   fm.transaction_date as payment_date,
+                   fm.payment_method,
+                   fm.amount as paid_amount
+            FROM maintenance_fees mf
+            LEFT JOIN financial_movements fm ON fm.reference_type = 'maintenance_fee' AND fm.reference_id = mf.id
+            WHERE mf.property_id = ?
+              AND (mf.period BETWEEN ? AND ? OR mf.paid_date BETWEEN ? AND ?)
+            ORDER BY mf.period DESC
+        ");
+        $stmt->execute([$resident['property_id'], $date_from, $date_to, $date_from, $date_to]);
+        $fees = $stmt->fetchAll();
+
+        $totalPaid = array_sum(array_column(array_filter($fees, fn($f) => $f['status'] === 'paid'), 'amount'));
+        $totalPending = array_sum(array_column(array_filter($fees, fn($f) => in_array($f['status'], ['pending', 'overdue'])), 'amount'));
+        $totalOverdue = array_sum(array_column(array_filter($fees, fn($f) => $f['status'] === 'overdue'), 'amount'));
+
+        $data = [
+            'title' => 'Estado de Cuenta - ' . $resident['first_name'] . ' ' . $resident['last_name'],
+            'resident' => $resident,
+            'fees' => $fees,
+            'totalPaid' => $totalPaid,
+            'totalPending' => $totalPending,
+            'totalOverdue' => $totalOverdue,
+            'year' => $year,
+            'date_from' => $date_from,
+            'date_to' => $date_to
+        ];
+
+        $this->view('residents/account_statement', $data);
+    }
+
+    /**
+     * Reporte de morosidad
+     */
+    public function delinquencyReport() {
+        $month = $this->get('month', date('Y-m'));
+        $date_from = $this->get('date_from', date('Y-01-01'));
+        $date_to = $this->get('date_to', date('Y-m-d'));
+
+        // Propiedades con cuotas vencidas
+        $stmt = $this->db->prepare("
+            SELECT
+                p.id as property_id,
+                p.property_number,
+                p.section,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.phone,
+                COUNT(mf.id) as months_overdue,
+                COALESCE(SUM(mf.amount), 0) as total_overdue,
+                MIN(mf.period) as oldest_overdue,
+                MAX(mf.period) as latest_overdue
+            FROM properties p
+            INNER JOIN residents r ON r.property_id = p.id AND r.status = 'active' AND r.is_primary = 1
+            INNER JOIN users u ON u.id = r.user_id
+            INNER JOIN maintenance_fees mf ON mf.property_id = p.id AND mf.status IN ('overdue', 'pending')
+            WHERE mf.due_date <= CURDATE()
+            GROUP BY p.id, p.property_number, p.section, u.first_name, u.last_name, u.email, u.phone
+            ORDER BY months_overdue DESC, total_overdue DESC
+        ");
+        $stmt->execute();
+        $delinquents = $stmt->fetchAll();
+
+        $totalProperties = count($delinquents);
+        $totalAmount = array_sum(array_column($delinquents, 'total_overdue'));
+
+        $data = [
+            'title' => 'Reporte de Morosidad',
+            'delinquents' => $delinquents,
+            'totalProperties' => $totalProperties,
+            'totalAmount' => $totalAmount,
+            'date_from' => $date_from,
+            'date_to' => $date_to
+        ];
+
+        $this->view('residents/delinquency_report', $data);
     }
 }
