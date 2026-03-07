@@ -11,19 +11,19 @@ CREATE TABLE IF NOT EXISTS penalty_rules (
     cut_day_type ENUM('first', 'last', 'custom') NOT NULL DEFAULT 'first' COMMENT 'Tipo de día de corte',
     cut_day INT DEFAULT 1 COMMENT 'Día de corte (1-28) cuando cut_day_type=custom',
     grace_days INT DEFAULT 0 COMMENT 'Días de gracia (máximo 15)',
-    
+
     -- Penalización: Después del día de corte
     after_cutday_type ENUM('amount', 'percentage') DEFAULT 'percentage',
     after_cutday_value DECIMAL(10,2) DEFAULT 0 COMMENT 'Monto o porcentaje de penalización tras el corte',
-    
+
     -- Penalización: Al mes siguiente
     next_month_type ENUM('amount', 'percentage') DEFAULT 'percentage',
     next_month_value DECIMAL(10,2) DEFAULT 0 COMMENT 'Monto o porcentaje al mes siguiente',
-    
+
     -- Penalización: Al segundo mes (moroso, retiro de servicios)
     second_month_type ENUM('amount', 'percentage') DEFAULT 'percentage',
     second_month_value DECIMAL(10,2) DEFAULT 0 COMMENT 'Monto o porcentaje al segundo mes',
-    
+
     is_active TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -64,10 +64,25 @@ CREATE TABLE IF NOT EXISTS delinquency_reports (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- Agregar campo is_vigilance_committee si no existe
+-- Agregar campo is_vigilance_committee si no existe (MySQL 5.7.23 compatible)
 -- ============================================
-ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS is_vigilance_committee TINYINT(1) DEFAULT 0 AFTER last_login;
+SET @col_exists := (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'users'
+      AND COLUMN_NAME = 'is_vigilance_committee'
+);
+
+SET @sql := IF(
+    @col_exists = 0,
+    'ALTER TABLE `users` ADD COLUMN `is_vigilance_committee` TINYINT(1) NOT NULL DEFAULT 0 AFTER `last_login`',
+    'SELECT ''Column users.is_vigilance_committee already exists'' AS info'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- ============================================
 -- Actualizar formato de QR en resident_access_passes
