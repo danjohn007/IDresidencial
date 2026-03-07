@@ -301,6 +301,74 @@ class FinancialController extends Controller {
             }
             
             if ($this->financialModel->update($id, $movementData)) {
+                // When a property is assigned to an imported/unlinked income movement of
+                // maintenance-fee type, auto-link it to the oldest pending fee for that property.
+                $noExistingRef = empty($movement['reference_type']) && empty($movement['reference_id']);
+                if ($noExistingRef &&
+                    $movementData['transaction_type'] === 'ingreso' &&
+                    $movementData['property_id']) {
+
+                    $movTypeStmt = $this->db->prepare("
+                        SELECT name, category FROM financial_movement_types WHERE id = ?
+                    ");
+                    $movTypeStmt->execute([$movementData['movement_type_id']]);
+                    $typeInfo = $movTypeStmt->fetch();
+
+                    if ($typeInfo &&
+                        (stripos($typeInfo['name'], 'mantenimiento') !== false ||
+                         stripos($typeInfo['name'], 'cuota') !== false)) {
+
+                        // Find oldest pending fee with matching amount for this property
+                        $feeStmt = $this->db->prepare("
+                            SELECT id, period, amount FROM maintenance_fees
+                            WHERE property_id = ?
+                            AND status IN ('pending', 'overdue')
+                            AND ABS(amount - ?) < 0.01
+                            ORDER BY due_date ASC
+                            LIMIT 1
+                        ");
+                        $feeStmt->execute([$movementData['property_id'], $movementData['amount']]);
+                        $fee = $feeStmt->fetch();
+
+                        // Fallback: any pending fee for this property
+                        if (!$fee) {
+                            $feeStmt = $this->db->prepare("
+                                SELECT id, period, amount FROM maintenance_fees
+                                WHERE property_id = ?
+                                AND status IN ('pending', 'overdue')
+                                ORDER BY due_date ASC
+                                LIMIT 1
+                            ");
+                            $feeStmt->execute([$movementData['property_id']]);
+                            $fee = $feeStmt->fetch();
+                        }
+
+                        if ($fee) {
+                            $updateFeeStmt = $this->db->prepare("
+                                UPDATE maintenance_fees
+                                SET status = 'paid',
+                                    paid_date = ?,
+                                    payment_method = ?,
+                                    payment_reference = ?
+                                WHERE id = ?
+                            ");
+                            $updateFeeStmt->execute([
+                                $movementData['transaction_date'],
+                                $movementData['payment_method'],
+                                $movementData['payment_reference'],
+                                $fee['id']
+                            ]);
+
+                            $linkStmt = $this->db->prepare("
+                                UPDATE financial_movements
+                                SET reference_type = 'maintenance_fee', reference_id = ?
+                                WHERE id = ?
+                            ");
+                            $linkStmt->execute([$fee['id'], $id]);
+                        }
+                    }
+                }
+
                 AuditController::log('update', 'Movimiento financiero actualizado: ' . $movementData['description'], 'financial_movements', $id);
                 $_SESSION['success_message'] = 'Movimiento actualizado exitosamente';
                 $this->redirect('financial');

@@ -30,6 +30,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Año</label>
                             <select name="year" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="all" <?php echo $year === 'all' ? 'selected' : ''; ?>>Todos</option>
                                 <?php for ($y = date('Y'); $y >= date('Y') - 5; $y--): ?>
                                     <option value="<?php echo $y; ?>" <?php echo ($y == $year) ? 'selected' : ''; ?>><?php echo $y; ?></option>
                                 <?php endfor; ?>
@@ -61,7 +62,7 @@
                     <h2 class="text-2xl font-bold">Estado de Cuenta</h2>
                     <p><strong>Residente:</strong> <?php echo htmlspecialchars($resident['first_name'] . ' ' . $resident['last_name']); ?></p>
                     <p><strong>Propiedad:</strong> <?php echo htmlspecialchars($resident['property_number']); ?> — Sección: <?php echo htmlspecialchars($resident['section'] ?? ''); ?></p>
-                    <p><strong>Período:</strong> <?php echo $year; ?></p>
+                    <p><strong>Período:</strong> <?php echo $year === 'all' ? 'Todos los años' : $year; ?></p>
                     <p><strong>Generado:</strong> <?php echo date('d/m/Y H:i'); ?></p>
                     <hr class="my-3">
                 </div>

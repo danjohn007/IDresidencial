@@ -86,6 +86,25 @@ class Resident {
             $params[] = $filters['status'];
         }
         
+        if (!empty($filters['section'])) {
+            $where[] = "p.section = ?";
+            $params[] = $filters['section'];
+        }
+        
+        if (isset($filters['is_vigilance_committee']) && $filters['is_vigilance_committee'] !== '') {
+            $where[] = "u.is_vigilance_committee = ?";
+            $params[] = (int)$filters['is_vigilance_committee'];
+        }
+        
+        if (!empty($filters['search'])) {
+            $where[] = "(u.first_name LIKE ? OR u.last_name LIKE ? OR u.phone LIKE ? OR u.email LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+        
         if (isset($filters['include_deleted']) && $filters['include_deleted'] === true) {
             // Remove the deleted filter if explicitly requested
             $where = array_filter($where, fn($w) => !str_contains($w, 'deleted'));
@@ -95,6 +114,7 @@ class Resident {
         
         $sql = "SELECT r.*, 
                        u.username, u.email, u.first_name, u.last_name, u.phone,
+                       u.is_vigilance_committee,
                        p.property_number, p.street, p.section, p.tower
                 FROM residents r
                 JOIN users u ON r.user_id = u.id
