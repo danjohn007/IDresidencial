@@ -420,7 +420,6 @@ class ResidentsController extends Controller {
                       SELECT 1 FROM maintenance_fees mf 
                       WHERE mf.property_id = p.id AND mf.period = ?
                   )
-                LIMIT 10
             ");
             $checkStmt->execute([$period]);
             $propertiesNeedingFees = $checkStmt->fetchAll();
@@ -1671,10 +1670,16 @@ class ResidentsController extends Controller {
         }
 
         $year = $this->get('year', date('Y'));
-        $date_from = $this->get('date_from', $year . '-01-01');
-        $date_to = $this->get('date_to', $year . '-12-31');
+        $status_filter = $this->get('status_filter', '');
 
-        // Cuotas del residente en el período
+        $whereExtra = '';
+        $params = [$resident['property_id'], $year . '%'];
+        if ($status_filter !== '') {
+            $whereExtra = ' AND mf.status = ?';
+            $params[] = $status_filter;
+        }
+
+        // Cuotas del residente en el año seleccionado
         $stmt = $this->db->prepare("
             SELECT mf.*,
                    fm.transaction_date as payment_date,
@@ -1683,10 +1688,11 @@ class ResidentsController extends Controller {
             FROM maintenance_fees mf
             LEFT JOIN financial_movements fm ON fm.reference_type = 'maintenance_fee' AND fm.reference_id = mf.id
             WHERE mf.property_id = ?
-              AND (mf.period BETWEEN ? AND ? OR mf.paid_date BETWEEN ? AND ?)
+              AND mf.period LIKE ?
+              $whereExtra
             ORDER BY mf.period DESC
         ");
-        $stmt->execute([$resident['property_id'], $date_from, $date_to, $date_from, $date_to]);
+        $stmt->execute($params);
         $fees = $stmt->fetchAll();
 
         $totalPaid = array_sum(array_column(array_filter($fees, fn($f) => $f['status'] === 'paid'), 'amount'));
@@ -1701,8 +1707,7 @@ class ResidentsController extends Controller {
             'totalPending' => $totalPending,
             'totalOverdue' => $totalOverdue,
             'year' => $year,
-            'date_from' => $date_from,
-            'date_to' => $date_to
+            'status_filter' => $status_filter
         ];
 
         $this->view('residents/account_statement', $data);

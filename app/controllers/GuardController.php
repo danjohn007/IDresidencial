@@ -464,28 +464,24 @@ class GuardController extends Controller {
             $db = Database::getInstance()->getConnection();
             
             // Buscar dispositivo activo y habilitado
-            // Si hay propertyId, buscar por sección de la propiedad, sino usar dispositivo por defecto
+            // Si hay propertyId, intentar primero sin sucursal asignada, sino usar cualquier dispositivo activo
             if ($propertyId) {
-                $stmt = $db->prepare("
-                    SELECT d.* 
-                    FROM access_devices d
-                    INNER JOIN properties p ON d.branch = p.section
-                    WHERE p.id = ? 
-                      AND d.enabled = 1 
-                      AND d.status = 'online'
-                    ORDER BY d.id DESC
+                $stmt = $db->query("
+                    SELECT * FROM access_devices 
+                    WHERE enabled = 1 
+                      AND status = 'online'
+                      AND branch_id IS NULL
+                    ORDER BY id DESC
                     LIMIT 1
                 ");
-                $stmt->execute([$propertyId]);
                 $device = $stmt->fetch();
                 
-                // Si no encuentra por sección, buscar dispositivo general
+                // Si no encuentra sin sucursal, usar cualquier dispositivo general
                 if (!$device) {
                     $stmt = $db->query("
                         SELECT * FROM access_devices 
                         WHERE enabled = 1 
                           AND status = 'online'
-                          AND (branch IS NULL OR branch = '')
                         ORDER BY id DESC
                         LIMIT 1
                     ");

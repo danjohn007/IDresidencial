@@ -125,26 +125,116 @@ class AccessController extends Controller {
     public function validate() {
         $this->requireRole(['superadmin', 'administrador', 'guardia']);
         
+        $db = Database::getInstance()->getConnection();
+
+        // Load available areas for the selector
+        $areasStmt = $db->query("SELECT DISTINCT area FROM access_devices WHERE area IS NOT NULL AND area != '' AND enabled = 1 ORDER BY area");
+        $areas = $areasStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Also load device_areas catalogue if available
+        try {
+            $daStmt = $db->query("SELECT name FROM device_areas WHERE is_active = 1 ORDER BY name");
+            $deviceAreas = $daStmt->fetchAll(PDO::FETCH_COLUMN);
+            $areas = array_unique(array_merge($areas, $deviceAreas));
+            sort($areas);
+        } catch (Exception $e) {
+            // Table may not exist yet; keep $areas from access_devices
+        }
+
+        // Restore last selected area from session
+        $lastArea = $_SESSION['last_validate_area'] ?? '';
+
         $data = [
             'title' => 'Validar Acceso',
             'error' => '',
-            'visit' => null
+            'visit' => null,
+            'areas' => $areas,
+            'selected_area' => $lastArea
         ];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $qrCode = $this->post('qr_code');
+            $area   = trim($this->post('area', ''));
+
+            // Persist selected area in session
+            if ($area !== '') {
+                $_SESSION['last_validate_area'] = $area;
+                $data['selected_area'] = $area;
+            }
             
             if (empty($qrCode)) {
                 $data['error'] = 'Por favor, ingresa el código QR';
+            } elseif (empty($area)) {
+                $data['error'] = 'Por favor, selecciona el área donde te encuentras';
             } else {
+                // 1. Check visits table
                 $visit = $this->visitModel->validateVisit($qrCode);
                 
                 if ($visit) {
                     $data['visit'] = $this->visitModel->findByQR($qrCode);
                     $data['valid'] = true;
+                    // Activate Shelly device for this area
+                    $deviceResult = $this->activateAccessDevice($data['visit']['property_id'] ?? null, $area);
+                    $data['device_activated'] = $deviceResult['activated'];
+                    $data['device_message'] = $deviceResult['message'];
                 } else {
-                    $data['error'] = 'Código QR inválido o expirado';
-                    $data['valid'] = false;
+                    // 2. Check resident_access_passes
+                    $passStmt = $db->prepare("
+                        SELECT rap.*,
+                               u.first_name, u.last_name,
+                               p.property_number, p.id as property_id
+                        FROM resident_access_passes rap
+                        INNER JOIN residents r ON rap.resident_id = r.id
+                        INNER JOIN users u ON r.user_id = u.id
+                        INNER JOIN properties p ON r.property_id = p.id
+                        WHERE rap.qr_code = ?
+                          AND rap.status = 'active'
+                          AND NOW() BETWEEN rap.valid_from AND COALESCE(rap.valid_until, '9999-12-31')
+                          AND (rap.max_uses = 0 OR rap.uses_count < rap.max_uses)
+                    ");
+                    $passStmt->execute([$qrCode]);
+                    $pass = $passStmt->fetch();
+
+                    if ($pass) {
+                        // Increment usage counter; mark single_use passes as used when limit reached
+                        $updStmt = $db->prepare("
+                            UPDATE resident_access_passes
+                            SET uses_count = uses_count + 1,
+                                status = IF(max_uses > 0 AND (uses_count + 1) >= max_uses AND pass_type = 'single_use', 'used', status)
+                            WHERE id = ?
+                        ");
+                        $updStmt->execute([$pass['id']]);
+
+                        // Log the access
+                        $this->accessLogModel->create([
+                            'log_type' => 'resident_pass',
+                            'reference_id' => $pass['id'],
+                            'access_type' => 'entry',
+                            'access_method' => 'qr',
+                            'property_id' => $pass['property_id'] ?? null,
+                            'name' => $pass['first_name'] . ' ' . $pass['last_name'],
+                            'vehicle_plate' => null,
+                            'guard_id' => $_SESSION['user_id']
+                        ]);
+
+                        $data['visit'] = [
+                            'visitor_name'    => $pass['first_name'] . ' ' . $pass['last_name'],
+                            'property_number' => $pass['property_number'],
+                            'valid_from'      => $pass['valid_from'],
+                            'valid_until'     => $pass['valid_until'] ?? 'Sin vencimiento',
+                            'pass_type'       => $pass['pass_type']
+                        ];
+                        $data['valid'] = true;
+                        $data['is_resident_pass'] = true;
+
+                        // Activate Shelly device
+                        $deviceResult = $this->activateAccessDevice($pass['property_id'] ?? null, $area);
+                        $data['device_activated'] = $deviceResult['activated'];
+                        $data['device_message'] = $deviceResult['message'];
+                    } else {
+                        $data['error'] = 'Código QR inválido o expirado';
+                        $data['valid'] = false;
+                    }
                 }
             }
         }
@@ -451,32 +541,17 @@ class AccessController extends Controller {
                 $device = $stmt->fetch();
             }
 
-            // Buscar dispositivo activo y habilitado por propiedad
-            if (!$device && $propertyId) {
-                $stmt = $db->prepare("
-                    SELECT d.* 
-                    FROM access_devices d
-                    INNER JOIN properties p ON d.branch = p.section
-                    WHERE p.id = ? 
-                      AND d.enabled = 1 
-                      AND d.status = 'online'
-                    ORDER BY d.id DESC
+            // Buscar dispositivo activo sin sucursal asignada como fallback por propiedad
+            if (!$device) {
+                $stmt = $db->query("
+                    SELECT * FROM access_devices 
+                    WHERE enabled = 1 
+                      AND status = 'online'
+                      AND branch_id IS NULL
+                    ORDER BY id DESC
                     LIMIT 1
                 ");
-                $stmt->execute([$propertyId]);
                 $device = $stmt->fetch();
-                
-                if (!$device) {
-                    $stmt = $db->query("
-                        SELECT * FROM access_devices 
-                        WHERE enabled = 1 
-                          AND status = 'online'
-                          AND (branch IS NULL OR branch = '')
-                        ORDER BY id DESC
-                        LIMIT 1
-                    ");
-                    $device = $stmt->fetch();
-                }
             }
 
             // Fallback: cualquier dispositivo activo

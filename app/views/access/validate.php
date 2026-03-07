@@ -15,6 +15,22 @@
 
                 <!-- Scanner Options -->
                 <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <!-- Area selector - always visible -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Área <span class="text-red-500">*</span>
+                        </label>
+                        <select id="area_top_select"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg">
+                            <option value="">— Selecciona el área —</option>
+                            <?php foreach ($areas as $areaOption): ?>
+                            <option value="<?php echo htmlspecialchars($areaOption); ?>"
+                                <?php echo ($selected_area === $areaOption) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($areaOption); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="flex gap-2 mb-4">
                         <button onclick="showScanner()" id="btnScanner"
                                 class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
@@ -49,6 +65,8 @@
                     <!-- Manual Input Form -->
                     <div id="manualContainer">
                         <form method="POST" action="<?php echo BASE_URL; ?>/access/validate" id="validateForm">
+                            <!-- Hidden area field synced with top selector -->
+                            <input type="hidden" name="area" id="area_select" value="<?php echo htmlspecialchars($selected_area); ?>">
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Código QR
@@ -74,41 +92,61 @@
                             <div class="text-center mb-4">
                                 <i class="fas fa-check-circle text-green-600 text-6xl mb-2"></i>
                                 <h2 class="text-2xl font-bold text-green-800">✅ Código Válido</h2>
+                                <?php if (!empty($is_resident_pass)): ?>
+                                <span class="inline-block mt-1 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">Pase de Residente</span>
+                                <?php endif; ?>
                             </div>
+                            
+                            <?php if (!empty($device_activated)): ?>
+                            <div class="mb-4 p-3 bg-green-100 border border-green-400 rounded-lg text-center text-green-800 text-sm font-semibold">
+                                <i class="fas fa-door-open mr-2"></i><?php echo htmlspecialchars($device_message); ?>
+                            </div>
+                            <?php elseif (isset($device_message) && $device_message): ?>
+                            <div class="mb-4 p-3 bg-yellow-100 border border-yellow-400 rounded-lg text-center text-yellow-800 text-sm">
+                                <i class="fas fa-exclamation-triangle mr-2"></i><?php echo htmlspecialchars($device_message); ?>
+                            </div>
+                            <?php endif; ?>
                             
                             <div class="bg-white rounded-lg p-6 space-y-4">
                                 <div>
-                                    <p class="text-sm text-gray-600">Visitante</p>
+                                    <p class="text-sm text-gray-600">Visitante / Residente</p>
                                     <p class="text-xl font-bold text-gray-900"><?php echo htmlspecialchars($visit['visitor_name']); ?></p>
                                 </div>
                                 
                                 <div class="grid grid-cols-2 gap-4">
+                                    <?php if (empty($is_resident_pass) && isset($visit['first_name'])): ?>
                                     <div>
                                         <p class="text-sm text-gray-600">Residente</p>
-                                        <p class="font-semibold text-gray-900"><?php echo $visit['first_name'] . ' ' . $visit['last_name']; ?></p>
+                                        <p class="font-semibold text-gray-900"><?php echo htmlspecialchars($visit['first_name'] . ' ' . $visit['last_name']); ?></p>
                                     </div>
+                                    <?php endif; ?>
                                     <div>
                                         <p class="text-sm text-gray-600">Propiedad</p>
-                                        <p class="font-semibold text-gray-900"><?php echo $visit['property_number']; ?></p>
+                                        <p class="font-semibold text-gray-900"><?php echo htmlspecialchars($visit['property_number']); ?></p>
                                     </div>
                                 </div>
                                 
-                                <?php if ($visit['vehicle_plate']): ?>
+                                <?php if (!empty($visit['vehicle_plate'])): ?>
                                     <div>
                                         <p class="text-sm text-gray-600">Vehículo</p>
-                                        <p class="font-semibold text-gray-900"><?php echo $visit['vehicle_plate']; ?></p>
+                                        <p class="font-semibold text-gray-900"><?php echo htmlspecialchars($visit['vehicle_plate']); ?></p>
                                     </div>
                                 <?php endif; ?>
                                 
                                 <div>
                                     <p class="text-sm text-gray-600">Vigencia</p>
                                     <p class="font-semibold text-gray-900">
-                                        <?php echo date('d/m/Y H:i', strtotime($visit['valid_from'])); ?> - 
-                                        <?php echo date('d/m/Y H:i', strtotime($visit['valid_until'])); ?>
+                                        <?php 
+                                        $vFrom = $visit['valid_from'] ?? '';
+                                        $vUntil = $visit['valid_until'] ?? 'Sin vencimiento';
+                                        echo $vFrom ? date('d/m/Y H:i', strtotime($vFrom)) : '—';
+                                        echo ' — ';
+                                        echo (is_string($vUntil) && strtotime($vUntil)) ? date('d/m/Y H:i', strtotime($vUntil)) : htmlspecialchars($vUntil);
+                                        ?>
                                     </p>
                                 </div>
                                 
-                                <?php if ($visit['status'] === 'pending'): ?>
+                                <?php if (empty($is_resident_pass) && isset($visit['status']) && $visit['status'] === 'pending'): ?>
                                     <!-- Identification Photo Section -->
                                     <div class="pt-4 border-t">
                                         <div id="photoSection">
@@ -186,6 +224,17 @@
 <script>
     let html5QrCode;
     let isScanning = false;
+
+    // Sync area selector with hidden form field
+    document.addEventListener('DOMContentLoaded', function () {
+        const topSelect = document.getElementById('area_top_select');
+        const hiddenField = document.getElementById('area_select');
+        if (topSelect && hiddenField) {
+            topSelect.addEventListener('change', function () {
+                hiddenField.value = this.value;
+            });
+        }
+    });
 
     // Show scanner view
     function showScanner() {

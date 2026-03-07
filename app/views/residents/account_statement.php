@@ -29,26 +29,29 @@
                     <form method="GET" action="<?php echo BASE_URL; ?>/residents/accountStatement/<?php echo $resident['id']; ?>" class="flex flex-wrap gap-4 items-end">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Año</label>
-                            <select name="year" onchange="this.form.submit()" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <select name="year" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                                 <?php for ($y = date('Y'); $y >= date('Y') - 5; $y--): ?>
                                     <option value="<?php echo $y; ?>" <?php echo ($y == $year) ? 'selected' : ''; ?>><?php echo $y; ?></option>
                                 <?php endfor; ?>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
-                            <input type="date" name="date_from" value="<?php echo $date_from; ?>"
-                                   class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                            <select name="status_filter" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="" <?php echo $status_filter === '' ? 'selected' : ''; ?>>Todos</option>
+                                <option value="paid" <?php echo $status_filter === 'paid' ? 'selected' : ''; ?>>Pagado</option>
+                                <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pendiente</option>
+                                <option value="overdue" <?php echo $status_filter === 'overdue' ? 'selected' : ''; ?>>Vencido</option>
+                            </select>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
-                            <input type="date" name="date_to" value="<?php echo $date_to; ?>"
-                                   class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
+                        <div class="flex space-x-2">
                             <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                                 <i class="fas fa-search mr-2"></i> Filtrar
                             </button>
+                            <a href="<?php echo BASE_URL; ?>/residents/accountStatement/<?php echo $resident['id']; ?>" 
+                               class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                                <i class="fas fa-undo mr-2"></i> Restaurar
+                            </a>
                         </div>
                     </form>
                 </div>
@@ -58,7 +61,7 @@
                     <h2 class="text-2xl font-bold">Estado de Cuenta</h2>
                     <p><strong>Residente:</strong> <?php echo htmlspecialchars($resident['first_name'] . ' ' . $resident['last_name']); ?></p>
                     <p><strong>Propiedad:</strong> <?php echo htmlspecialchars($resident['property_number']); ?> — Sección: <?php echo htmlspecialchars($resident['section'] ?? ''); ?></p>
-                    <p><strong>Período:</strong> <?php echo date('d/m/Y', strtotime($date_from)); ?> al <?php echo date('d/m/Y', strtotime($date_to)); ?></p>
+                    <p><strong>Período:</strong> <?php echo $year; ?></p>
                     <p><strong>Generado:</strong> <?php echo date('d/m/Y H:i'); ?></p>
                     <hr class="my-3">
                 </div>
