@@ -100,6 +100,18 @@
                                 </select>
                             </div>
 
+                            <!-- Selector de cuota pendiente (visible solo para Cuota de Mantenimiento) -->
+                            <div class="md:col-span-2" id="maintenance_fee_div" style="display:none;">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Cuota Pendiente <span class="text-red-500">*</span>
+                                    <span class="text-xs text-gray-500 ml-1">(Seleccione la cuota a pagar)</span>
+                                </label>
+                                <select name="maintenance_fee_id" id="maintenance_fee_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option value="">— Seleccione una propiedad primero —</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1" id="fee_amount_hint"></p>
+                            </div>
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Método de Pago
@@ -190,6 +202,75 @@
 const movementTypes = <?php echo json_encode($movementTypes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 const currentMovementTypeId = <?php echo json_encode($movement['movement_type_id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
+let isMaintenanceFeeType = false;
+
+function checkMaintenanceFeeType() {
+    const movTypeId = document.getElementById('movement_type_id').value;
+    const transType = document.getElementById('transaction_type').value;
+    const selectedType = movementTypes.find(t => t.id == movTypeId);
+    isMaintenanceFeeType = selectedType && transType === 'ingreso' &&
+        (selectedType.name.toLowerCase().includes('mantenimiento') || selectedType.name.toLowerCase().includes('cuota'));
+    toggleMaintenanceFeeDiv();
+}
+
+function toggleMaintenanceFeeDiv() {
+    const feeDiv = document.getElementById('maintenance_fee_div');
+    const propertyId = document.getElementById('property_id').value;
+    if (isMaintenanceFeeType && propertyId) {
+        feeDiv.style.display = 'block';
+        loadPendingFees(propertyId);
+    } else {
+        feeDiv.style.display = 'none';
+        document.getElementById('maintenance_fee_id').innerHTML = '<option value="">— Seleccione una propiedad primero —</option>';
+        document.getElementById('fee_amount_hint').textContent = '';
+    }
+}
+
+function loadPendingFees(propertyId) {
+    const feeSelect = document.getElementById('maintenance_fee_id');
+    feeSelect.innerHTML = '<option value="">Cargando...</option>';
+    fetch(`<?php echo BASE_URL; ?>/financial/getPendingFees/${propertyId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.fees.length > 0) {
+                feeSelect.innerHTML = '<option value="">— Seleccione cuota pendiente —</option>';
+                data.fees.forEach(fee => {
+                    const opt = document.createElement('option');
+                    opt.value = fee.id;
+                    opt.textContent = `${fee.period_label} — ${fee.amount_label} (${fee.status_label})`;
+                    opt.dataset.amount = fee.amount;
+                    feeSelect.appendChild(opt);
+                });
+                feeSelect.required = true;
+            } else {
+                feeSelect.innerHTML = '<option value="">Sin cuotas pendientes para esta propiedad</option>';
+                feeSelect.required = false;
+            }
+            updateFeeAmount();
+        })
+        .catch(() => {
+            feeSelect.innerHTML = '<option value="">Error al cargar cuotas</option>';
+            feeSelect.required = false;
+        });
+}
+
+function updateFeeAmount() {
+    const feeSelect = document.getElementById('maintenance_fee_id');
+    const amountInput = document.querySelector('input[name="amount"]');
+    const hint = document.getElementById('fee_amount_hint');
+    const selectedOption = feeSelect.options[feeSelect.selectedIndex];
+    if (selectedOption && selectedOption.dataset.amount) {
+        const feeAmount = parseFloat(selectedOption.dataset.amount);
+        amountInput.value = feeAmount.toFixed(2);
+        amountInput.readOnly = true;
+        hint.textContent = 'El monto es igual al total pendiente de la cuota seleccionada.';
+        hint.className = 'text-xs text-blue-600 mt-1';
+    } else {
+        amountInput.readOnly = false;
+        hint.textContent = '';
+    }
+}
+
 document.getElementById('transaction_type').addEventListener('change', function() {
     const transactionType = this.value;
     const movementTypeSelect = document.getElementById('movement_type_id');
@@ -207,7 +288,6 @@ document.getElementById('transaction_type').addEventListener('change', function(
     movementTypeSelect.innerHTML = '<option value="">Seleccionar...</option>';
     
     if (transactionType) {
-        // Filtrar tipos de movimiento
         const filtered = movementTypes.filter(type => 
             type.category === transactionType || type.category === 'ambos'
         );
@@ -222,7 +302,11 @@ document.getElementById('transaction_type').addEventListener('change', function(
             movementTypeSelect.appendChild(option);
         });
     }
+    checkMaintenanceFeeType();
 });
+
+document.getElementById('movement_type_id').addEventListener('change', checkMaintenanceFeeType);
+document.getElementById('maintenance_fee_id').addEventListener('change', updateFeeAmount);
 
 // Trigger on page load
 document.getElementById('transaction_type').dispatchEvent(new Event('change'));
@@ -242,33 +326,32 @@ document.getElementById('property_id').addEventListener('change', function() {
         // Reset to show all residents
         residentSelect.innerHTML = residentSelect.dataset.allOptions;
         residentSelect.value = currentResidentId;
-        return;
-    }
-    
-    // Rebuild options showing only matching residents
-    const allOptions = residentSelect.dataset.allOptions;
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = allOptions;
-    
-    residentSelect.innerHTML = '<option value="">Sin residente</option>';
-    
-    let hasMatch = false;
-    Array.from(tempDiv.querySelectorAll('option')).forEach(option => {
-        if (option.value === '') return; // Skip empty option
+    } else {
+        // Rebuild options showing only matching residents
+        const allOptions = residentSelect.dataset.allOptions;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = allOptions;
         
-        const residentPropertyId = option.getAttribute('data-property-id');
-        if (residentPropertyId === propertyId) {
-            residentSelect.appendChild(option.cloneNode(true));
-            if (option.value === currentResidentId) {
-                hasMatch = true;
+        residentSelect.innerHTML = '<option value="">Sin residente</option>';
+        
+        let hasMatch = false;
+        Array.from(tempDiv.querySelectorAll('option')).forEach(option => {
+            if (option.value === '') return;
+            const residentPropertyId = option.getAttribute('data-property-id');
+            if (residentPropertyId === propertyId) {
+                residentSelect.appendChild(option.cloneNode(true));
+                if (option.value === currentResidentId) {
+                    hasMatch = true;
+                }
             }
+        });
+        
+        if (hasMatch) {
+            residentSelect.value = currentResidentId;
         }
-    });
-    
-    // Select current resident if it matches the property
-    if (hasMatch) {
-        residentSelect.value = currentResidentId;
     }
+
+    toggleMaintenanceFeeDiv();
 });
 </script>
 

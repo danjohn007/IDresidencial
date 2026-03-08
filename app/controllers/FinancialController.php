@@ -126,6 +126,7 @@ class FinancialController extends Controller {
                 'is_unforeseen' => ($this->post('transaction_type') === 'egreso' && $this->post('is_unforeseen')) ? 1 : 0,
                 'evidence_file' => null
             ];
+            $selectedFeeId = intval($this->post('maintenance_fee_id') ?: 0);
             
             // Handle evidence file upload (validated)
             $uploadedFile = $this->uploadEvidenceFile();
@@ -133,41 +134,57 @@ class FinancialController extends Controller {
                 $movementData['evidence_file'] = $uploadedFile;
             }
             
+            // Validate maintenance fee selection when type is Cuota de Mantenimiento
+            $movementType = $this->db->prepare("SELECT name, category FROM financial_movement_types WHERE id = ?");
+            $movementType->execute([$movementData['movement_type_id']]);
+            $typeInfo = $movementType->fetch();
+            $isMaintenanceFee = $typeInfo &&
+                $movementData['transaction_type'] === 'ingreso' &&
+                (stripos($typeInfo['name'], 'mantenimiento') !== false || stripos($typeInfo['name'], 'cuota') !== false);
+
+            if ($isMaintenanceFee && $movementData['property_id'] && $selectedFeeId) {
+                // Validate: amount must match the fee amount exactly
+                $feeCheckStmt = $this->db->prepare("SELECT id, amount, period, status FROM maintenance_fees WHERE id = ? AND property_id = ? AND status IN ('pending','overdue')");
+                $feeCheckStmt->execute([$selectedFeeId, $movementData['property_id']]);
+                $selectedFee = $feeCheckStmt->fetch();
+                if (!$selectedFee) {
+                    $data['error'] = 'La cuota seleccionada no es válida o ya fue pagada.';
+                    $this->view('financial/create', $data);
+                    return;
+                }
+                if (abs(floatval($movementData['amount']) - floatval($selectedFee['amount'])) > 0.01) {
+                    $data['error'] = 'El monto debe ser exactamente $' . number_format($selectedFee['amount'], 2) . ' para pagar esta cuota.';
+                    $this->view('financial/create', $data);
+                    return;
+                }
+            }
+            
             $movementId = $this->financialModel->create($movementData);
             if ($movementId) {
-                // Check if this is a maintenance fee payment
-                $movementType = $this->db->prepare("
-                    SELECT name, category 
-                    FROM financial_movement_types 
-                    WHERE id = ?
-                ");
-                $movementType->execute([$movementData['movement_type_id']]);
-                $typeInfo = $movementType->fetch();
-                
-                // If this is a maintenance fee payment (income with 'mantenimiento' in name) and has a property
-                // NOTE: Keyword matching is used here for simplicity. For production, consider adding 
-                // an 'is_maintenance_fee' boolean flag to financial_movement_types table.
-                if ($typeInfo && 
-                    $movementData['transaction_type'] === 'ingreso' &&
-                    (stripos($typeInfo['name'], 'mantenimiento') !== false || stripos($typeInfo['name'], 'cuota') !== false) && 
-                    $movementData['property_id']) {
-                    
-                    // Try to find the oldest unpaid maintenance fee for this property
-                    // This allows paying multiple months in order
-                    // Use a small tolerance for amount comparison to handle floating-point precision
-                    $feeStmt = $this->db->prepare("
-                        SELECT id, period, amount FROM maintenance_fees 
-                        WHERE property_id = ? 
-                        AND status IN ('pending', 'overdue')
-                        AND ABS(amount - ?) < 0.01
-                        ORDER BY due_date ASC
-                        LIMIT 1
-                    ");
-                    $feeStmt->execute([$movementData['property_id'], $movementData['amount']]);
-                    $fee = $feeStmt->fetch();
-                    
-                    // If no exact amount match, try to find any unpaid fee for this property
+                if ($isMaintenanceFee && $movementData['property_id']) {
+                    // Determine which fee to pay
+                    $fee = null;
+                    if ($selectedFeeId) {
+                        // Use the explicitly selected fee
+                        $feeStmt = $this->db->prepare("SELECT id, period, amount FROM maintenance_fees WHERE id = ? AND property_id = ? AND status IN ('pending','overdue')");
+                        $feeStmt->execute([$selectedFeeId, $movementData['property_id']]);
+                        $fee = $feeStmt->fetch();
+                    }
                     if (!$fee) {
+                        // Fallback: find oldest pending fee with matching amount
+                        $feeStmt = $this->db->prepare("
+                            SELECT id, period, amount FROM maintenance_fees 
+                            WHERE property_id = ? 
+                            AND status IN ('pending', 'overdue')
+                            AND ABS(amount - ?) < 0.01
+                            ORDER BY due_date ASC
+                            LIMIT 1
+                        ");
+                        $feeStmt->execute([$movementData['property_id'], $movementData['amount']]);
+                        $fee = $feeStmt->fetch();
+                    }
+                    if (!$fee) {
+                        // Final fallback: any pending fee
                         $feeStmt = $this->db->prepare("
                             SELECT id, period, amount FROM maintenance_fees 
                             WHERE property_id = ? 
@@ -180,7 +197,6 @@ class FinancialController extends Controller {
                     }
                     
                     if ($fee) {
-                        // Update the maintenance fee status
                         $updateFeeStmt = $this->db->prepare("
                             UPDATE maintenance_fees 
                             SET status = 'paid', 
@@ -196,7 +212,6 @@ class FinancialController extends Controller {
                             $fee['id']
                         ]);
                         
-                        // Update the financial movement with reference
                         $updateMovementStmt = $this->db->prepare("
                             UPDATE financial_movements 
                             SET reference_type = 'maintenance_fee', reference_id = ?
@@ -603,7 +618,13 @@ class FinancialController extends Controller {
                 $data['error'] = 'No hay datos para importar. Por favor carga el archivo nuevamente.';
             } else {
                 $imported = 0;
+                $errors = [];
                 foreach ($rows as $rowIndex => $row) {
+                    // Skip empty rows (no data cells)
+                    if (empty(array_filter($row, fn($v) => trim((string)$v) !== ''))) {
+                        continue;
+                    }
+
                     $cargoRaw = floatval(str_replace(['$', ',', ' '], '', $row[4] ?? 0));
                     $abonoRaw = floatval(str_replace(['$', ',', ' '], '', $row[5] ?? 0));
                     // Determine transaction type and amount
@@ -624,36 +645,56 @@ class FinancialController extends Controller {
 
                     $txDate = date('Y-m-d');
                     if (!empty($row[0])) {
-                        $parsedDate = DateTime::createFromFormat('d/m/Y', trim($row[0]))
-                                   ?: DateTime::createFromFormat('Y-m-d', trim($row[0]))
-                                   ?: DateTime::createFromFormat('m/d/Y', trim($row[0]));
-                        if ($parsedDate) {
-                            $txDate = $parsedDate->format('Y-m-d');
+                        $rawDate = trim((string)$row[0]);
+                        // Handle Excel serial date (positive integer > 1000)
+                        if (is_numeric($rawDate) && intval($rawDate) > 1000) {
+                            // Standard Excel serial to Unix: (serial - 25569) * 86400
+                            // 25569 = days from Excel epoch (Jan 1, 1900) to Unix epoch (Jan 1, 1970)
+                            // accounting for Excel's 1900 leap-year bug (serials >= 61)
+                            $txDate = gmdate('Y-m-d', (intval($rawDate) - 25569) * 86400);
+                        } else {
+                            $parsedDate = DateTime::createFromFormat('d/m/Y', $rawDate)
+                                       ?: DateTime::createFromFormat('Y-m-d', $rawDate)
+                                       ?: DateTime::createFromFormat('m/d/Y', $rawDate)
+                                       ?: DateTime::createFromFormat('d/m/y', $rawDate)
+                                       ?: DateTime::createFromFormat('m/d/y', $rawDate);
+                            if ($parsedDate) {
+                                $txDate = $parsedDate->format('Y-m-d');
+                            }
                         }
                     }
 
                     $description = !empty($row[3]) ? trim($row[3]) : (!empty($row[1]) ? trim($row[1]) : 'Importado de archivo');
 
-                    $stmt = $this->db->prepare("
-                        INSERT INTO financial_movements 
-                        (movement_type_id, transaction_type, amount, description, transaction_date, created_by, notes, is_imported)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-                    ");
-                    $stmt->execute([
-                        $movTypeId,
-                        $transType,
-                        $amount,
-                        $description,
-                        $txDate,
-                        $_SESSION['user_id'],
-                        'Importado desde archivo bancario'
-                    ]);
-                    $imported++;
+                    try {
+                        $stmt = $this->db->prepare("
+                            INSERT INTO financial_movements 
+                            (movement_type_id, transaction_type, amount, description, transaction_date, created_by, notes, is_imported)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                        ");
+                        $stmt->execute([
+                            $movTypeId,
+                            $transType,
+                            $amount,
+                            $description,
+                            $txDate,
+                            $_SESSION['user_id'],
+                            'Importado desde archivo bancario'
+                        ]);
+                        $imported++;
+                    } catch (PDOException $e) {
+                        error_log('importCSV row error: ' . $e->getMessage() . ' | data: ' . json_encode([$movTypeId, $transType, $amount, $description, $txDate]));
+                        $errors[] = 'Fila ' . ($rowIndex + 1) . ': ' . $e->getMessage();
+                    }
                 }
 
-                AuditController::log('create', "Importación archivo bancario: $imported movimientos", 'financial_movements', null);
-                $_SESSION['success_message'] = "Se importaron $imported movimientos exitosamente";
-                $this->redirect('financial');
+                if ($imported > 0) {
+                    AuditController::log('create', "Importación archivo bancario: $imported movimientos", 'financial_movements', null);
+                    $_SESSION['success_message'] = "Se importaron $imported movimientos exitosamente" . (count($errors) > 0 ? '. ' . count($errors) . ' filas con error.' : '');
+                    $this->redirect('financial');
+                } else {
+                    $data['error'] = 'No se pudo importar ningún movimiento.' . (count($errors) > 0 ? ' Errores: ' . implode('; ', array_slice($errors, 0, 3)) : '');
+                }
             }
         } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
             $file = $_FILES['csv_file'];
@@ -966,6 +1007,35 @@ class FinancialController extends Controller {
         fputcsv($output, [date('d/m/Y'), 'Cuota de mantenimiento', '1500.00', 'Pago mensual', '0.00', '1500.00']);
         fputcsv($output, [date('d/m/Y'), 'Pago de servicio', '500.00', 'Servicio de limpieza', '500.00', '0.00']);
         fclose($output);
+        exit;
+    }
+
+    /**
+     * API: Obtener cuotas pendientes de una propiedad (para selector en movimiento financiero)
+     */
+    public function getPendingFees($propertyId = null) {
+        header('Content-Type: application/json');
+        if (!$propertyId) {
+            echo json_encode(['success' => false, 'fees' => []]);
+            exit;
+        }
+        $propertyId = intval($propertyId);
+        $stmt = $this->db->prepare("
+            SELECT mf.id, mf.period, mf.amount, mf.due_date, mf.status
+            FROM maintenance_fees mf
+            WHERE mf.property_id = ? AND mf.status IN ('pending', 'overdue')
+            ORDER BY mf.due_date ASC
+        ");
+        $stmt->execute([$propertyId]);
+        $fees = $stmt->fetchAll();
+        // Format period and amount for display
+        foreach ($fees as &$fee) {
+            $dt = DateTime::createFromFormat('Y-m-d', $fee['period'] . '-01');
+            $fee['period_label'] = $dt ? $dt->format('M Y') : $fee['period'];
+            $fee['amount_label'] = '$' . number_format($fee['amount'], 2);
+            $fee['status_label'] = $fee['status'] === 'overdue' ? 'Vencido' : 'Pendiente';
+        }
+        echo json_encode(['success' => true, 'fees' => $fees]);
         exit;
     }
 }
