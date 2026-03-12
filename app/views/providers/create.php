@@ -48,10 +48,11 @@
                             <p class="text-xs text-gray-500 mt-1">Debe contener exactamente 10 dígitos</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
-                            <input type="email" name="email"
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico <span class="text-red-500">*</span></label>
+                            <input type="email" name="email" required
                                    value="<?php echo htmlspecialchars($provider['email'] ?? ''); ?>"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500">
+                            <p class="text-xs text-gray-500 mt-1">Se usará como usuario de acceso. No puede repetirse.</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Categoría / Especialidad</label>
@@ -105,6 +106,12 @@
                         <a href="<?php echo BASE_URL; ?>/providers" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
                             Cancelar
                         </a>
+                    </div>
+                    <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Se creará automáticamente un usuario con <strong>rol proveedor</strong> usando el correo ingresado.
+                        La contraseña temporal se generará de forma aleatoria y se mostrará al guardar.
+                        El proveedor podrá cambiarla posteriormente.
                     </div>
                 </form>
             </div>

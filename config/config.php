@@ -46,11 +46,11 @@ define('QR_API_ENABLED', true);
 define('QR_LIBRARY', 'phpqrcode'); // Usaremos biblioteca PHP local
 
 // Configuración de correo (SMTP)
-define('SMTP_HOST', 'smtp.gmail.com');
-define('SMTP_PORT', 587);
-define('SMTP_USER', '');
-define('SMTP_PASS', '');
-define('SMTP_FROM', SITE_EMAIL);
+define('SMTP_HOST', 'residencial.digital');
+define('SMTP_PORT', 465);
+define('SMTP_USER', 'contacto@residencial.digital');
+define('SMTP_PASS', 'Danjohn007');
+define('SMTP_FROM', 'contacto@residencial.digital');
 define('SMTP_FROM_NAME', SITE_NAME);
 
 // Horarios de atención

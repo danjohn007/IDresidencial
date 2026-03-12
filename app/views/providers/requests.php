@@ -76,6 +76,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Solicitada</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Costo</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Imagen</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                         </tr>
                     </thead>
@@ -149,6 +150,18 @@
                                 <?php else: ?>—<?php endif; ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <?php if (!empty($req['image_path'])): ?>
+                                <a href="<?php echo PUBLIC_URL . '/' . htmlspecialchars($req['image_path']); ?>"
+                                   target="_blank" title="Ver imagen adjunta">
+                                    <img src="<?php echo PUBLIC_URL . '/' . htmlspecialchars($req['image_path']); ?>"
+                                         alt="Imagen adjunta"
+                                         class="w-12 h-12 object-cover rounded border border-gray-200 hover:opacity-80">
+                                </a>
+                                <?php else: ?>
+                                <span class="text-gray-400">—</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 <?php if ($req['status'] !== 'completed' && $req['status'] !== 'cancelled'): ?>
                                 <button onclick="updateStatus(<?php echo $req['id']; ?>)"
                                         class="text-blue-600 hover:text-blue-900 mr-2" title="Actualizar estado">
@@ -183,6 +196,12 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Costo Real (opcional)</label>
                 <input type="number" step="0.01" name="actual_cost" min="0"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                       placeholder="0.00">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tarifa del Proveedor (opcional)</label>
+                <input type="number" step="0.01" name="rate" min="0"
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg"
                        placeholder="0.00">
             </div>

@@ -312,6 +312,16 @@
                     </a>
                 </li>
                 <?php endif; ?>
+
+                <?php if ($_SESSION['role'] === 'proveedor'): ?>
+                <!-- Panel Proveedor -->
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/providers/myDashboard" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-yellow-50 transition">
+                        <i class="fas fa-hard-hat w-5 text-yellow-600"></i>
+                        <span>Mi Panel</span>
+                    </a>
+                </li>
+                <?php endif; ?>
                 
                 <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador'])): ?>
                 <!-- Divider -->
