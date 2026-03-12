@@ -1890,11 +1890,13 @@ class ResidentsController extends Controller {
             $adminStmt = $this->db->query("SELECT email FROM users WHERE role IN ('superadmin', 'administrador') AND status = 'active' AND email IS NOT NULL AND email != ''");
             $adminEmails = $adminStmt->fetchAll(PDO::FETCH_COLUMN);
 
-            // Collect recipients (avoid duplicate)
-            $recipients = array_unique(array_filter(array_merge($adminEmails, $residentEmail ? [$residentEmail] : [])));
+            // Build recipient list: admin emails + resident email (deduplicated)
+            $residentEmails = ($residentEmail && filter_var($residentEmail, FILTER_VALIDATE_EMAIL)) ? [$residentEmail] : [];
+            $allEmails = array_merge($adminEmails, $residentEmails);
+            $recipients = array_unique(array_filter($allEmails));
 
-            foreach ($recipients as $email) {
-                $mailer->send($email, $subject, $body);
+            foreach ($recipients as $recipientEmail) {
+                $mailer->send($recipientEmail, $subject, $body);
             }
         } catch (Exception $e) {
             error_log('sendFeePaymentNotification error: ' . $e->getMessage());
@@ -1963,7 +1965,9 @@ class ResidentsController extends Controller {
                     continue;
                 }
                 if (empty(array_filter($row))) continue;
-                $rows[] = array_combine($headers, array_pad($row, count($headers), ''));
+                // Normalize row length to match headers (truncate extra or pad missing columns)
+                $normalizedRow = array_slice(array_pad($row, count($headers), ''), 0, count($headers));
+                $rows[] = array_combine($headers, $normalizedRow);
             }
             fclose($handle);
 

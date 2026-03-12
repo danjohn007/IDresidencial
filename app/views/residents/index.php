@@ -14,7 +14,7 @@
                 </div>
                 <div class="space-x-2">
                     <a href="<?php echo BASE_URL; ?>/residents/importExcel" class="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
-                        <i class="fas fa-file-excel mr-2"></i> Importar Excel
+                        <i class="fas fa-file-csv mr-2"></i> Importar CSV
                     </a>
                     <a href="<?php echo BASE_URL; ?>/residents/create" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                         <i class="fas fa-user-plus mr-2"></i> Nuevo Residente

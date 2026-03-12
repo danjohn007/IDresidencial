@@ -57,12 +57,15 @@ class ProvidersController extends Controller {
         $catStmt = $this->db->query("SELECT DISTINCT category FROM providers WHERE category IS NOT NULL AND category != '' ORDER BY category");
         $categories = $catStmt->fetchAll(PDO::FETCH_COLUMN);
 
-        // Stats
-        $stats = [
-            'total'    => count($providers),
-            'active'   => count(array_filter($providers, fn($p) => $p['status'] === 'active')),
-            'inactive' => count(array_filter($providers, fn($p) => $p['status'] === 'inactive')),
-        ];
+        // Stats from database (single query, not filtered)
+        $statsStmt = $this->db->query("
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) as inactive
+            FROM providers
+        ");
+        $stats = $statsStmt->fetch();
 
         $data = [
             'title'      => 'Proveedores',

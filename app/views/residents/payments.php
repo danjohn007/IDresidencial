@@ -42,7 +42,7 @@
                                value="<?php echo htmlspecialchars($filters['search'] ?? ''); ?>" 
                                placeholder="Escribe el nombre, teléfono o número de propiedad..."
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <p class="text-xs text-gray-500 mt-1">Busca por nombre, apellido o número de teléfono del residente</p>
+                        <p class="text-xs text-gray-500 mt-1">Busca por nombre, apellido, número de teléfono o número de propiedad del residente</p>
                     </div>
                     
                     <!-- Other Filters -->

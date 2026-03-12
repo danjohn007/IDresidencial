@@ -195,8 +195,9 @@
 </div>
 
 <script>
+var baseUrl = <?php echo json_encode(BASE_URL); ?>;
 function updateStatus(requestId) {
-    document.getElementById('statusForm').action = '<?php echo BASE_URL; ?>/providers/updateRequestStatus/' + requestId;
+    document.getElementById('statusForm').action = baseUrl + '/providers/updateRequestStatus/' + requestId;
     document.getElementById('statusModal').classList.remove('hidden');
 }
 function closeStatusModal() {

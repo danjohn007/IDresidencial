@@ -9,7 +9,7 @@
         <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
             <div class="mb-6 flex justify-between items-center">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900"><i class="fas fa-file-excel mr-2 text-emerald-600"></i>Importar Residentes desde Excel</h1>
+                    <h1 class="text-3xl font-bold text-gray-900"><i class="fas fa-file-csv mr-2 text-emerald-600"></i>Importar Residentes desde CSV</h1>
                     <p class="text-gray-600 mt-1">Carga masiva de residentes usando un archivo CSV</p>
                 </div>
                 <a href="<?php echo BASE_URL; ?>/residents" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
@@ -46,7 +46,7 @@
                     <li>El campo <strong>relacion</strong> acepta: <code>propietario</code>, <code>inquilino</code>, <code>familiar</code></li>
                     <li>Si la propiedad no existe, se creará automáticamente.</li>
                     <li>Los emails duplicados serán omitidos.</li>
-                    <li>Si no se provee <strong>password</strong>, se genera una contraseña aleatoria.</li>
+                    <li>Si no se provee <strong>password</strong>, se genera una contraseña aleatoria temporal. El residente deberá usar la función de recuperación de contraseña para acceder.</li>
                 </ul>
             </div>
 
