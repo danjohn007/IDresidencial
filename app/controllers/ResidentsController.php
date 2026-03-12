@@ -2092,6 +2092,163 @@ class ResidentsController extends Controller {
     }
 
     /**
+     * Enviar estado de cuenta por email via SMTP
+     */
+    public function sendAccountStatement($id = null) {
+        if (!$id) {
+            $this->redirect('residents');
+        }
+
+        $resident = $this->residentModel->findById($id);
+        if (!$resident) {
+            $_SESSION['error_message'] = 'Residente no encontrado';
+            $this->redirect('residents');
+        }
+
+        if (empty($resident['email'])) {
+            $_SESSION['error_message'] = 'El residente no tiene correo electrónico registrado.';
+            $this->redirect('residents/accountStatement/' . $id);
+        }
+
+        $year          = $this->post('year', date('Y'));
+        $status_filter = $this->post('status_filter', '');
+
+        $whereExtra = '';
+        if ($year === 'all') {
+            $params = [$resident['property_id']];
+        } else {
+            $params      = [$resident['property_id'], $year . '%'];
+            $whereExtra  = 'AND mf.period LIKE ?';
+        }
+        if ($status_filter !== '') {
+            $whereExtra .= ' AND mf.status = ?';
+            $params[]    = $status_filter;
+        }
+
+        $stmt = $this->db->prepare("
+            SELECT mf.*,
+                   fm.transaction_date as payment_date,
+                   fm.payment_method,
+                   fm.amount as paid_amount
+            FROM maintenance_fees mf
+            LEFT JOIN financial_movements fm ON fm.reference_type = 'maintenance_fee' AND fm.reference_id = mf.id
+            WHERE mf.property_id = ?
+              $whereExtra
+            ORDER BY mf.period DESC
+        ");
+        $stmt->execute($params);
+        $fees = $stmt->fetchAll();
+
+        $totalPaid    = array_sum(array_column(array_filter($fees, fn($f) => $f['status'] === 'paid'), 'amount'));
+        $totalPending = array_sum(array_column(array_filter($fees, fn($f) => in_array($f['status'], ['pending', 'overdue'])), 'amount'));
+        $totalOverdue = array_sum(array_column(array_filter($fees, fn($f) => $f['status'] === 'overdue'), 'amount'));
+
+        // Build HTML email body
+        $periodLabel = ($year === 'all') ? 'Todos los años' : $year;
+        $feesRows = '';
+        foreach ($fees as $fee) {
+            $period  = $fee['period'] ?? $fee['due_date'] ?? null;
+            $pStr    = $period ? date('M Y', strtotime($period)) : '—';
+            $statusMap = ['paid' => 'Pagado', 'overdue' => 'Vencido', 'pending' => 'Pendiente'];
+            $st      = $statusMap[$fee['status']] ?? ucfirst($fee['status']);
+            $payDate = $fee['paid_date']    ? date('d/m/Y', strtotime($fee['paid_date']))
+                     : ($fee['payment_date'] ? date('d/m/Y', strtotime($fee['payment_date'])) : '—');
+            $method  = htmlspecialchars($fee['payment_method'] ?? '—');
+            $amount  = '$' . number_format($fee['amount'], 2);
+            $feesRows .= "<tr>
+                <td style='padding:8px;border-bottom:1px solid #e5e7eb;'>{$pStr}</td>
+                <td style='padding:8px;border-bottom:1px solid #e5e7eb;'>{$amount}</td>
+                <td style='padding:8px;border-bottom:1px solid #e5e7eb;'>{$st}</td>
+                <td style='padding:8px;border-bottom:1px solid #e5e7eb;'>{$payDate}</td>
+                <td style='padding:8px;border-bottom:1px solid #e5e7eb;'>{$method}</td>
+            </tr>";
+        }
+
+        $firstName = htmlspecialchars($resident['first_name']);
+        $lastName  = htmlspecialchars($resident['last_name']);
+        $propNum   = htmlspecialchars($resident['property_number']);
+        $genDate   = date('d/m/Y H:i');
+        $tPaid     = '$' . number_format($totalPaid, 2);
+        $tPending  = '$' . number_format($totalPending, 2);
+        $tOverdue  = '$' . number_format($totalOverdue, 2);
+
+        $emailBody = "
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset='UTF-8'></head>
+        <body style='font-family:Arial,sans-serif;color:#333;margin:0;padding:0;'>
+            <div style='max-width:700px;margin:0 auto;padding:20px;'>
+                <div style='background:#3B82F6;color:white;padding:20px;border-radius:8px 8px 0 0;text-align:center;'>
+                    <h1 style='margin:0;font-size:22px;'>📄 Estado de Cuenta</h1>
+                </div>
+                <div style='background:#f9fafb;padding:24px;border:1px solid #e5e7eb;'>
+                    <p><strong>Residente:</strong> {$firstName} {$lastName}</p>
+                    <p><strong>Propiedad:</strong> {$propNum}</p>
+                    <p><strong>Período:</strong> {$periodLabel}</p>
+                    <p><strong>Generado:</strong> {$genDate}</p>
+                    <hr style='margin:16px 0;border:none;border-top:1px solid #e5e7eb;'>
+                    <table style='width:100%;border-collapse:collapse;margin-bottom:16px;'>
+                        <tr>
+                            <td style='padding:12px;background:#d1fae5;border-radius:4px;text-align:center;'>
+                                <div style='font-size:12px;color:#6b7280;'>Total Pagado</div>
+                                <div style='font-size:20px;font-weight:bold;color:#059669;'>{$tPaid}</div>
+                            </td>
+                            <td style='width:16px;'></td>
+                            <td style='padding:12px;background:#fef3c7;border-radius:4px;text-align:center;'>
+                                <div style='font-size:12px;color:#6b7280;'>Total Pendiente</div>
+                                <div style='font-size:20px;font-weight:bold;color:#d97706;'>{$tPending}</div>
+                            </td>
+                            <td style='width:16px;'></td>
+                            <td style='padding:12px;background:#fee2e2;border-radius:4px;text-align:center;'>
+                                <div style='font-size:12px;color:#6b7280;'>Total Vencido</div>
+                                <div style='font-size:20px;font-weight:bold;color:#dc2626;'>{$tOverdue}</div>
+                            </td>
+                        </tr>
+                    </table>
+                    <table style='width:100%;border-collapse:collapse;font-size:13px;'>
+                        <thead>
+                            <tr style='background:#f3f4f6;'>
+                                <th style='padding:8px;text-align:left;'>Período</th>
+                                <th style='padding:8px;text-align:left;'>Monto</th>
+                                <th style='padding:8px;text-align:left;'>Estado</th>
+                                <th style='padding:8px;text-align:left;'>Fecha Pago</th>
+                                <th style='padding:8px;text-align:left;'>Método</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            " . ($feesRows ?: "<tr><td colspan='5' style='padding:12px;text-align:center;color:#9ca3af;'>Sin registros en este período</td></tr>") . "
+                        </tbody>
+                    </table>
+                </div>
+                <div style='text-align:center;padding:16px;font-size:11px;color:#9ca3af;'>
+                    &copy; " . date('Y') . " ERP Residencial. Todos los derechos reservados.
+                </div>
+            </div>
+        </body>
+        </html>";
+
+        require_once APP_PATH . '/core/Mailer.php';
+        $mailer = new Mailer();
+
+        if (!$mailer->isConfigured()) {
+            $_SESSION['error_message'] = 'El sistema de correo no está configurado. Contacta al administrador.';
+            $this->redirect('residents/accountStatement/' . $id);
+        }
+
+        $subject = 'Estado de Cuenta — ' . $resident['first_name'] . ' ' . $resident['last_name'] . ' — ' . $periodLabel;
+        $sent    = $mailer->send($resident['email'], $subject, $emailBody);
+
+        if ($sent) {
+            AuditController::log('email', 'Estado de cuenta enviado a ' . $resident['email'], 'residents', $id);
+            $_SESSION['success_message'] = 'Estado de cuenta enviado exitosamente a ' . htmlspecialchars($resident['email']) . '.';
+        } else {
+            $_SESSION['error_message'] = 'No se pudo enviar el correo. Verifica la configuración SMTP o intenta más tarde.';
+        }
+
+        $this->redirect('residents/accountStatement/' . $id);
+    }
+
+    /**
      * Reporte de morosidad
      */
     public function delinquencyReport() {

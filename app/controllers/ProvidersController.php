@@ -9,9 +9,25 @@ class ProvidersController extends Controller {
 
     private $db;
 
+    /** Methods accessible by the proveedor role (own portal only) */
+    private const PROVIDER_METHODS = ['myDashboard', 'updateRequestStatus'];
+
     public function __construct() {
         $this->requireAuth();
-        $this->requireRole(['superadmin', 'administrador']);
+
+        // Determine which action is being called
+        $url = isset($_GET['url']) ? explode('/', filter_var(rtrim($_GET['url'], '/'), FILTER_SANITIZE_URL)) : [];
+        $action = $url[1] ?? 'index';
+
+        if ($_SESSION['role'] === 'proveedor') {
+            // Providers may only access their own portal methods
+            if (!in_array($action, self::PROVIDER_METHODS)) {
+                $this->redirect('providers/myDashboard');
+            }
+        } else {
+            $this->requireRole(['superadmin', 'administrador']);
+        }
+
         $this->db = Database::getInstance()->getConnection();
     }
 
@@ -105,33 +121,78 @@ class ProvidersController extends Controller {
                 return;
             }
 
-            if (!empty($providerData['email']) && !filter_var($providerData['email'], FILTER_VALIDATE_EMAIL)) {
+            if (empty($providerData['email'])) {
+                $data['error'] = 'El correo electrónico es obligatorio.';
+                $data['provider'] = $providerData;
+                $this->view('providers/create', $data);
+                return;
+            }
+
+            if (!filter_var($providerData['email'], FILTER_VALIDATE_EMAIL)) {
                 $data['error'] = 'El correo electrónico no es válido.';
                 $data['provider'] = $providerData;
                 $this->view('providers/create', $data);
                 return;
             }
 
-            $stmt = $this->db->prepare("
-                INSERT INTO providers (company_name, contact_name, phone, email, category, address, rfc, notes, status, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt->execute([
-                $providerData['company_name'],
-                $providerData['contact_name'] ?: null,
-                $providerData['phone'] ?: null,
-                $providerData['email'] ?: null,
-                $providerData['category'] ?: null,
-                $providerData['address'] ?: null,
-                $providerData['rfc'] ?: null,
-                $providerData['notes'] ?: null,
-                $providerData['status'],
-                $providerData['created_by']
-            ]);
-            $newId = $this->db->lastInsertId();
+            // Check email uniqueness in users table
+            $stmtCheck = $this->db->prepare("SELECT id FROM users WHERE email = ?");
+            $stmtCheck->execute([$providerData['email']]);
+            if ($stmtCheck->fetch()) {
+                $data['error'] = 'El correo electrónico ya está registrado en el sistema.';
+                $data['provider'] = $providerData;
+                $this->view('providers/create', $data);
+                return;
+            }
+
+            // Generate a random password
+            $plainPassword = bin2hex(random_bytes(6)); // 12 hex chars
+
+            try {
+                $this->db->beginTransaction();
+
+                // Create user with role = proveedor
+                $username = 'prov_' . substr(md5($providerData['email'] . uniqid()), 0, 8);
+                $hashedPassword = password_hash($plainPassword, PASSWORD_DEFAULT);
+                $firstName = $providerData['contact_name'] ?: $providerData['company_name'];
+                $stmtUser = $this->db->prepare("
+                    INSERT INTO users (username, email, password, first_name, last_name, role, status)
+                    VALUES (?, ?, ?, ?, '', 'proveedor', 'active')
+                ");
+                $stmtUser->execute([$username, $providerData['email'], $hashedPassword, $firstName]);
+                $newUserId = $this->db->lastInsertId();
+
+                // Insert provider linked to the new user
+                $stmt = $this->db->prepare("
+                    INSERT INTO providers (user_id, company_name, contact_name, phone, email, category, address, rfc, notes, status, created_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([
+                    $newUserId,
+                    $providerData['company_name'],
+                    $providerData['contact_name'] ?: null,
+                    $providerData['phone'] ?: null,
+                    $providerData['email'],
+                    $providerData['category'] ?: null,
+                    $providerData['address'] ?: null,
+                    $providerData['rfc'] ?: null,
+                    $providerData['notes'] ?: null,
+                    $providerData['status'],
+                    $providerData['created_by']
+                ]);
+                $newId = $this->db->lastInsertId();
+
+                $this->db->commit();
+            } catch (Exception $e) {
+                $this->db->rollBack();
+                $data['error'] = 'Error al crear el proveedor: ' . $e->getMessage();
+                $data['provider'] = $providerData;
+                $this->view('providers/create', $data);
+                return;
+            }
 
             AuditController::log('create', 'Proveedor creado: ' . $providerData['company_name'], 'providers', $newId);
-            $_SESSION['success_message'] = 'Proveedor creado exitosamente.';
+            $_SESSION['success_message'] = 'Proveedor creado exitosamente. Usuario: <strong>' . htmlspecialchars($username) . '</strong> — Contraseña temporal: <strong>' . htmlspecialchars($plainPassword) . '</strong>';
             $this->redirect('providers');
         }
 
@@ -378,25 +439,103 @@ class ProvidersController extends Controller {
      */
     public function updateRequestStatus($requestId = null) {
         if (!$requestId) {
-            $this->redirect('providers/requests');
+            $this->redirect($_SESSION['role'] === 'proveedor' ? 'providers/myDashboard' : 'providers/requests');
         }
 
-        $newStatus = $this->post('status');
-        $actualCost = $this->post('actual_cost');
+        // If a provider is updating, ensure the request belongs to them
+        if ($_SESSION['role'] === 'proveedor') {
+            $stmtProv = $this->db->prepare("SELECT id FROM providers WHERE user_id = ?");
+            $stmtProv->execute([$_SESSION['user_id']]);
+            $prov = $stmtProv->fetch();
+            if (!$prov) {
+                $this->redirect('providers/myDashboard');
+            }
+            $stmtOwn = $this->db->prepare("SELECT id FROM provider_service_requests WHERE id = ? AND provider_id = ?");
+            $stmtOwn->execute([$requestId, $prov['id']]);
+            if (!$stmtOwn->fetch()) {
+                $_SESSION['error_message'] = 'No tienes permiso para actualizar esta solicitud.';
+                $this->redirect('providers/myDashboard');
+            }
+        }
+
+        $newStatus    = $this->post('status');
+        $actualCost   = $this->post('actual_cost');
+        $rate         = $this->post('rate');
         $completedDate = ($newStatus === 'completed') ? date('Y-m-d') : null;
 
         $stmt = $this->db->prepare("
             UPDATE provider_service_requests
             SET status = ?,
                 actual_cost = ?,
+                rate = ?,
                 completed_date = ?
             WHERE id = ?
         ");
-        $stmt->execute([$newStatus, $actualCost ?: null, $completedDate, $requestId]);
+        $stmt->execute([$newStatus, $actualCost ?: null, $rate ?: null, $completedDate, $requestId]);
 
         AuditController::log('update', 'Estado de solicitud actualizado: ' . $newStatus, 'provider_service_requests', $requestId);
         $_SESSION['success_message'] = 'Estado de la solicitud actualizado.';
-        $this->redirect('providers/requests');
+        $this->redirect($_SESSION['role'] === 'proveedor' ? 'providers/myDashboard' : 'providers/requests');
+    }
+
+    /**
+     * Provider's own dashboard - shows only their assigned service requests
+     */
+    public function myDashboard() {
+        // Find provider record linked to current user
+        $stmt = $this->db->prepare("SELECT * FROM providers WHERE user_id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $provider = $stmt->fetch();
+
+        if (!$provider) {
+            $_SESSION['error_message'] = 'No se encontró un proveedor asociado a tu usuario.';
+            $this->redirect('auth/login');
+        }
+
+        $status   = $this->get('status', '');
+        $priority = $this->get('priority', '');
+        $search   = $this->get('search', '');
+
+        $where  = ["sr.provider_id = ?"];
+        $params = [$provider['id']];
+
+        if ($status !== '') {
+            $where[] = "sr.status = ?";
+            $params[] = $status;
+        }
+        if ($priority !== '') {
+            $where[] = "sr.priority = ?";
+            $params[] = $priority;
+        }
+        if ($search !== '') {
+            $where[] = "(sr.title LIKE ? OR sr.description LIKE ?)";
+            $term = '%' . $search . '%';
+            $params[] = $term;
+            $params[] = $term;
+        }
+
+        $whereClause = 'WHERE ' . implode(' AND ', $where);
+
+        $stmt = $this->db->prepare("
+            SELECT sr.*, prop.property_number
+            FROM provider_service_requests sr
+            LEFT JOIN properties prop ON sr.property_id = prop.id
+            $whereClause
+            ORDER BY
+                CASE sr.priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END,
+                sr.created_at DESC
+        ");
+        $stmt->execute($params);
+        $requests = $stmt->fetchAll();
+
+        $data = [
+            'title'    => 'Mi Panel — ' . htmlspecialchars($provider['company_name']),
+            'provider' => $provider,
+            'requests' => $requests,
+            'filters'  => compact('status', 'priority', 'search'),
+        ];
+
+        $this->view('providers/my_dashboard', $data);
     }
 
     /**

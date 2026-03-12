@@ -69,6 +69,9 @@ class AuthController extends Controller {
                             case 'guardia':
                                 $this->redirect('guard');
                                 break;
+                            case 'proveedor':
+                                $this->redirect('providers/myDashboard');
+                                break;
                             default:
                                 $this->redirect('dashboard');
                                 break;

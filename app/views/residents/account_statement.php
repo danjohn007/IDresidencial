@@ -24,6 +24,17 @@
                     </div>
                 </div>
 
+                <?php if (isset($_SESSION['success_message'])): ?>
+                <div class="mb-4 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded no-print">
+                    <i class="fas fa-check-circle mr-1"></i><?php echo $_SESSION['success_message']; unset($_SESSION['success_message']); ?>
+                </div>
+                <?php endif; ?>
+                <?php if (isset($_SESSION['error_message'])): ?>
+                <div class="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded no-print">
+                    <i class="fas fa-exclamation-circle mr-1"></i><?php echo htmlspecialchars($_SESSION['error_message']); unset($_SESSION['error_message']); ?>
+                </div>
+                <?php endif; ?>
+
                 <!-- Date Filters -->
                 <div class="bg-white rounded-lg shadow p-4 mb-6 no-print">
                     <form method="GET" action="<?php echo BASE_URL; ?>/residents/accountStatement/<?php echo $resident['id']; ?>" class="flex flex-wrap gap-4 items-end">
@@ -153,10 +164,20 @@
 
                 <!-- Send by email (no-print) -->
                 <div class="mt-4 flex justify-end space-x-3 no-print">
-                    <a href="mailto:<?php echo htmlspecialchars($resident['email'] ?? ''); ?>?subject=Estado+de+Cuenta&body=Estimado+<?php echo urlencode($resident['first_name']); ?>%2C+adjunto+su+estado+de+cuenta."
-                       class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        <i class="fas fa-envelope mr-2"></i> Enviar por Email
-                    </a>
+                    <?php if (!empty($resident['email'])): ?>
+                    <form method="POST" action="<?php echo BASE_URL; ?>/residents/sendAccountStatement/<?php echo $resident['id']; ?>"
+                          onsubmit="this.querySelector('button[type=submit]').disabled=true; this.querySelector('button[type=submit]').innerHTML='<i class=\'fas fa-spinner fa-spin mr-2\'></i>Enviando...';">
+                        <input type="hidden" name="year" value="<?php echo htmlspecialchars($year); ?>">
+                        <input type="hidden" name="status_filter" value="<?php echo htmlspecialchars($status_filter); ?>">
+                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-envelope mr-2"></i> Enviar por Email
+                        </button>
+                    </form>
+                    <?php else: ?>
+                    <span class="inline-flex items-center px-4 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed" title="El residente no tiene correo registrado">
+                        <i class="fas fa-envelope mr-2"></i> Sin correo registrado
+                    </span>
+                    <?php endif; ?>
                 </div>
             </div>
         </main>
