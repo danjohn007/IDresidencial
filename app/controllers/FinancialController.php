@@ -620,11 +620,6 @@ class FinancialController extends Controller {
                 $imported = 0;
                 $errors = [];
                 foreach ($rows as $rowIndex => $row) {
-                    // Skip empty rows (no data cells)
-                    if (empty(array_filter($row, fn($v) => trim((string)$v) !== ''))) {
-                        continue;
-                    }
-
                     $cargoRaw = floatval(str_replace(['$', ',', ' '], '', $row[4] ?? 0));
                     $abonoRaw = floatval(str_replace(['$', ',', ' '], '', $row[5] ?? 0));
                     // Determine transaction type and amount
@@ -728,6 +723,12 @@ class FinancialController extends Controller {
                 }
 
                 if (empty($data['error'])) {
+                    // Filter out empty rows BEFORE preview to maintain index consistency
+                    $rows = array_filter($rows, function($row) {
+                        return !empty(array_filter($row, fn($v) => trim((string)$v) !== ''));
+                    });
+                    $rows = array_values($rows); // Re-index array to have sequential numeric keys
+                    
                     // Auto-detect movement type from CONCEPTO column (col index 1)
                     $typesByName = [];
                     foreach ($movementTypes as $mt) {
