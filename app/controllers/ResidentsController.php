@@ -19,7 +19,7 @@ class ResidentsController extends Controller {
         $action = isset($url[1]) ? $url[1] : 'index';
         
         // Methods that residents can access
-        $residentMethods = ['myPayments', 'generateAccess', 'myAccesses', 'cancelPass', 'makePayment', 'processPayment', 'financialReport'];
+        $residentMethods = ['myPayments', 'generateAccess', 'myAccesses', 'cancelPass', 'makePayment', 'processPayment', 'financialReport', 'serviceRequests'];
         
         // If not a resident method, require admin roles
         if (!in_array($action, $residentMethods)) {
@@ -2388,5 +2388,76 @@ class ResidentsController extends Controller {
         }
 
         $this->view('residents/import_excel', $data);
+    }
+
+    /**
+     * Solicitudes de Servicio del residente (filtradas por su propiedad)
+     */
+    public function serviceRequests() {
+        if ($_SESSION['role'] !== 'residente') {
+            $_SESSION['error_message'] = 'Acceso denegado';
+            $this->redirect('dashboard');
+        }
+
+        $userId = $_SESSION['user_id'];
+        $stmt = $this->db->prepare("
+            SELECT r.*, p.property_number
+            FROM residents r
+            JOIN properties p ON r.property_id = p.id
+            WHERE r.user_id = ? AND r.status = 'active'
+            LIMIT 1
+        ");
+        $stmt->execute([$userId]);
+        $resident = $stmt->fetch();
+
+        if (!$resident) {
+            $_SESSION['error_message'] = 'No se encontró información del residente';
+            $this->redirect('dashboard');
+        }
+
+        $status   = $this->get('status', '');
+        $priority = $this->get('priority', '');
+        $search   = $this->get('search', '');
+
+        $where  = ["sr.property_id = ?"];
+        $params = [$resident['property_id']];
+
+        if ($status !== '') {
+            $where[] = "sr.status = ?";
+            $params[] = $status;
+        }
+        if ($priority !== '') {
+            $where[] = "sr.priority = ?";
+            $params[] = $priority;
+        }
+        if ($search !== '') {
+            $where[] = "(sr.title LIKE ? OR sr.description LIKE ?)";
+            $term = '%' . $search . '%';
+            $params[] = $term;
+            $params[] = $term;
+        }
+
+        $whereClause = 'WHERE ' . implode(' AND ', $where);
+
+        $stmt = $this->db->prepare("
+            SELECT sr.*, prov.company_name as provider_name
+            FROM provider_service_requests sr
+            LEFT JOIN providers prov ON sr.provider_id = prov.id
+            $whereClause
+            ORDER BY
+                CASE sr.priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END,
+                sr.created_at DESC
+        ");
+        $stmt->execute($params);
+        $requests = $stmt->fetchAll();
+
+        $data = [
+            'title'    => 'Solicitudes de Servicio',
+            'resident' => $resident,
+            'requests' => $requests,
+            'filters'  => compact('status', 'priority', 'search'),
+        ];
+
+        $this->view('residents/service_requests', $data);
     }
 }

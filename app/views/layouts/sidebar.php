@@ -223,6 +223,14 @@
                         <span>Mis Accesos</span>
                     </a>
                 </li>
+                
+                <!-- Solicitudes de Servicio -->
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/residents/serviceRequests" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fas fa-clipboard-list w-5"></i>
+                        <span>Solicitudes de Servicio</span>
+                    </a>
+                </li>
                 <?php endif; ?>
                 
                 <!-- Amenidades -->
