@@ -18,12 +18,10 @@
             </div>
             <?php else: ?>
 
-            <?php if (!empty($dateRangeAdjusted) || (isset($isCommittee) && !$isCommittee && !isset($isAdmin))): ?>
+            <?php if (!empty($minAllowed) && !$isAdmin && !$isCommittee): ?>
             <div class="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-700 rounded text-sm">
                 <i class="fas fa-info-circle mr-1"></i>
-                <?php if (isset($isCommittee) && !$isCommittee && !(isset($isAdmin) && $isAdmin)): ?>
-                    El rango de fechas disponible es el mes actual y los 3 meses anteriores.
-                <?php endif; ?>
+                El historial financiero disponible es a partir de tu fecha de ingreso (<?php echo date('d/m/Y', strtotime($registrationDate)); ?>).
             </div>
             <?php endif; ?>
 
@@ -49,6 +47,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
                         <input type="date" name="date_from" value="<?php echo htmlspecialchars($date_from); ?>"
+                               <?php if (!empty($minAllowed)): ?>min="<?php echo htmlspecialchars($minAllowed); ?>"<?php endif; ?>
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                     </div>
                     <div>
