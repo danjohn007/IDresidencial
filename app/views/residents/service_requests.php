@@ -217,7 +217,7 @@
             </button>
         </div>
         
-        <form id="requestForm" method="POST" action="<?php echo BASE_URL; ?>/residents/createServiceRequest">
+        <form id="requestForm" method="POST" action="<?php echo BASE_URL; ?>/residents/createServiceRequest" enctype="multipart/form-data">
             <div class="p-6 space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Título <span class="text-red-500">*</span></label>
@@ -241,21 +241,21 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                        <input id="category" type="text" name="category" list="categorySuggestions" maxlength="100"
-                               placeholder="Ej: Plomería, Electricidad..."
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <datalist id="categorySuggestions">
-                            <option value="Plomería">
-                            <option value="Electricidad">
-                            <option value="Carpintería">
-                            <option value="Pintura">
-                            <option value="Limpieza">
-                            <option value="Jardinería">
-                            <option value="Albañilería">
-                            <option value="Seguridad">
-                            <option value="General">
-                            <option value="Otros">
-                        </datalist>
+                        <select id="category" name="category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">Seleccione una categoría...</option>
+                            <option value="Plomería">Plomería</option>
+                            <option value="Electricidad">Electricidad</option>
+                            <option value="Carpintería">Carpintería</option>
+                            <option value="Pintura">Pintura</option>
+                            <option value="Limpieza">Limpieza</option>
+                            <option value="Jardinería">Jardinería</option>
+                            <option value="Albañilería">Albañilería</option>
+                            <option value="Seguridad">Seguridad</option>
+                            <option value="Climatización">Climatización</option>
+                            <option value="Computación">Computación</option>
+                            <option value="General">General</option>
+                            <option value="Otros">Otros</option>
+                        </select>
                     </div>
                     
                     <div>
@@ -296,6 +296,15 @@
                     <textarea name="notes" rows="2" maxlength="500"
                               placeholder="Información adicional relevante..."
                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-image text-gray-400 mr-1"></i>Imagen (Opcional)
+                    </label>
+                    <input type="file" name="service_image" id="serviceImage" accept="image/jpeg,image/jpg,image/png,image/webp"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <p class="text-xs text-gray-500 mt-1">JPG, PNG o WEBP. Máximo 5MB</p>
                 </div>
                 
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -455,7 +464,12 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
         method: 'POST',
         body: formData
     })
-    .then(r => r.json())
+    .then(r => {
+        if (!r.ok) {
+            throw new Error('HTTP error! status: ' + r.status);
+        }
+        return r.json();
+    })
     .then(data => {
         if (data.success) {
             closeRequestModal();
@@ -464,13 +478,16 @@ document.getElementById('requestForm').addEventListener('submit', function(e) {
         } else {
             errorDiv.textContent = data.message || 'Error al enviar la solicitud';
             errorDiv.classList.remove('hidden');
+            showToast(data.message || 'Error al enviar la solicitud', 'error', 5000);
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Enviar Solicitud';
         }
     })
-    .catch(() => {
-        errorDiv.textContent = 'Error de conexión. Intente nuevamente.';
+    .catch((error) => {
+        console.error('Error details:', error);
+        errorDiv.textContent = 'Error de conexión: ' + error.message;
         errorDiv.classList.remove('hidden');
+        showToast('Error de conexión. Intente nuevamente.', 'error', 5000);
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Enviar Solicitud';
     });

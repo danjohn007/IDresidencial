@@ -2428,9 +2428,9 @@ class ResidentsController extends Controller {
             $this->redirect('dashboard');
         }
 
-        $status   = $this->get('status', '');
-        $priority = $this->get('priority', '');
-        $search   = $this->get('search', '');
+        $status   = $_GET['status'] ?? '';
+        $priority = $_GET['priority'] ?? '';
+        $search   = $_GET['search'] ?? '';
 
         $where  = ["sr.property_id = ?"];
         $params = [$resident['property_id']];
@@ -2490,7 +2490,7 @@ class ResidentsController extends Controller {
             exit;
         }
 
-        if ($_SESSION['role'] !== 'residente') {
+        if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'residente') {
             echo json_encode(['success' => false, 'message' => 'Acceso denegado']);
             exit;
         }
@@ -2515,9 +2515,9 @@ class ResidentsController extends Controller {
             }
 
             // Validate required fields
-            $title = trim($this->post('title'));
-            $description = trim($this->post('description'));
-            $priority = $this->post('priority', 'medium');
+            $title = trim($_POST['title'] ?? '');
+            $description = trim($_POST['description'] ?? '');
+            $priority = $_POST['priority'] ?? 'medium';
 
             if (empty($title)) {
                 echo json_encode(['success' => false, 'message' => 'El título es requerido']);
@@ -2536,11 +2536,44 @@ class ResidentsController extends Controller {
             }
 
             // Get optional fields
-            $category   = trim($this->post('category', ''));
-            $area       = trim($this->post('area', ''));
-            $requestedDate = $this->post('requested_date', null);
-            $notes      = trim($this->post('notes', ''));
-            $providerId = $this->post('provider_id', null);
+            $category   = trim($_POST['category'] ?? '');
+            $area       = trim($_POST['area'] ?? '');
+            $requestedDate = $_POST['requested_date'] ?? null;
+            $notes      = trim($_POST['notes'] ?? '');
+            $providerId = $_POST['provider_id'] ?? null;
+            $imagePath  = null;
+
+            // Process image upload if provided
+            if (isset($_FILES['service_image']) && $_FILES['service_image']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = PUBLIC_PATH . '/uploads/service_requests/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+
+                $fileInfo = pathinfo($_FILES['service_image']['name']);
+                $extension = strtolower($fileInfo['extension']);
+                $allowedTypes = ['jpg', 'jpeg', 'png', 'webp'];
+
+                if (!in_array($extension, $allowedTypes)) {
+                    echo json_encode(['success' => false, 'message' => 'Tipo de archivo no permitido. Use JPG, PNG o WEBP.']);
+                    exit;
+                }
+
+                // Check file size (5MB max)
+                if ($_FILES['service_image']['size'] > 5 * 1024 * 1024) {
+                    echo json_encode(['success' => false, 'message' => 'El archivo es muy grande. Máximo 5MB.']);
+                    exit;
+                }
+
+                $fileName = 'service_' . date('YmdHis') . '_' . uniqid() . '.' . $extension;
+                $uploadPath = $uploadDir . $fileName;
+
+                if (move_uploaded_file($_FILES['service_image']['tmp_name'], $uploadPath)) {
+                    $imagePath = '/uploads/service_requests/' . $fileName;
+                } else {
+                    error_log('Failed to move uploaded file to: ' . $uploadPath);
+                }
+            }
 
             // Validate provider_id if provided
             if ($providerId !== null && $providerId !== '') {
@@ -2568,8 +2601,8 @@ class ResidentsController extends Controller {
             $stmt = $this->db->prepare("
                 INSERT INTO provider_service_requests 
                 (provider_id, title, description, category, area, property_id, priority, status, 
-                 requested_date, notes, created_by, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW())
+                 requested_date, notes, image_path, created_by, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, NOW())
             ");
 
             $stmt->execute([
@@ -2582,6 +2615,7 @@ class ResidentsController extends Controller {
                 $priority,
                 $requestedDate,
                 $notes ?: null,
+                $imagePath,
                 $userId
             ]);
 
@@ -2604,8 +2638,13 @@ class ResidentsController extends Controller {
             ]);
 
         } catch (PDOException $e) {
-            error_log('createServiceRequest error: ' . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Error al crear la solicitud. Intente nuevamente.']);
+            error_log('createServiceRequest PDO error: ' . $e->getMessage());
+            error_log('createServiceRequest PDO trace: ' . $e->getTraceAsString());
+            echo json_encode(['success' => false, 'message' => 'Error de base de datos. Verifique que la tabla tenga el campo image_path.']);
+        } catch (Exception $e) {
+            error_log('createServiceRequest general error: ' . $e->getMessage());
+            error_log('createServiceRequest general trace: ' . $e->getTraceAsString());
+            echo json_encode(['success' => false, 'message' => 'Error inesperado: ' . $e->getMessage()]);
         }
 
         exit;

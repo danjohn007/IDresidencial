@@ -58,6 +58,7 @@
                                 <option value="Pintura">
                                 <option value="Carpintería">
                                 <option value="Albañilería">
+                                <option value="Computación">
                                 <option value="General">
                             </datalist>
                         </div>
