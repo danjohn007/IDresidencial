@@ -311,9 +311,9 @@ class ResidentsController extends Controller {
      * Ver estado de cuenta
      */
     public function payments() {
-        // Default to current month + next month to show both overdue/current and pending upcoming
-        $defaultDateFrom = date('Y-m-01'); // First day of current month
-        $defaultDateTo = date('Y-m-t', strtotime('+1 month')); // Last day of next month
+        // Default to last 12 months to show full history
+        $defaultDateFrom = date('Y-m-01', strtotime('-11 months')); // First day of 12 months ago
+        $defaultDateTo = date('Y-m-t'); // Last day of current month
         
         $filters = [
             'status' => $this->get('status'),
@@ -1242,10 +1242,14 @@ class ResidentsController extends Controller {
         
         // Get the fee
         $stmt = $this->db->prepare("
-            SELECT mf.*, p.property_number, r.id as resident_id
+            SELECT mf.*, p.property_number, r.id as resident_id,
+                   COALESCE(u.first_name, '') as first_name,
+                   COALESCE(u.last_name, '') as last_name,
+                   u.email as resident_email
             FROM maintenance_fees mf
             JOIN properties p ON mf.property_id = p.id
             LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
+            LEFT JOIN users u ON r.user_id = u.id
             WHERE mf.id = ?
         ");
         $stmt->execute([$feeId]);
@@ -1354,6 +1358,9 @@ class ResidentsController extends Controller {
             $this->db->commit();
             
             AuditController::log('payment', 'Cuota de mantenimiento pagada (admin): ' . $fee['period'], 'maintenance_fees', $feeId);
+            
+            // Send email notifications
+            $this->sendFeePaymentNotification($fee, 'paid', $transactionDate, $paymentMethod);
             
             echo json_encode(['success' => true, 'message' => 'Pago registrado exitosamente']);
             
@@ -1495,9 +1502,17 @@ class ResidentsController extends Controller {
         }
         
         $stmt = $this->db->prepare("
-            SELECT mf.*, fm.id as movement_id
+            SELECT mf.*, fm.id as movement_id,
+                   p.property_number,
+                   COALESCE(u.first_name, '') as first_name,
+                   COALESCE(u.last_name, '') as last_name,
+                   u.email as resident_email,
+                   r.id as resident_id
             FROM maintenance_fees mf
             LEFT JOIN financial_movements fm ON fm.reference_type = 'maintenance_fee' AND fm.reference_id = mf.id
+            JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
+            LEFT JOIN users u ON r.user_id = u.id
             WHERE mf.id = ?
         ");
         $stmt->execute([$feeId]);
@@ -1531,6 +1546,9 @@ class ResidentsController extends Controller {
             
             AuditController::log('delete', 'Pago de cuota eliminado: ' . $feeId, 'maintenance_fees', $feeId);
             $_SESSION['success_message'] = 'Pago eliminado y cuota revertida a ' . ($newStatus === 'overdue' ? 'Vencido' : 'Pendiente');
+            
+            // Send cancellation email notifications
+            $this->sendFeePaymentNotification($fee, 'cancelled');
             
         } catch (PDOException $e) {
             $this->db->rollBack();
@@ -1593,7 +1611,7 @@ class ResidentsController extends Controller {
         
         $userId = $_SESSION['user_id'];
         
-        // For committee members and admins, allow full range; for regular residents restrict to 4 months
+        // For committee members and admins, allow full range; for regular residents restrict to their registration date
         $isAdmin = in_array($_SESSION['role'], ['superadmin', 'administrador']);
         $isCommittee = false;
         if ($_SESSION['role'] === 'residente') {
@@ -1603,24 +1621,9 @@ class ResidentsController extends Controller {
             $isCommittee = !empty($userRow['is_vigilance_committee']);
         }
         
-        // Default date range: current year for admin/committee, current month for regular resident
-        $defaultFrom = ($isAdmin || $isCommittee) ? date('Y-01-01') : date('Y-m-01', strtotime('-3 months'));
-        $defaultTo = date('Y-m-d');
-        
-        $date_from = $this->get('date_from', $defaultFrom);
-        $date_to = $this->get('date_to', $defaultTo);
-        
-        // Restrict non-committee residents to max 4 months (current + 3 previous)
-        if (!$isAdmin && !$isCommittee) {
-            $minAllowed = date('Y-m-01', strtotime('-3 months'));
-            if ($date_from < $minAllowed) {
-                $date_from = $minAllowed;
-            }
-        }
-        
-        // Get resident's property
+        // Get resident's property and registration date
         $stmt = $this->db->prepare("
-            SELECT r.id as resident_id, r.property_id, p.property_number
+            SELECT r.id as resident_id, r.property_id, p.property_number, r.created_at as registration_date
             FROM residents r
             INNER JOIN properties p ON r.property_id = p.id
             WHERE r.user_id = ? AND r.status = 'active'
@@ -1628,6 +1631,30 @@ class ResidentsController extends Controller {
         ");
         $stmt->execute([$userId]);
         $residentInfo = $stmt->fetch();
+        
+        // Determine minimum allowed date based on role
+        $registrationDate = $residentInfo ? date('Y-m-d', strtotime($residentInfo['registration_date'])) : date('Y-01-01');
+        
+        if ($isAdmin) {
+            $defaultFrom = date('Y-01-01');
+            $minAllowed = null; // No restriction for admins
+        } elseif ($isCommittee) {
+            $defaultFrom = date('Y-01-01');
+            $minAllowed = null; // No restriction for committee
+        } else {
+            $defaultFrom = $registrationDate;
+            $minAllowed = $registrationDate;
+        }
+        
+        $defaultTo = date('Y-m-d');
+        
+        $date_from = $this->get('date_from', $defaultFrom);
+        $date_to = $this->get('date_to', $defaultTo);
+        
+        // Enforce minimum date restriction for regular residents (from their registration date)
+        if ($minAllowed !== null && $date_from < $minAllowed) {
+            $date_from = $minAllowed;
+        }
         
         $payments = [];
         $totalPaid = 0;
@@ -1668,7 +1695,9 @@ class ResidentsController extends Controller {
             'date_from' => $date_from,
             'date_to' => $date_to,
             'isCommittee' => $isCommittee,
-            'isAdmin' => $isAdmin
+            'isAdmin' => $isAdmin,
+            'registrationDate' => $registrationDate,
+            'minAllowed' => $minAllowed
         ];
         
         $this->view('residents/financial_report', $data);
@@ -1782,5 +1811,269 @@ class ResidentsController extends Controller {
         ];
 
         $this->view('residents/delinquency_report', $data);
+    }
+
+    /**
+     * Send email notification for fee payment registration or cancellation
+     * Sends to superadmin(s) and the resident
+     *
+     * @param array $fee  Fee data (must include property_number, period, amount, first_name, last_name, resident_email)
+     * @param string $type 'paid' or 'cancelled'
+     * @param string|null $transactionDate Date of the payment (for paid notifications)
+     * @param string|null $paymentMethod   Method used (for paid notifications)
+     */
+    private function sendFeePaymentNotification(array $fee, string $type, ?string $transactionDate = null, ?string $paymentMethod = null): void {
+        try {
+            require_once APP_PATH . '/core/Mailer.php';
+            $mailer = new Mailer();
+            if (!$mailer->isConfigured()) {
+                return;
+            }
+
+            $siteName = 'ERP Residencial';
+            $propertyNumber = $fee['property_number'] ?? '';
+            $period = $fee['period'] ?? '';
+            $amount = number_format($fee['amount'] ?? 0, 2);
+            $residentName = trim(($fee['first_name'] ?? '') . ' ' . ($fee['last_name'] ?? ''));
+            $residentEmail = $fee['resident_email'] ?? null;
+            $paidDateDisplay = $transactionDate ? date('d/m/Y', strtotime($transactionDate)) : date('d/m/Y');
+
+            if ($type === 'paid') {
+                $subject = "✅ Pago de Cuota Registrado - {$propertyNumber} Período {$period}";
+                $actionText = 'registrado';
+                $headerColor = '#10B981';
+                $headerIcon = '✅';
+                $headerTitle = 'Pago de Cuota Registrado';
+                $bodyExtra = "<p><strong>Fecha de pago:</strong> {$paidDateDisplay}</p>"
+                           . ($paymentMethod ? "<p><strong>Método de pago:</strong> " . htmlspecialchars($paymentMethod) . "</p>" : '');
+            } else {
+                $subject = "❌ Pago de Cuota Cancelado - {$propertyNumber} Período {$period}";
+                $actionText = 'cancelado';
+                $headerColor = '#EF4444';
+                $headerIcon = '❌';
+                $headerTitle = 'Pago de Cuota Cancelado';
+                $bodyExtra = "<p>La cuota ha sido revertida a estado pendiente/vencido.</p>";
+            }
+
+            $body = "
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: {$headerColor}; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+                .content { background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; }
+                .info-box { background-color: #fff; padding: 15px; border-left: 4px solid {$headerColor}; margin: 20px 0; }
+                .footer { text-align: center; padding: 20px; font-size: 12px; color: #6b7280; }
+            </style>
+            </head>
+            <body>
+            <div class='container'>
+                <div class='header'><h1>{$headerIcon} {$headerTitle}</h1></div>
+                <div class='content'>
+                    <p>Se ha <strong>{$actionText}</strong> un pago de cuota de mantenimiento.</p>
+                    <div class='info-box'>
+                        <p><strong>Residente:</strong> " . htmlspecialchars($residentName) . "</p>
+                        <p><strong>Propiedad:</strong> " . htmlspecialchars($propertyNumber) . "</p>
+                        <p><strong>Período:</strong> " . htmlspecialchars($period) . "</p>
+                        <p><strong>Monto:</strong> \${$amount} MXN</p>
+                        {$bodyExtra}
+                    </div>
+                    <p style='font-size:12px;color:#6b7280;'>Este es un mensaje automático del sistema.</p>
+                </div>
+                <div class='footer'><p>&copy; " . date('Y') . " {$siteName}. Todos los derechos reservados.</p></div>
+            </div>
+            </body></html>";
+
+            // Get superadmin emails
+            $adminStmt = $this->db->query("SELECT email FROM users WHERE role IN ('superadmin', 'administrador') AND status = 'active' AND email IS NOT NULL AND email != ''");
+            $adminEmails = $adminStmt->fetchAll(PDO::FETCH_COLUMN);
+
+            // Build recipient list: admin emails + resident email (deduplicated)
+            $residentEmails = ($residentEmail && filter_var($residentEmail, FILTER_VALIDATE_EMAIL)) ? [$residentEmail] : [];
+            $allEmails = array_merge($adminEmails, $residentEmails);
+            $recipients = array_unique(array_filter($allEmails));
+
+            foreach ($recipients as $recipientEmail) {
+                $mailer->send($recipientEmail, $subject, $body);
+            }
+        } catch (Exception $e) {
+            error_log('sendFeePaymentNotification error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Importar residentes desde Excel
+     */
+    public function importExcel() {
+        $data = [
+            'title' => 'Importar Residentes desde Excel',
+            'errors' => [],
+            'imported' => 0,
+            'skipped' => 0,
+            'results' => []
+        ];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['excel_file'])) {
+            $file = $_FILES['excel_file'];
+
+            // Validate file
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                $data['errors'][] = 'Error al subir el archivo. Código: ' . $file['error'];
+                $this->view('residents/import_excel', $data);
+                return;
+            }
+
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, ['csv', 'txt'])) {
+                $data['errors'][] = 'Solo se aceptan archivos CSV. Use la plantilla provista.';
+                $this->view('residents/import_excel', $data);
+                return;
+            }
+
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime = $finfo->file($file['tmp_name']);
+            $allowedMimes = ['text/plain', 'text/csv', 'application/csv', 'application/vnd.ms-excel'];
+            if (!in_array($mime, $allowedMimes)) {
+                $data['errors'][] = 'Tipo de archivo no válido.';
+                $this->view('residents/import_excel', $data);
+                return;
+            }
+
+            if ($file['size'] > 5 * 1024 * 1024) {
+                $data['errors'][] = 'El archivo no puede superar 5MB.';
+                $this->view('residents/import_excel', $data);
+                return;
+            }
+
+            // Parse CSV
+            $handle = fopen($file['tmp_name'], 'r');
+            if (!$handle) {
+                $data['errors'][] = 'No se pudo leer el archivo.';
+                $this->view('residents/import_excel', $data);
+                return;
+            }
+
+            $lineNum = 0;
+            $headers = [];
+            $rows = [];
+            while (($row = fgetcsv($handle, 1000, ',')) !== false) {
+                $lineNum++;
+                if ($lineNum === 1) {
+                    $headers = array_map('strtolower', array_map('trim', $row));
+                    continue;
+                }
+                if (empty(array_filter($row))) continue;
+                // Normalize row length to match headers (truncate extra or pad missing columns)
+                $normalizedRow = array_slice(array_pad($row, count($headers), ''), 0, count($headers));
+                $rows[] = array_combine($headers, $normalizedRow);
+            }
+            fclose($handle);
+
+            // Required columns
+            $required = ['nombre', 'apellido', 'email', 'telefono', 'propiedad', 'relacion'];
+            foreach ($required as $col) {
+                if (!in_array($col, $headers)) {
+                    $data['errors'][] = "Columna requerida faltante: '{$col}'. Verifique la plantilla.";
+                }
+            }
+
+            if (!empty($data['errors'])) {
+                $this->view('residents/import_excel', $data);
+                return;
+            }
+
+            foreach ($rows as $rowNum => $row) {
+                $lineNum = $rowNum + 2;
+                $email = trim($row['email'] ?? '');
+                $nombre = trim($row['nombre'] ?? '');
+                $apellido = trim($row['apellido'] ?? '');
+                $telefono = trim($row['telefono'] ?? '');
+                $propNum = trim($row['propiedad'] ?? '');
+                $relacion = strtolower(trim($row['relacion'] ?? 'propietario'));
+                $seccion = trim($row['seccion'] ?? '');
+                $password = trim($row['password'] ?? '');
+
+                if (empty($email) || empty($nombre) || empty($propNum)) {
+                    $data['results'][] = ['line' => $lineNum, 'status' => 'error', 'message' => "Línea {$lineNum}: nombre, email y propiedad son requeridos"];
+                    $data['skipped']++;
+                    continue;
+                }
+
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $data['results'][] = ['line' => $lineNum, 'status' => 'error', 'message' => "Línea {$lineNum}: email inválido ({$email})"];
+                    $data['skipped']++;
+                    continue;
+                }
+
+                // Check if email already exists
+                $checkStmt = $this->db->prepare("SELECT id FROM users WHERE email = ?");
+                $checkStmt->execute([$email]);
+                if ($checkStmt->fetch()) {
+                    $data['results'][] = ['line' => $lineNum, 'status' => 'skip', 'message' => "Línea {$lineNum}: email ya registrado ({$email})"];
+                    $data['skipped']++;
+                    continue;
+                }
+
+                // Find or create property
+                $propStmt = $this->db->prepare("SELECT id FROM properties WHERE property_number = ?");
+                $propStmt->execute([$propNum]);
+                $property = $propStmt->fetch();
+
+                if (!$property) {
+                    // Create the property
+                    $insertPropStmt = $this->db->prepare("INSERT INTO properties (property_number, section, status) VALUES (?, ?, 'ocupada')");
+                    $insertPropStmt->execute([$propNum, $seccion ?: null]);
+                    $propertyId = $this->db->lastInsertId();
+                } else {
+                    $propertyId = $property['id'];
+                }
+
+                try {
+                    $this->db->beginTransaction();
+
+                    // Generate username from email
+                    $baseUsername = strtolower(explode('@', $email)[0]);
+                    $username = $baseUsername;
+                    $suffix = 1;
+                    while (true) {
+                        $uCheck = $this->db->prepare("SELECT id FROM users WHERE username = ?");
+                        $uCheck->execute([$username]);
+                        if (!$uCheck->fetch()) break;
+                        $username = $baseUsername . $suffix;
+                        $suffix++;
+                    }
+
+                    $passwordHash = password_hash($password ?: bin2hex(random_bytes(6)), PASSWORD_BCRYPT);
+
+                    $userStmt = $this->db->prepare("
+                        INSERT INTO users (username, email, password, first_name, last_name, phone, role, status)
+                        VALUES (?, ?, ?, ?, ?, ?, 'residente', 'active')
+                    ");
+                    $userStmt->execute([$username, $email, $passwordHash, $nombre, $apellido, $telefono]);
+                    $userId = $this->db->lastInsertId();
+
+                    $resStmt = $this->db->prepare("
+                        INSERT INTO residents (user_id, property_id, relationship, is_primary, status)
+                        VALUES (?, ?, ?, 1, 'active')
+                    ");
+                    $resStmt->execute([$userId, $propertyId, $relacion]);
+
+                    $this->db->commit();
+
+                    AuditController::log('create', "Residente importado desde Excel: {$email}", 'residents', $this->db->lastInsertId());
+                    $data['results'][] = ['line' => $lineNum, 'status' => 'ok', 'message' => "Línea {$lineNum}: {$nombre} {$apellido} importado correctamente"];
+                    $data['imported']++;
+                } catch (PDOException $e) {
+                    $this->db->rollBack();
+                    error_log('importExcel row error: ' . $e->getMessage());
+                    $data['results'][] = ['line' => $lineNum, 'status' => 'error', 'message' => "Línea {$lineNum}: error al importar ({$e->getMessage()})"];
+                    $data['skipped']++;
+                }
+            }
+        }
+
+        $this->view('residents/import_excel', $data);
     }
 }

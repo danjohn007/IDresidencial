@@ -34,15 +34,15 @@
                     <!-- Search Bar -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-search mr-2"></i>Buscar por Nombre o Teléfono
+                            <i class="fas fa-search mr-2"></i>Buscar por Nombre, Teléfono o Propiedad
                         </label>
                         <input type="text" 
                                name="search" 
                                id="searchInput"
                                value="<?php echo htmlspecialchars($filters['search'] ?? ''); ?>" 
-                               placeholder="Escribe el nombre del residente o teléfono..."
+                               placeholder="Escribe el nombre, teléfono o número de propiedad..."
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <p class="text-xs text-gray-500 mt-1">Busca por nombre, apellido o número de teléfono del residente</p>
+                        <p class="text-xs text-gray-500 mt-1">Busca por nombre, apellido, número de teléfono o número de propiedad del residente</p>
                     </div>
                     
                     <!-- Other Filters -->

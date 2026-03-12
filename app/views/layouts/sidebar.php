@@ -258,6 +258,33 @@
                     </a>
                 </li>
                 
+                <!-- Proveedores (admin only) -->
+                <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador'])): ?>
+                <li>
+                    <button onclick="toggleSubmenu('providers-submenu')" class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-hard-hat w-5"></i>
+                            <span>Proveedores</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm" id="providers-submenu-icon"></i>
+                    </button>
+                    <ul id="providers-submenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/providers" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-list w-5"></i>
+                                <span>Lista de Proveedores</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/providers/requests" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-clipboard-list w-5"></i>
+                                <span>Solicitudes de Servicio</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                <?php endif; ?>
+                
                 <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador', 'guardia'])): ?>
                 <!-- Seguridad -->
                 <li>
