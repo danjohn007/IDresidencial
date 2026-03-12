@@ -25,6 +25,24 @@
                     </div>
                 <?php endif; ?>
 
+                <?php if (!empty($summary['historical_debt']) && $summary['historical_debt'] > 0): ?>
+                <div class="bg-orange-50 border-l-4 border-orange-400 p-4 mb-6 rounded">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-orange-500 text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-orange-800">
+                                ℹ️ Esta propiedad tiene <strong>$<?php echo number_format($summary['historical_debt'], 2); ?></strong> en adeudos anteriores a tu ingreso (<?php echo date('d/m/Y', strtotime($resident['contract_start'])); ?>)
+                            </p>
+                            <p class="text-xs text-orange-700 mt-1">
+                                <?php echo $summary['historical_count'] ?? 0; ?> pago(s) histórico(s). Contacta a administración si tienes dudas sobre estos adeudos.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <!-- Resumen -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">

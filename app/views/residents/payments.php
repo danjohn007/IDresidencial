@@ -290,18 +290,26 @@
         </div>
         <div id="upcomingModalInfo" class="px-6 py-3 bg-blue-50 border-b border-blue-100 text-sm text-blue-700"></div>
         <div class="p-6">
-            <p class="text-sm text-gray-600 mb-4">Selecciona un mes para registrar un pago por adelantado:</p>
+            <p class="text-sm text-gray-600 mb-4">Selecciona uno o más meses para registrar el pago:</p>
             <div id="monthsGrid" class="grid grid-cols-3 gap-3"></div>
+            <div id="selectedMonthsSummary" class="hidden mt-4 p-3 bg-purple-50 border border-purple-200 rounded">
+                <p class="text-sm text-gray-700 mb-1">Meses seleccionados: <span id="selectedCount" class="font-bold">0</span></p>
+                <p class="text-sm text-gray-900 font-semibold">Total: $<span id="selectedTotal">0.00</span></p>
+            </div>
             <div id="upcomingModalLoading" class="hidden text-center py-4">
                 <i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i>
-                <p class="text-sm text-gray-500 mt-2">Preparando pago...</p>
+                <p class="text-sm text-gray-500 mt-2">Cargando meses...</p>
             </div>
             <div id="upcomingModalError" class="hidden mt-3 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded"></div>
         </div>
-        <div class="p-4 border-t border-gray-200 flex justify-end">
+        <div class="p-4 border-t border-gray-200 flex justify-between items-center">
             <button type="button" onclick="closeUpcomingMonthsModal()"
                     class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
-                Cerrar
+                Cancelar
+            </button>
+            <button type="button" id="paySelectedBtn" onclick="paySelectedMonths()" disabled
+                    class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                <i class="fas fa-credit-card mr-2"></i>Pagar Seleccionados
             </button>
         </div>
     </div>
@@ -419,7 +427,26 @@ document.getElementById('paymentForm').addEventListener('submit', function(e) {
     errorDiv.classList.add('hidden');
 
     const formData = new FormData(this);
-    fetch('<?php echo BASE_URL; ?>/residents/registerFeePayment', {
+    const feeIdValue = formData.get('fee_id');
+    
+    // Detectar si es pago múltiple (fee_id es un array JSON) o simple
+    let isMultiple = false;
+    try {
+        const parsed = JSON.parse(feeIdValue);
+        if (Array.isArray(parsed)) {
+            isMultiple = true;
+            formData.set('fee_ids', feeIdValue); // Renombrar para el endpoint múltiple
+            formData.delete('fee_id');
+        }
+    } catch (e) {
+        // Si no es JSON válido, es un pago simple
+    }
+    
+    const endpoint = isMultiple 
+        ? '<?php echo BASE_URL; ?>/residents/registerMultipleFeePayments'
+        : '<?php echo BASE_URL; ?>/residents/registerFeePayment';
+    
+    fetch(endpoint, {
         method: 'POST',
         body: formData
     })
@@ -447,12 +474,15 @@ var _upcomingPropertyId = null;
 var _upcomingPropertyNumber = null;
 var _upcomingResidentName = null;
 var _upcomingAmount = null;
+var _monthsData = {};
+var _selectedMonths = [];
 
 function openUpcomingMonthsModal(btn) {
     _upcomingPropertyId = btn.getAttribute('data-property-id');
     _upcomingPropertyNumber = btn.getAttribute('data-property');
     _upcomingResidentName = btn.getAttribute('data-resident');
     _upcomingAmount = parseFloat(btn.getAttribute('data-amount'));
+    _selectedMonths = [];
 
     var info = document.getElementById('upcomingModalInfo');
     var b1 = document.createElement('strong');
@@ -467,98 +497,241 @@ function openUpcomingMonthsModal(btn) {
     info.appendChild(document.createTextNode(_upcomingResidentName));
 
     document.getElementById('upcomingModalError').classList.add('hidden');
-    generateMonthsGrid();
+    document.getElementById('selectedMonthsSummary').classList.add('hidden');
+    loadMonthsStatus();
     document.getElementById('upcomingMonthsModal').classList.remove('hidden');
 }
 
 function closeUpcomingMonthsModal() {
     document.getElementById('upcomingMonthsModal').classList.add('hidden');
     _upcomingPropertyId = null;
+    _selectedMonths = [];
+    _monthsData = {};
 }
 
-function generateMonthsGrid() {
-    var grid = document.getElementById('monthsGrid');
-    grid.innerHTML = '';
-
-    var monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-    var now = new Date();
-
-    for (var i = 0; i < 12; i++) {
-        var d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        var year = d.getFullYear();
-        var month = d.getMonth();
-        var period = year + '-' + String(month + 1).padStart(2, '0');
-
-        (function(p, idx, m, y) {
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'py-3 px-2 text-sm rounded-lg border-2 transition-colors text-center cursor-pointer ' +
-                (idx === 0 ? 'border-blue-400 bg-blue-50 hover:border-blue-600' : 'border-gray-200 hover:border-purple-400 hover:bg-purple-50');
-            btn.innerHTML = '<div class="font-semibold">' + monthNames[m] + '</div>' +
-                            '<div class="text-xs text-gray-500">' + y + '</div>' +
-                            (idx === 0 ? '<div class="text-xs text-blue-600 mt-1">Actual</div>' : '');
-            btn.addEventListener('click', function() { selectUpcomingMonth(p); });
-            grid.appendChild(btn);
-        })(period, i, month, year);
-    }
-}
-
-function selectUpcomingMonth(period) {
+function loadMonthsStatus() {
     var loading = document.getElementById('upcomingModalLoading');
     var grid = document.getElementById('monthsGrid');
     var errorDiv = document.getElementById('upcomingModalError');
+    
+    loading.classList.remove('hidden');
+    grid.innerHTML = '';
+    errorDiv.classList.add('hidden');
+    
+    var formData = new FormData();
+    formData.append('property_id', _upcomingPropertyId);
+    
+    fetch('<?php echo BASE_URL; ?>/residents/getUpcomingMonthsStatus', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        loading.classList.add('hidden');
+        if (data.success) {
+            _monthsData = {};
+            data.months.forEach(m => {
+                _monthsData[m.period] = m;
+            });
+            generateMonthsGrid(data.months);
+        } else {
+            errorDiv.textContent = data.message || 'Error al cargar los meses';
+            errorDiv.classList.remove('hidden');
+        }
+    })
+    .catch(() => {
+        loading.classList.add('hidden');
+        errorDiv.textContent = 'Error de conexión';
+        errorDiv.classList.remove('hidden');
+    });
+}
 
+function generateMonthsGrid(monthsData) {
+    var grid = document.getElementById('monthsGrid');
+    grid.innerHTML = '';
+    var monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+    monthsData.forEach((monthData, idx) => {
+        var period = monthData.period;
+        var [year, month] = period.split('-');
+        var monthIdx = parseInt(month) - 1;
+        var isPaid = monthData.status === 'paid';
+        var isCurrent = monthData.isCurrent;
+        
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.period = period;
+        btn.dataset.feeId = monthData.feeId || '';
+        btn.dataset.amount = monthData.amount || _upcomingAmount;
+        btn.dataset.status = monthData.status;
+        
+        var baseClass = 'py-3 px-2 text-sm rounded-lg border-2 transition-all text-center ';
+        
+        if (isPaid) {
+            // Mes pagado - verde suave, no seleccionable
+            btn.className = baseClass + 'border-green-300 bg-green-50 text-green-700 cursor-not-allowed opacity-60';
+            btn.disabled = true;
+            btn.innerHTML = `<div class="font-semibold">${monthNames[monthIdx]}</div>` +
+                          `<div class="text-xs">${year}</div>` +
+                          `<div class="text-xs mt-1"><i class="fas fa-check-circle"></i> Pagado</div>`;
+        } else {
+            // Mes no pagado - seleccionable
+            if (isCurrent) {
+                // Mes actual - azul suave
+                btn.className = baseClass + 'border-blue-400 bg-blue-50 hover:border-blue-600 hover:bg-blue-100 cursor-pointer';
+                btn.innerHTML = `<div class="font-semibold">${monthNames[monthIdx]}</div>` +
+                              `<div class="text-xs">${year}</div>` +
+                              `<div class="text-xs text-blue-600 mt-1">Actual</div>`;
+            } else {
+                // Meses futuros - gris
+                btn.className = baseClass + 'border-gray-200 hover:border-purple-400 hover:bg-purple-50 cursor-pointer';
+                btn.innerHTML = `<div class="font-semibold">${monthNames[monthIdx]}</div>` +
+                              `<div class="text-xs text-gray-500">${year}</div>`;
+            }
+            btn.addEventListener('click', function() { toggleMonthSelection(this); });
+        }
+        
+        grid.appendChild(btn);
+    });
+}
+
+function toggleMonthSelection(btn) {
+    var period = btn.dataset.period;
+    var feeId = btn.dataset.feeId;
+    var amount = parseFloat(btn.dataset.amount);
+    var monthData = _monthsData[period];
+    
+    var idx = _selectedMonths.findIndex(m => m.period === period);
+    
+    if (idx >= 0) {
+        // Deseleccionar
+        _selectedMonths.splice(idx, 1);
+        btn.classList.remove('border-purple-600', 'bg-purple-100', 'ring-2', 'ring-purple-400');
+    } else {
+        // Seleccionar
+        _selectedMonths.push({
+            period: period,
+            feeId: feeId || null,
+            amount: amount,
+            needsCreation: !feeId
+        });
+        btn.classList.add('border-purple-600', 'bg-purple-100', 'ring-2', 'ring-purple-400');
+    }
+    
+    updateSelectedSummary();
+}
+
+function updateSelectedSummary() {
+    var summary = document.getElementById('selectedMonthsSummary');
+    var countSpan = document.getElementById('selectedCount');
+    var totalSpan = document.getElementById('selectedTotal');
+    var payBtn = document.getElementById('paySelectedBtn');
+    
+    if (_selectedMonths.length === 0) {
+        summary.classList.add('hidden');
+        payBtn.disabled = true;
+    } else {
+        summary.classList.remove('hidden');
+        payBtn.disabled = false;
+        countSpan.textContent = _selectedMonths.length;
+        var total = _selectedMonths.reduce((sum, m) => sum + m.amount, 0);
+        totalSpan.textContent = total.toFixed(2);
+    }
+}
+
+function paySelectedMonths() {
+    if (_selectedMonths.length === 0) return;
+    
+    var loading = document.getElementById('upcomingModalLoading');
+    var grid = document.getElementById('monthsGrid');
+    var errorDiv = document.getElementById('upcomingModalError');
+    
     loading.classList.remove('hidden');
     grid.style.opacity = '0.5';
     grid.style.pointerEvents = 'none';
     errorDiv.classList.add('hidden');
-
-    var formData = new FormData();
-    formData.append('property_id', _upcomingPropertyId);
-    formData.append('period', period);
-
-    fetch('<?php echo BASE_URL; ?>/residents/getOrCreateFeeForPeriod', {
-        method: 'POST',
-        body: formData
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        loading.classList.add('hidden');
-        grid.style.opacity = '';
-        grid.style.pointerEvents = '';
-
-        if (data.success) {
-            if (data.fee.status === 'paid') {
-                errorDiv.textContent = 'El período ' + period + ' ya fue pagado.';
-                errorDiv.classList.remove('hidden');
-                return;
+    
+    // Crear fees para los meses que no tienen ID (necesitan creación)
+    var needCreation = _selectedMonths.filter(m => m.needsCreation);
+    var promises = needCreation.map(m => {
+        var fd = new FormData();
+        fd.append('property_id', _upcomingPropertyId);
+        fd.append('period', m.period);
+        return fetch('<?php echo BASE_URL; ?>/residents/getOrCreateFeeForPeriod', {
+            method: 'POST',
+            body: fd
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.fee.id) {
+                m.feeId = data.fee.id;
+                return true;
             }
-            closeUpcomingMonthsModal();
-            var fakeBtn = {
-                getAttribute: function(attr) {
-                    var map = {
-                        'data-fee-id': String(data.fee.id),
-                        'data-property': data.fee.property_number,
-                        'data-resident': data.fee.resident_name,
-                        'data-period': data.fee.period,
-                        'data-amount': String(data.fee.amount)
-                    };
-                    return map[attr];
-                }
-            };
-            openPaymentModal(fakeBtn);
-        } else {
-            errorDiv.textContent = data.message || 'Error al obtener la cuota';
-            errorDiv.classList.remove('hidden');
+            return false;
+        });
+    });
+    
+    Promise.all(promises)
+    .then(() => {
+        // Verificar que todos los meses tengan feeId
+        var allHaveIds = _selectedMonths.every(m => m.feeId);
+        if (!allHaveIds) {
+            throw new Error('No se pudieron crear todas las cuotas');
         }
-    })
-    .catch(function() {
+        
+        // Abrir modal de pago con múltiples fees
         loading.classList.add('hidden');
         grid.style.opacity = '';
         grid.style.pointerEvents = '';
-        errorDiv.textContent = 'Error de conexión. Intente nuevamente.';
+        closeUpcomingMonthsModal();
+        
+        var periods = _selectedMonths.map(m => m.period).join(', ');
+        var total = _selectedMonths.reduce((sum, m) => sum + m.amount, 0);
+        var feeIds = _selectedMonths.map(m => m.feeId);
+        
+        openMultiplePaymentModal({
+            feeIds: feeIds,
+            periods: periods,
+            totalAmount: total,
+            property: _upcomingPropertyNumber,
+            resident: _upcomingResidentName
+        });
+    })
+    .catch(err => {
+        loading.classList.add('hidden');
+        grid.style.opacity = '';
+        grid.style.pointerEvents = '';
+        errorDiv.textContent = err.message || 'Error al preparar el pago';
         errorDiv.classList.remove('hidden');
     });
+}
+
+function openMultiplePaymentModal(data) {
+    var modal = document.getElementById('paymentModal');
+    var form = document.getElementById('paymentForm');
+    var info = document.getElementById('modalInfo');
+    var feeIdInput = document.getElementById('modalFeeId');
+    var descInput = document.getElementById('modalDescription');
+    
+    // Usar el campo fee_id para almacenar el array como JSON
+    feeIdInput.value = JSON.stringify(data.feeIds);
+    
+    info.innerHTML = '';
+    info.appendChild(Object.assign(document.createElement('span'), {innerHTML: '<strong>Propiedad:</strong> '}));
+    info.appendChild(document.createTextNode(data.property));
+    info.appendChild(document.createTextNode(' \u00a0|\u00a0 '));
+    info.appendChild(Object.assign(document.createElement('span'), {innerHTML: '<strong>Residente:</strong> '}));
+    info.appendChild(document.createTextNode(data.resident));
+    info.appendChild(document.createElement('br'));
+    info.appendChild(Object.assign(document.createElement('span'), {innerHTML: '<strong>Períodos:</strong> '}));
+    info.appendChild(document.createTextNode(data.periods));
+    info.appendChild(document.createTextNode(' \u00a0|\u00a0 '));
+    info.appendChild(Object.assign(document.createElement('span'), {innerHTML: '<strong>Total:</strong> $'}));
+    info.appendChild(document.createTextNode(data.totalAmount.toFixed(2)));
+    
+    descInput.value = 'Pago de cuotas de mantenimiento - ' + data.periods;
+    document.getElementById('modalError').classList.add('hidden');
+    modal.classList.remove('hidden');
 }
 </script>
 

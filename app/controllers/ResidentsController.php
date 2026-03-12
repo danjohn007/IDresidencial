@@ -762,16 +762,19 @@ class ResidentsController extends Controller {
             $this->redirect('dashboard');
         }
         
-        // Obtener historial de pagos
+        // Fecha de ingreso del residente (filtrar solo sus pagos)
+        $residentStartDate = $resident['contract_start'] ?? date('Y-m-d');
+        
+        // Obtener solo pagos desde la fecha de ingreso del residente
         $stmt = $this->db->prepare("
             SELECT * FROM maintenance_fees 
-            WHERE property_id = ? 
+            WHERE property_id = ? AND due_date >= ?
             ORDER BY due_date DESC, created_at DESC
         ");
-        $stmt->execute([$resident['property_id']]);
+        $stmt->execute([$resident['property_id'], $residentStartDate]);
         $payments = $stmt->fetchAll();
         
-        // Calcular adeudos
+        // Calcular adeudos solo desde la fecha de ingreso
         $stmt = $this->db->prepare("
             SELECT 
                 SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) as pending_amount,
@@ -779,9 +782,9 @@ class ResidentsController extends Controller {
                 SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as paid_amount,
                 COUNT(CASE WHEN status IN ('pending', 'overdue') THEN 1 END) as pending_count
             FROM maintenance_fees 
-            WHERE property_id = ?
+            WHERE property_id = ? AND due_date >= ?
         ");
-        $stmt->execute([$resident['property_id']]);
+        $stmt->execute([$resident['property_id'], $residentStartDate]);
         $summary = $stmt->fetch();
         
         $data = [
@@ -1483,6 +1486,203 @@ class ResidentsController extends Controller {
                 'status' => $fee['status']
             ]
         ]);
+        exit;
+    }
+
+    /**
+     * Get status of next 12 months fees for a property
+     */
+    public function getUpcomingMonthsStatus() {
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+            exit;
+        }
+
+        $propertyId = intval($this->post('property_id'));
+
+        if (!$propertyId) {
+            echo json_encode(['success' => false, 'message' => 'ID de propiedad inválido']);
+            exit;
+        }
+
+        $months = [];
+        
+        for ($i = 0; $i < 12; $i++) {
+            $date = new DateTime();
+            $date->modify("+$i months");
+            $period = $date->format('Y-m');
+            
+            // Check if fee exists for this period
+            $stmt = $this->db->prepare("
+                SELECT id, status, amount, due_date, paid_date
+                FROM maintenance_fees 
+                WHERE property_id = ? AND period = ?
+            ");
+            $stmt->execute([$propertyId, $period]);
+            $fee = $stmt->fetch();
+            
+            $months[] = [
+                'period' => $period,
+                'isCurrent' => $i === 0,
+                'status' => $fee ? $fee['status'] : 'none',
+                'feeId' => $fee ? (int)$fee['id'] : null,
+                'amount' => $fee ? (float)$fee['amount'] : null,
+                'dueDate' => $fee ? $fee['due_date'] : null,
+                'paidDate' => $fee ? $fee['paid_date'] : null
+            ];
+        }
+
+        echo json_encode(['success' => true, 'months' => $months]);
+        exit;
+    }
+
+    /**
+     * Register payment for multiple fees at once  
+     */
+    public function registerMultipleFeePayments() {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+            exit;
+        }
+        
+        $feeIds = $this->post('fee_ids'); // Expecting JSON array
+        $transactionDate = $this->post('transaction_date');
+        $description = trim($this->post('description', ''));
+        $paymentMethod = $this->post('payment_method');
+        $paymentReference = trim($this->post('payment_reference', ''));
+        
+        // Decode fee_ids if it's a JSON string
+        if (is_string($feeIds)) {
+            $feeIds = json_decode($feeIds, true);
+        }
+        
+        // Validate required fields
+        if (empty($feeIds) || !is_array($feeIds) || !$transactionDate || !$paymentMethod) {
+            echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
+            exit;
+        }
+        
+        // Validate all fees exist and are unpaid
+        $placeholders = str_repeat('?,', count($feeIds) - 1) . '?';
+        $stmt = $this->db->prepare("
+            SELECT mf.*, p.property_number
+            FROM maintenance_fees mf
+            JOIN properties p ON mf.property_id = p.id
+            WHERE mf.id IN ($placeholders)
+        ");
+        $stmt->execute($feeIds);
+        $fees = $stmt->fetchAll();
+        
+        if (count($fees) !== count($feeIds)) {
+            echo json_encode(['success' => false, 'message' => 'Una o más cuotas no existen']);
+            exit;
+        }
+        
+        // Check if any are already paid
+        foreach ($fees as $fee) {
+            if ($fee['status'] === 'paid') {
+                echo json_encode(['success' => false, 'message' => 'Una o más cuotas ya están pagadas']);
+                exit;
+            }
+        }
+        
+        // Handle evidence file upload
+        $evidencePath = null;
+        if (!empty($_FILES['evidence']) && $_FILES['evidence']['error'] === UPLOAD_ERR_OK) {
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $fileType = $finfo->file($_FILES['evidence']['tmp_name']);
+            if (!in_array($fileType, $allowedTypes)) {
+                echo json_encode(['success' => false, 'message' => 'Tipo de archivo no permitido']);
+                exit;
+            }
+            $ext = strtolower(pathinfo($_FILES['evidence']['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, $allowedExtensions)) {
+                echo json_encode(['success' => false, 'message' => 'Extensión de archivo no permitida']);
+                exit;
+            }
+            $maxSize = 5 * 1024 * 1024; // 5MB
+            if ($_FILES['evidence']['size'] > $maxSize) {
+                echo json_encode(['success' => false, 'message' => 'El archivo no puede superar 5MB']);
+                exit;
+            }
+            $uploadDir = PUBLIC_PATH . '/uploads/evidence/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            $filename = 'evidence_' . time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+            if (move_uploaded_file($_FILES['evidence']['tmp_name'], $uploadDir . $filename)) {
+                $evidencePath = 'uploads/evidence/' . $filename;
+            }
+        }
+        
+        try {
+            $this->db->beginTransaction();
+            
+            $totalAmount = 0;
+            $periods = [];
+            
+            // Update all fees
+            foreach ($fees as $fee) {
+                $stmt = $this->db->prepare("
+                    UPDATE maintenance_fees 
+                    SET status = 'paid',
+                        paid_date = ?,
+                        payment_method = ?,
+                        payment_reference = ?,
+                        notes = CONCAT(IFNULL(notes, ''), ?, ?)
+                    WHERE id = ?
+                ");
+                
+                $note = "\nPago múltiple registrado el " . date('Y-m-d H:i:s');
+                if ($evidencePath) {
+                    $note .= " | Evidencia: " . $evidencePath;
+                }
+                if ($description) {
+                    $note .= " | " . $description;
+                }
+                
+                $stmt->execute([
+                    $transactionDate,
+                    $paymentMethod,
+                    $paymentReference,
+                    "\n",
+                    $note,
+                    $fee['id']
+                ]);
+                
+                $totalAmount += $fee['amount'];
+                $periods[] = $fee['period'];
+                
+                // Log audit
+                AuditController::log(
+                    'update',
+                    'Pago registrado para período ' . $fee['period'] . ' (Pago múltiple)',
+                    'maintenance_fees',
+                    $fee['id']
+                );
+            }
+            
+            $this->db->commit();
+            
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Se registraron ' . count($fees) . ' pagos exitosamente',
+                'total_amount' => $totalAmount,
+                'periods' => $periods
+            ]);
+            
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            error_log('registerMultipleFeePayments error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error al registrar los pagos']);
+        }
+        
         exit;
     }
 
