@@ -2473,4 +2473,122 @@ class ResidentsController extends Controller {
 
         $this->view('residents/service_requests', $data);
     }
+
+    /**
+     * Create a new service request from resident
+     */
+    public function createServiceRequest() {
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+            exit;
+        }
+
+        if ($_SESSION['role'] !== 'residente') {
+            echo json_encode(['success' => false, 'message' => 'Acceso denegado']);
+            exit;
+        }
+
+        try {
+            $userId = $_SESSION['user_id'];
+
+            // Get resident's property
+            $stmt = $this->db->prepare("
+                SELECT r.*, p.property_number
+                FROM residents r
+                JOIN properties p ON r.property_id = p.id
+                WHERE r.user_id = ? AND r.status = 'active'
+                LIMIT 1
+            ");
+            $stmt->execute([$userId]);
+            $resident = $stmt->fetch();
+
+            if (!$resident) {
+                echo json_encode(['success' => false, 'message' => 'Residente no encontrado']);
+                exit;
+            }
+
+            // Validate required fields
+            $title = trim($this->post('title'));
+            $description = trim($this->post('description'));
+            $priority = $this->post('priority', 'medium');
+
+            if (empty($title)) {
+                echo json_encode(['success' => false, 'message' => 'El título es requerido']);
+                exit;
+            }
+
+            if (empty($description)) {
+                echo json_encode(['success' => false, 'message' => 'La descripción es requerida']);
+                exit;
+            }
+
+            // Validate priority
+            $validPriorities = ['low', 'medium', 'high', 'urgent'];
+            if (!in_array($priority, $validPriorities)) {
+                $priority = 'medium';
+            }
+
+            // Get optional fields
+            $category = trim($this->post('category', ''));
+            $area = trim($this->post('area', ''));
+            $requestedDate = $this->post('requested_date', null);
+            $notes = trim($this->post('notes', ''));
+
+            // Validate requested_date if provided
+            if ($requestedDate && !empty($requestedDate)) {
+                $dateObj = \DateTime::createFromFormat('Y-m-d', $requestedDate);
+                if (!$dateObj || $dateObj->format('Y-m-d') !== $requestedDate) {
+                    $requestedDate = null;
+                }
+            } else {
+                $requestedDate = null;
+            }
+
+            // Insert service request
+            $stmt = $this->db->prepare("
+                INSERT INTO provider_service_requests 
+                (title, description, category, area, property_id, priority, status, 
+                 requested_date, notes, created_by, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW())
+            ");
+
+            $stmt->execute([
+                $title,
+                $description,
+                $category ?: null,
+                $area ?: null,
+                $resident['property_id'],
+                $priority,
+                $requestedDate,
+                $notes ?: null,
+                $userId
+            ]);
+
+            $requestId = $this->db->lastInsertId();
+
+            // Log audit
+            if (class_exists('AuditController')) {
+                AuditController::log(
+                    'create',
+                    'Solicitud de servicio creada por residente: ' . $title,
+                    'provider_service_requests',
+                    $requestId
+                );
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Solicitud enviada exitosamente',
+                'request_id' => $requestId
+            ]);
+
+        } catch (PDOException $e) {
+            error_log('createServiceRequest error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error al crear la solicitud. Intente nuevamente.']);
+        }
+
+        exit;
+    }
 }
