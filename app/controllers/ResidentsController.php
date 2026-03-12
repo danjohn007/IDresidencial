@@ -216,11 +216,38 @@ class ResidentsController extends Controller {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Auto-generate username from email
             $email = $this->post('email');
+            $relationship = $this->post('relationship', 'propietario');
+            $propertyId = intval($this->post('property_id'));
+
+            // Validate owner rules before proceeding
+            if ($relationship === 'propietario') {
+                $ownerStmt = $this->db->prepare("
+                    SELECT id FROM residents
+                    WHERE property_id = ? AND relationship = 'propietario' AND status = 'active'
+                    LIMIT 1
+                ");
+                $ownerStmt->execute([$propertyId]);
+                if ($ownerStmt->fetch()) {
+                    $data['error'] = 'Esta propiedad ya tiene un residente propietario asignado. Solo puede haber un propietario por propiedad.';
+                }
+            } elseif ($relationship === 'inquilino' || $relationship === 'familiar') {
+                $ownerStmt = $this->db->prepare("
+                    SELECT id FROM residents
+                    WHERE property_id = ? AND relationship = 'propietario' AND status = 'active'
+                    LIMIT 1
+                ");
+                $ownerStmt->execute([$propertyId]);
+                if (!$ownerStmt->fetch()) {
+                    $data['error'] = 'Debe registrar primero un propietario para esta propiedad antes de agregar un inquilino o familiar.';
+                }
+            }
 
             // Check for duplicate email before attempting to create
-            if ($this->userModel->findByEmail($email)) {
+            if (empty($data['error']) && $this->userModel->findByEmail($email)) {
                 $data['error'] = 'El correo electrónico ya está registrado en el sistema. Por favor utilice otro correo.';
-            } else {
+            }
+
+            if (empty($data['error'])) {
             $baseUsername = strstr($email, '@', true);
             
             // Ensure username is unique by adding suffix if needed
@@ -247,12 +274,12 @@ class ResidentsController extends Controller {
             if ($this->userModel->create($userData)) {
                 $user = $this->userModel->findByUsername($userData['username']);
                 
-                // Crear residente
+                // Crear residente (is_primary only for propietario)
                 $residentData = [
                     'user_id' => $user['id'],
-                    'property_id' => $this->post('property_id'),
-                    'relationship' => $this->post('relationship', 'propietario'),
-                    'is_primary' => true,
+                    'property_id' => $propertyId,
+                    'relationship' => $relationship,
+                    'is_primary' => $relationship === 'propietario' ? true : false,
                     'status' => 'active'
                 ];
                 
@@ -266,7 +293,7 @@ class ResidentsController extends Controller {
             } else {
                 $data['error'] = 'Error al crear el usuario';
             }
-            } // end else (email not duplicate)
+            } // end if no error
         }
         
         // Obtener propiedades disponibles
@@ -423,12 +450,11 @@ class ResidentsController extends Controller {
         $statsStmt->execute($statsParams);
         $stats = $statsStmt->fetch();
         
-        // Check for properties that need fees generated (active residents without current or next period fee)
+        // Check for properties that need fees generated (active residents without current period fee)
         $currentPeriod = date('Y-m');
-        $nextPeriod = date('Y-m', strtotime('+1 month'));
         $generatedCount = 0;
         
-        foreach ([$currentPeriod, $nextPeriod] as $period) {
+        foreach ([$currentPeriod] as $period) {
             $checkStmt = $this->db->prepare("
                 SELECT p.id, p.property_number
                 FROM properties p
@@ -1373,6 +1399,93 @@ class ResidentsController extends Controller {
         exit;
     }
     
+    /**
+     * Get or create a maintenance fee for a specific property and period (for advance payments)
+     */
+    public function getOrCreateFeeForPeriod() {
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+            exit;
+        }
+
+        $propertyId = intval($this->post('property_id'));
+        $period = trim($this->post('period'));
+
+        if (!$propertyId || !$period || !preg_match('/^\d{4}-\d{2}$/', $period)) {
+            echo json_encode(['success' => false, 'message' => 'Datos inválidos']);
+            exit;
+        }
+
+        // Validate the period is not in the past (allow current month and future)
+        $currentPeriod = date('Y-m');
+        if ($period < $currentPeriod) {
+            echo json_encode(['success' => false, 'message' => 'No se pueden registrar pagos para períodos anteriores desde esta función']);
+            exit;
+        }
+
+        // Check if fee already exists
+        $stmt = $this->db->prepare("
+            SELECT mf.*, p.property_number,
+                   COALESCE(u.first_name, 'Sin asignar') as first_name,
+                   COALESCE(u.last_name, '') as last_name
+            FROM maintenance_fees mf
+            JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
+            LEFT JOIN users u ON r.user_id = u.id
+            WHERE mf.property_id = ? AND mf.period = ?
+        ");
+        $stmt->execute([$propertyId, $period]);
+        $fee = $stmt->fetch();
+
+        if (!$fee) {
+            // Create the fee for the requested period
+            $defaultAmount = 1500.00;
+            $amountStmt = $this->db->prepare("
+                SELECT mp.monthly_cost
+                FROM memberships m
+                INNER JOIN membership_plans mp ON m.membership_plan_id = mp.id
+                INNER JOIN residents r ON r.id = m.resident_id
+                WHERE r.property_id = ? AND m.status = 'active' AND r.is_primary = 1
+                LIMIT 1
+            ");
+            $amountStmt->execute([$propertyId]);
+            $membershipAmount = $amountStmt->fetch();
+            $amount = $membershipAmount ? $membershipAmount['monthly_cost'] : $defaultAmount;
+            $dueDate = date('Y-m-10', strtotime($period . '-01'));
+
+            $insertStmt = $this->db->prepare("
+                INSERT IGNORE INTO maintenance_fees (property_id, period, amount, due_date, status)
+                VALUES (?, ?, ?, ?, 'pending')
+            ");
+            $insertStmt->execute([$propertyId, $period, $amount, $dueDate]);
+
+            // Re-fetch the fee with joined data
+            $stmt->execute([$propertyId, $period]);
+            $fee = $stmt->fetch();
+
+            if (!$fee) {
+                echo json_encode(['success' => false, 'message' => 'Error al crear la cuota']);
+                exit;
+            }
+        }
+
+        echo json_encode([
+            'success' => true,
+            'fee' => [
+                'id' => (int)$fee['id'],
+                'property_id' => (int)$fee['property_id'],
+                'property_number' => $fee['property_number'],
+                'resident_name' => trim($fee['first_name'] . ' ' . $fee['last_name']),
+                'period' => $fee['period'],
+                'amount' => (float)$fee['amount'],
+                'status' => $fee['status']
+            ]
+        ]);
+        exit;
+    }
+
     /**
      * Ver detalles de pago de una cuota
      */
