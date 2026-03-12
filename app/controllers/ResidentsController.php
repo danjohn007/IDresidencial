@@ -19,7 +19,7 @@ class ResidentsController extends Controller {
         $action = isset($url[1]) ? $url[1] : 'index';
         
         // Methods that residents can access
-        $residentMethods = ['myPayments', 'generateAccess', 'myAccesses', 'cancelPass', 'makePayment', 'processPayment', 'financialReport', 'serviceRequests'];
+        $residentMethods = ['myPayments', 'generateAccess', 'myAccesses', 'cancelPass', 'makePayment', 'processPayment', 'financialReport', 'serviceRequests', 'createServiceRequest'];
         
         // If not a resident method, require admin roles
         if (!in_array($action, $residentMethods)) {
