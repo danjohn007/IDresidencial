@@ -156,6 +156,7 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                                         <div class="flex items-center space-x-2">
                                         <?php if ($fee['status'] !== 'paid'): ?>
+                                            <?php if ($fee['period'] === date('Y-m')): ?>
                                             <button type="button"
                                                data-fee-id="<?php echo (int)$fee['id']; ?>"
                                                data-property="<?php echo htmlspecialchars($fee['property_number'], ENT_QUOTES); ?>"
@@ -166,6 +167,17 @@
                                                title="Registrar Pago"
                                                class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors">
                                                 <i class="fas fa-dollar-sign text-sm"></i>
+                                            </button>
+                                            <?php endif; ?>
+                                            <button type="button"
+                                               data-property-id="<?php echo (int)$fee['property_id']; ?>"
+                                               data-property="<?php echo htmlspecialchars($fee['property_number'], ENT_QUOTES); ?>"
+                                               data-resident="<?php echo htmlspecialchars(trim($fee['first_name'] . ' ' . $fee['last_name']), ENT_QUOTES); ?>"
+                                               data-amount="<?php echo (float)$fee['amount']; ?>"
+                                               onclick="openUpcomingMonthsModal(this)"
+                                               title="Pagar Meses Próximos"
+                                               class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors">
+                                                <i class="fas fa-calendar-alt text-sm"></i>
                                             </button>
                                         <?php else: ?>
                                             <a href="<?php echo BASE_URL; ?>/residents/viewFeePayment/<?php echo (int)$fee['id']; ?>"
@@ -190,6 +202,16 @@
                                                class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
                                                 <i class="fas fa-trash text-sm"></i>
                                             </a>
+                                            <button type="button"
+                                               data-property-id="<?php echo (int)$fee['property_id']; ?>"
+                                               data-property="<?php echo htmlspecialchars($fee['property_number'], ENT_QUOTES); ?>"
+                                               data-resident="<?php echo htmlspecialchars(trim($fee['first_name'] . ' ' . $fee['last_name']), ENT_QUOTES); ?>"
+                                               data-amount="<?php echo (float)$fee['amount']; ?>"
+                                               onclick="openUpcomingMonthsModal(this)"
+                                               title="Pagar Meses Próximos"
+                                               class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors">
+                                                <i class="fas fa-calendar-alt text-sm"></i>
+                                            </button>
                                         <?php endif; ?>
                                         </div>
                                     </td>
@@ -254,6 +276,34 @@
                 </div>
             </div>
         </main>
+    </div>
+</div>
+
+<!-- Upcoming Months Modal -->
+<div id="upcomingMonthsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900"><i class="fas fa-calendar-alt text-purple-600 mr-2"></i>Próximos 12 Meses</h3>
+            <button type="button" onclick="closeUpcomingMonthsModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div id="upcomingModalInfo" class="px-6 py-3 bg-blue-50 border-b border-blue-100 text-sm text-blue-700"></div>
+        <div class="p-6">
+            <p class="text-sm text-gray-600 mb-4">Selecciona un mes para registrar un pago por adelantado:</p>
+            <div id="monthsGrid" class="grid grid-cols-3 gap-3"></div>
+            <div id="upcomingModalLoading" class="hidden text-center py-4">
+                <i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i>
+                <p class="text-sm text-gray-500 mt-2">Preparando pago...</p>
+            </div>
+            <div id="upcomingModalError" class="hidden mt-3 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded"></div>
+        </div>
+        <div class="p-4 border-t border-gray-200 flex justify-end">
+            <button type="button" onclick="closeUpcomingMonthsModal()"
+                    class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
+                Cerrar
+            </button>
+        </div>
     </div>
 </div>
 
@@ -392,6 +442,124 @@ document.getElementById('paymentForm').addEventListener('submit', function(e) {
         btn.innerHTML = '<i class="fas fa-check mr-2"></i>Registrar Pago';
     });
 });
+
+var _upcomingPropertyId = null;
+var _upcomingPropertyNumber = null;
+var _upcomingResidentName = null;
+var _upcomingAmount = null;
+
+function openUpcomingMonthsModal(btn) {
+    _upcomingPropertyId = btn.getAttribute('data-property-id');
+    _upcomingPropertyNumber = btn.getAttribute('data-property');
+    _upcomingResidentName = btn.getAttribute('data-resident');
+    _upcomingAmount = parseFloat(btn.getAttribute('data-amount'));
+
+    var info = document.getElementById('upcomingModalInfo');
+    var b1 = document.createElement('strong');
+    b1.textContent = 'Propiedad: ';
+    var b2 = document.createElement('strong');
+    b2.textContent = 'Residente: ';
+    info.innerHTML = '';
+    info.appendChild(b1);
+    info.appendChild(document.createTextNode(_upcomingPropertyNumber));
+    info.appendChild(document.createTextNode(' \u00a0|\u00a0 '));
+    info.appendChild(b2);
+    info.appendChild(document.createTextNode(_upcomingResidentName));
+
+    document.getElementById('upcomingModalError').classList.add('hidden');
+    generateMonthsGrid();
+    document.getElementById('upcomingMonthsModal').classList.remove('hidden');
+}
+
+function closeUpcomingMonthsModal() {
+    document.getElementById('upcomingMonthsModal').classList.add('hidden');
+    _upcomingPropertyId = null;
+}
+
+function generateMonthsGrid() {
+    var grid = document.getElementById('monthsGrid');
+    grid.innerHTML = '';
+
+    var monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    var now = new Date();
+
+    for (var i = 0; i < 12; i++) {
+        var d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        var year = d.getFullYear();
+        var month = d.getMonth();
+        var period = year + '-' + String(month + 1).padStart(2, '0');
+
+        (function(p, idx, m, y) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'py-3 px-2 text-sm rounded-lg border-2 transition-colors text-center cursor-pointer ' +
+                (idx === 0 ? 'border-blue-400 bg-blue-50 hover:border-blue-600' : 'border-gray-200 hover:border-purple-400 hover:bg-purple-50');
+            btn.innerHTML = '<div class="font-semibold">' + monthNames[m] + '</div>' +
+                            '<div class="text-xs text-gray-500">' + y + '</div>' +
+                            (idx === 0 ? '<div class="text-xs text-blue-600 mt-1">Actual</div>' : '');
+            btn.addEventListener('click', function() { selectUpcomingMonth(p); });
+            grid.appendChild(btn);
+        })(period, i, month, year);
+    }
+}
+
+function selectUpcomingMonth(period) {
+    var loading = document.getElementById('upcomingModalLoading');
+    var grid = document.getElementById('monthsGrid');
+    var errorDiv = document.getElementById('upcomingModalError');
+
+    loading.classList.remove('hidden');
+    grid.style.opacity = '0.5';
+    grid.style.pointerEvents = 'none';
+    errorDiv.classList.add('hidden');
+
+    var formData = new FormData();
+    formData.append('property_id', _upcomingPropertyId);
+    formData.append('period', period);
+
+    fetch('<?php echo BASE_URL; ?>/residents/getOrCreateFeeForPeriod', {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        loading.classList.add('hidden');
+        grid.style.opacity = '';
+        grid.style.pointerEvents = '';
+
+        if (data.success) {
+            if (data.fee.status === 'paid') {
+                errorDiv.textContent = 'El período ' + period + ' ya fue pagado.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            closeUpcomingMonthsModal();
+            var fakeBtn = {
+                getAttribute: function(attr) {
+                    var map = {
+                        'data-fee-id': String(data.fee.id),
+                        'data-property': data.fee.property_number,
+                        'data-resident': data.fee.resident_name,
+                        'data-period': data.fee.period,
+                        'data-amount': String(data.fee.amount)
+                    };
+                    return map[attr];
+                }
+            };
+            openPaymentModal(fakeBtn);
+        } else {
+            errorDiv.textContent = data.message || 'Error al obtener la cuota';
+            errorDiv.classList.remove('hidden');
+        }
+    })
+    .catch(function() {
+        loading.classList.add('hidden');
+        grid.style.opacity = '';
+        grid.style.pointerEvents = '';
+        errorDiv.textContent = 'Error de conexión. Intente nuevamente.';
+        errorDiv.classList.remove('hidden');
+    });
+}
 </script>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
