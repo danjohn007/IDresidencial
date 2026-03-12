@@ -145,14 +145,15 @@ class ProvidersController extends Controller {
                 return;
             }
 
-            // Generate a random password
-            $plainPassword = bin2hex(random_bytes(6)); // 12 hex chars
+            // Generate a random password (16 hex chars = 8 bytes of entropy)
+            $plainPassword = bin2hex(random_bytes(8));
 
             try {
                 $this->db->beginTransaction();
 
                 // Create user with role = proveedor
-                $username = 'prov_' . substr(md5($providerData['email'] . uniqid()), 0, 8);
+                $emailPrefix = preg_replace('/[^a-z0-9]/', '', strtolower(explode('@', $providerData['email'])[0]));
+                $username = 'prov_' . substr($emailPrefix, 0, 10) . '_' . random_int(1000, 9999);
                 $hashedPassword = password_hash($plainPassword, PASSWORD_DEFAULT);
                 $firstName = $providerData['contact_name'] ?: $providerData['company_name'];
                 $stmtUser = $this->db->prepare("
