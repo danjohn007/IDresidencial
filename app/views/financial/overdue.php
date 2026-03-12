@@ -12,7 +12,25 @@
                     <h1 class="text-3xl font-bold text-gray-900">💳 Cartera Vencida</h1>
                     <p class="text-gray-600 mt-1">Cuotas pendientes y vencidas</p>
                 </div>
+                <form method="POST" action="<?php echo BASE_URL; ?>/financial/applyPenalties"
+                      onsubmit="return confirm('¿Aplicar penalizaciones a todas las cuotas vencidas según las reglas configuradas? Esta acción no se puede deshacer.');">
+                    <button type="submit"
+                            class="inline-flex items-center px-5 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 shadow">
+                        <i class="fas fa-gavel mr-2"></i> Aplicar Penalizaciones
+                    </button>
+                </form>
             </div>
+
+            <?php if (isset($_SESSION['success_message'])): ?>
+            <div class="mb-4 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded">
+                <?php echo htmlspecialchars($_SESSION['success_message']); unset($_SESSION['success_message']); ?>
+            </div>
+            <?php endif; ?>
+            <?php if (isset($_SESSION['error_message'])): ?>
+            <div class="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded">
+                <?php echo htmlspecialchars($_SESSION['error_message']); unset($_SESSION['error_message']); ?>
+            </div>
+            <?php endif; ?>
 
             <!-- Stats Card -->
             <div class="bg-white rounded-lg shadow p-6 mb-6 border-l-4 border-red-500">

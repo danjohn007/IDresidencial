@@ -28,6 +28,20 @@
             </div>
             <?php endif; ?>
 
+            <?php if (isset($_SESSION['new_provider_credentials'])): ?>
+            <?php $creds = $_SESSION['new_provider_credentials']; unset($_SESSION['new_provider_credentials']); ?>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    showNewProviderModal(
+                        <?php echo json_encode($creds['company']); ?>,
+                        <?php echo json_encode($creds['username']); ?>,
+                        <?php echo json_encode($creds['email']); ?>,
+                        <?php echo json_encode($creds['password']); ?>
+                    );
+                });
+            </script>
+            <?php endif; ?>
+
             <!-- Stats -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
@@ -162,6 +176,94 @@ function confirmDeactivate(id, name) {
         window.location.href = '<?php echo BASE_URL; ?>/providers/delete/' + id;
     }
 }
+
+function showNewProviderModal(company, username, email, password) {
+    document.getElementById('modalProviderCompany').textContent = company;
+    document.getElementById('modalProviderUsername').value = username;
+    document.getElementById('modalProviderEmail').value = email;
+    document.getElementById('modalProviderPassword').value = password;
+    document.getElementById('newProviderModal').classList.remove('hidden');
+}
+
+function closeNewProviderModal() {
+    document.getElementById('newProviderModal').classList.add('hidden');
+}
+
+function copyToClipboard(fieldId, btn) {
+    const input = document.getElementById(fieldId);
+    input.select();
+    input.setSelectionRange(0, 99999);
+    try {
+        navigator.clipboard.writeText(input.value).then(function() {
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check text-green-600"></i>';
+            setTimeout(function() { btn.innerHTML = original; }, 1500);
+        });
+    } catch (e) {
+        document.execCommand('copy');
+        const original = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check text-green-600"></i>';
+        setTimeout(function() { btn.innerHTML = original; }, 1500);
+    }
+}
 </script>
+
+<!-- New Provider Credentials Modal -->
+<div id="newProviderModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-lg mx-4">
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-3">
+                <i class="fas fa-check-circle text-green-600 text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900">¡Proveedor Creado!</h2>
+            <p class="text-gray-600 mt-1">Guarda estas credenciales. La contraseña <strong>no se mostrará nuevamente</strong>.</p>
+        </div>
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-5">
+            <p class="text-sm font-semibold text-yellow-800 mb-1"><i class="fas fa-hard-hat mr-1"></i>Empresa: <span id="modalProviderCompany"></span></p>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                <div class="flex">
+                    <input type="text" id="modalProviderUsername" readonly
+                           class="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50 font-mono text-sm focus:outline-none">
+                    <button onclick="copyToClipboard('modalProviderUsername', this)"
+                            class="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-200 text-gray-600" title="Copiar usuario">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+                <div class="flex">
+                    <input type="text" id="modalProviderEmail" readonly
+                           class="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50 font-mono text-sm focus:outline-none">
+                    <button onclick="copyToClipboard('modalProviderEmail', this)"
+                            class="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-200 text-gray-600" title="Copiar email">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña Temporal <span class="text-red-500">*</span></label>
+                <div class="flex">
+                    <input type="text" id="modalProviderPassword" readonly
+                           class="flex-1 px-4 py-2 border border-yellow-400 rounded-l-lg bg-yellow-50 font-mono text-sm font-bold focus:outline-none">
+                    <button onclick="copyToClipboard('modalProviderPassword', this)"
+                            class="px-3 py-2 bg-yellow-100 border border-l-0 border-yellow-400 rounded-r-lg hover:bg-yellow-200 text-yellow-800" title="Copiar contraseña">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-red-600 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Copia esta contraseña ahora. No se volverá a mostrar.</p>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-center">
+            <button onclick="closeNewProviderModal()"
+                    class="px-8 py-3 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700">
+                <i class="fas fa-check mr-2"></i>Entendido, ya copié las credenciales
+            </button>
+        </div>
+    </div>
+</div>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>

@@ -78,7 +78,7 @@
                                     <option value="administrador">Administrador</option>
                                     <option value="superadmin">Super Admin</option>
                                 </select>
-                                <p class="text-xs text-gray-500 mt-1">Los residentes se crean desde el módulo de Residentes</p>
+                                <p class="text-xs text-gray-500 mt-1">Los residentes se crean desde el módulo de Residentes. Los proveedores se crean desde el módulo de Proveedores.</p>
                             </div>
                             
                             <div>

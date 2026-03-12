@@ -193,7 +193,12 @@ class ProvidersController extends Controller {
             }
 
             AuditController::log('create', 'Proveedor creado: ' . $providerData['company_name'], 'providers', $newId);
-            $_SESSION['success_message'] = 'Proveedor creado exitosamente. Usuario: <strong>' . htmlspecialchars($username) . '</strong> — Contraseña temporal: <strong>' . htmlspecialchars($plainPassword) . '</strong>';
+            $_SESSION['new_provider_credentials'] = [
+                'company' => $providerData['company_name'],
+                'username' => $username,
+                'email' => $providerData['email'],
+                'password' => $plainPassword,
+            ];
             $this->redirect('providers');
         }
 

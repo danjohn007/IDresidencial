@@ -67,6 +67,7 @@ class UsersController extends Controller {
             'administrador' => $this->userModel->count(['role' => 'administrador']),
             'guardia' => $this->userModel->count(['role' => 'guardia']),
             'residente' => $this->userModel->count(['role' => 'residente']),
+            'proveedor' => $this->userModel->count(['role' => 'proveedor']),
             'active' => $this->userModel->count(['status' => 'active']),
             'inactive' => $this->userModel->count(['status' => 'inactive'])
         ];
