@@ -2464,11 +2464,16 @@ class ResidentsController extends Controller {
         $stmt->execute($params);
         $requests = $stmt->fetchAll();
 
+        // Fetch active providers for the dropdown
+        $provStmt = $this->db->query("SELECT id, company_name, category FROM providers WHERE status = 'active' ORDER BY company_name");
+        $providers = $provStmt->fetchAll();
+
         $data = [
-            'title'    => 'Solicitudes de Servicio',
-            'resident' => $resident,
-            'requests' => $requests,
-            'filters'  => compact('status', 'priority', 'search'),
+            'title'     => 'Solicitudes de Servicio',
+            'resident'  => $resident,
+            'requests'  => $requests,
+            'providers' => $providers,
+            'filters'   => compact('status', 'priority', 'search'),
         ];
 
         $this->view('residents/service_requests', $data);
@@ -2531,10 +2536,23 @@ class ResidentsController extends Controller {
             }
 
             // Get optional fields
-            $category = trim($this->post('category', ''));
-            $area = trim($this->post('area', ''));
+            $category   = trim($this->post('category', ''));
+            $area       = trim($this->post('area', ''));
             $requestedDate = $this->post('requested_date', null);
-            $notes = trim($this->post('notes', ''));
+            $notes      = trim($this->post('notes', ''));
+            $providerId = $this->post('provider_id', null);
+
+            // Validate provider_id if provided
+            if ($providerId !== null && $providerId !== '') {
+                $providerId = intval($providerId);
+                $provCheck = $this->db->prepare("SELECT id FROM providers WHERE id = ? AND status = 'active'");
+                $provCheck->execute([$providerId]);
+                if (!$provCheck->fetch()) {
+                    $providerId = null;
+                }
+            } else {
+                $providerId = null;
+            }
 
             // Validate requested_date if provided
             if ($requestedDate && !empty($requestedDate)) {
@@ -2549,12 +2567,13 @@ class ResidentsController extends Controller {
             // Insert service request
             $stmt = $this->db->prepare("
                 INSERT INTO provider_service_requests 
-                (title, description, category, area, property_id, priority, status, 
+                (provider_id, title, description, category, area, property_id, priority, status, 
                  requested_date, notes, created_by, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW())
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, NOW())
             ");
 
             $stmt->execute([
+                $providerId,
                 $title,
                 $description,
                 $category ?: null,

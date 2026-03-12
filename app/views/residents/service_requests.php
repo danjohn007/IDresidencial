@@ -226,20 +226,36 @@
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                 </div>
                 
+                <div>
+                    <label for="provider_id" class="block text-sm font-medium text-gray-700 mb-1">Proveedor Preferido</label>
+                    <select id="provider_id" name="provider_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">Sin preferencia (la administración asignará)</option>
+                        <?php foreach ($providers as $prov): ?>
+                        <option value="<?php echo $prov['id']; ?>">
+                            <?php echo htmlspecialchars($prov['company_name']); ?><?php if (!empty($prov['category'])): ?> — <?php echo htmlspecialchars($prov['category']); ?><?php endif; ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                        <select name="category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                            <option value="">Seleccionar...</option>
-                            <option value="Plomería">Plomería</option>
-                            <option value="Electricidad">Electricidad</option>
-                            <option value="Carpintería">Carpintería</option>
-                            <option value="Pintura">Pintura</option>
-                            <option value="Limpieza">Limpieza</option>
-                            <option value="Jardinería">Jardinería</option>
-                            <option value="Seguridad">Seguridad</option>
-                            <option value="Otros">Otros</option>
-                        </select>
+                        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                        <input id="category" type="text" name="category" list="categorySuggestions" maxlength="100"
+                               placeholder="Ej: Plomería, Electricidad..."
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <datalist id="categorySuggestions">
+                            <option value="Plomería">
+                            <option value="Electricidad">
+                            <option value="Carpintería">
+                            <option value="Pintura">
+                            <option value="Limpieza">
+                            <option value="Jardinería">
+                            <option value="Albañilería">
+                            <option value="Seguridad">
+                            <option value="General">
+                            <option value="Otros">
+                        </datalist>
                     </div>
                     
                     <div>
@@ -285,7 +301,7 @@
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p class="text-sm text-blue-800">
                         <i class="fas fa-info-circle mr-1"></i>
-                        Su solicitud será enviada a la administración para su revisión y asignación a un proveedor de servicios.
+                        Su solicitud será registrada para la propiedad <strong><?php echo htmlspecialchars($resident['property_number']); ?></strong>. Si selecciona un proveedor preferido, la administración lo tomará en cuenta al asignar el servicio.
                     </p>
                 </div>
             </div>
