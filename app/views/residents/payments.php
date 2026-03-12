@@ -319,7 +319,7 @@
 <div id="paymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center">
     <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
         <div class="p-6 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-gray-900"><i class="fas fa-dollar-sign text-green-600 mr-2"></i>Registrar Pago - Cuota de Mantenimiento</h3>
+            <h3 id="modalTitle" class="text-lg font-semibold text-gray-900"><i class="fas fa-dollar-sign text-green-600 mr-2"></i>Registrar Pago - Cuota de Mantenimiento</h3>
             <button type="button" onclick="closePaymentModal()" class="text-gray-400 hover:text-gray-600">
                 <i class="fas fa-times text-xl"></i>
             </button>
@@ -382,7 +382,120 @@
     </div>
 </div>
 
+<!-- Toast Notification Container -->
+<div id="toastContainer" class="fixed top-4 right-4 z-[9999] space-y-2"></div>
+
+<style>
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.toast-enter {
+    animation: slideInRight 0.3s ease-out forwards;
+}
+
+.toast-exit {
+    animation: slideOutRight 0.3s ease-in forwards;
+}
+</style>
+
 <script>
+/**
+ * Show a toast notification
+ * @param {string} message - The message to display
+ * @param {string} type - Type of toast: 'success', 'error', 'warning', 'info'
+ * @param {number} duration - Duration in milliseconds (default: 4000)
+ */
+function showToast(message, type = 'success', duration = 4000) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    
+    // Set toast ID
+    const toastId = 'toast-' + Date.now();
+    toast.id = toastId;
+    
+    // Base classes
+    toast.className = 'flex items-start p-4 rounded-lg shadow-lg min-w-[300px] max-w-md toast-enter';
+    
+    // Type-specific styles
+    const typeStyles = {
+        success: {
+            bg: 'bg-green-50 border border-green-200',
+            icon: 'fas fa-check-circle text-green-500',
+            text: 'text-green-800'
+        },
+        error: {
+            bg: 'bg-red-50 border border-red-200',
+            icon: 'fas fa-exclamation-circle text-red-500',
+            text: 'text-red-800'
+        },
+        warning: {
+            bg: 'bg-yellow-50 border border-yellow-200',
+            icon: 'fas fa-exclamation-triangle text-yellow-500',
+            text: 'text-yellow-800'
+        },
+        info: {
+            bg: 'bg-blue-50 border border-blue-200',
+            icon: 'fas fa-info-circle text-blue-500',
+            text: 'text-blue-800'
+        }
+    };
+    
+    const style = typeStyles[type] || typeStyles.info;
+    toast.className += ' ' + style.bg;
+    
+    // Toast content
+    toast.innerHTML = `
+        <div class="flex-shrink-0">
+            <i class="${style.icon} text-xl"></i>
+        </div>
+        <div class="ml-3 flex-1">
+            <p class="${style.text} text-sm font-medium">${message}</p>
+        </div>
+        <button onclick="closeToast('${toastId}')" class="ml-3 flex-shrink-0 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Auto-remove after duration
+    setTimeout(() => {
+        closeToast(toastId);
+    }, duration);
+}
+
+function closeToast(toastId) {
+    const toast = document.getElementById(toastId);
+    if (toast) {
+        toast.classList.remove('toast-enter');
+        toast.classList.add('toast-exit');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }
+}
+
 function openPaymentModal(btn) {
     var feeId = btn.getAttribute('data-fee-id');
     var propertyNumber = btn.getAttribute('data-property');
@@ -391,6 +504,9 @@ function openPaymentModal(btn) {
     var amount = parseFloat(btn.getAttribute('data-amount'));
 
     document.getElementById('modalFeeId').value = feeId;
+    
+    // Actualizar título del modal para pago simple
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-dollar-sign text-green-600 mr-2"></i>Registrar Pago - Cuota de Mantenimiento';
 
     var info = document.getElementById('modalInfo');
     // Use textContent for individual parts to avoid XSS
@@ -454,10 +570,27 @@ document.getElementById('paymentForm').addEventListener('submit', function(e) {
     .then(data => {
         if (data.success) {
             closePaymentModal();
-            location.reload();
+            
+            // Determinar mensaje según tipo de pago
+            let message = '';
+            if (isMultiple && data.periods && data.periods.length > 0) {
+                const count = data.periods.length;
+                const total = data.total_amount ? '$' + parseFloat(data.total_amount).toFixed(2) : '';
+                message = `✅ ${count} ${count === 1 ? 'pago registrado' : 'pagos registrados'} exitosamente ${total ? '(Total: ' + total + ')' : ''}`;
+            } else {
+                message = '✅ Pago registrado exitosamente';
+            }
+            
+            showToast(message, 'success', 4000);
+            
+            // Recargar después de 2 segundos para que el usuario vea el toast
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
         } else {
             errorDiv.textContent = data.message || 'Error al registrar el pago';
             errorDiv.classList.remove('hidden');
+            showToast(data.message || 'Error al registrar el pago', 'error', 5000);
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-check mr-2"></i>Registrar Pago';
         }
@@ -465,6 +598,7 @@ document.getElementById('paymentForm').addEventListener('submit', function(e) {
     .catch(() => {
         errorDiv.textContent = 'Error de conexión. Intente nuevamente.';
         errorDiv.classList.remove('hidden');
+        showToast('Error de conexión. Intente nuevamente.', 'error', 5000);
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-check mr-2"></i>Registrar Pago';
     });
@@ -507,6 +641,15 @@ function closeUpcomingMonthsModal() {
     _upcomingPropertyId = null;
     _selectedMonths = [];
     _monthsData = {};
+}
+
+function viewPaidFeeDetail(feeId) {
+    if (!feeId) {
+        showToast('No se encontr\u00f3 el ID de la cuota', 'error', 3000);
+        return;
+    }
+    // Abrir en nueva pesta\u00f1a o en la misma ventana
+    window.location.href = '<?php echo BASE_URL; ?>/residents/viewFeePayment/' + feeId;
 }
 
 function loadMonthsStatus() {
@@ -568,12 +711,13 @@ function generateMonthsGrid(monthsData) {
         var baseClass = 'py-3 px-2 text-sm rounded-lg border-2 transition-all text-center ';
         
         if (isPaid) {
-            // Mes pagado - verde suave, no seleccionable
-            btn.className = baseClass + 'border-green-300 bg-green-50 text-green-700 cursor-not-allowed opacity-60';
-            btn.disabled = true;
+            // Mes pagado - verde suave, clic para ver detalle
+            btn.className = baseClass + 'border-green-300 bg-green-50 text-green-700 hover:border-green-500 hover:bg-green-100 cursor-pointer';
             btn.innerHTML = `<div class="font-semibold">${monthNames[monthIdx]}</div>` +
                           `<div class="text-xs">${year}</div>` +
-                          `<div class="text-xs mt-1"><i class="fas fa-check-circle"></i> Pagado</div>`;
+                          `<div class="text-xs mt-1"><i class="fas fa-check-circle"></i> Pagado</div>` +
+                          `<div class="text-xs text-green-600"><i class="fas fa-eye"></i></div>`;
+            btn.addEventListener('click', function() { viewPaidFeeDetail(monthData.feeId); });
         } else {
             // Mes no pagado - seleccionable
             if (isCurrent) {
@@ -640,7 +784,11 @@ function updateSelectedSummary() {
 }
 
 function paySelectedMonths() {
-    if (_selectedMonths.length === 0) return;
+    // Validar que haya meses seleccionados
+    if (!_selectedMonths || _selectedMonths.length === 0) {
+        showToast('Debe seleccionar al menos un mes', 'warning', 3000);
+        return;
+    }
     
     var loading = document.getElementById('upcomingModalLoading');
     var grid = document.getElementById('monthsGrid');
@@ -653,6 +801,15 @@ function paySelectedMonths() {
     
     // Crear fees para los meses que no tienen ID (necesitan creación)
     var needCreation = _selectedMonths.filter(m => m.needsCreation);
+    
+    // Mostrar toast informativo si hay meses que necesitan creación
+    if (needCreation.length > 0) {
+        showToast(`Preparando ${needCreation.length} ${needCreation.length === 1 ? 'cuota' : 'cuotas'}...`, 'info', 3000);
+    }
+    
+    console.log('Meses seleccionados:', _selectedMonths.length);
+    console.log('Meses que necesitan creación:', needCreation.length);
+    
     var promises = needCreation.map(m => {
         var fd = new FormData();
         fd.append('property_id', _upcomingPropertyId);
@@ -663,21 +820,39 @@ function paySelectedMonths() {
         })
         .then(r => r.json())
         .then(data => {
-            if (data.success && data.fee.id) {
+            if (data.success && data.fee && data.fee.id) {
                 m.feeId = data.fee.id;
+                console.log('Fee creada/obtenida para período ' + m.period + ': ID=' + m.feeId);
                 return true;
             }
+            console.error('Error creando fee para período ' + m.period + ':', data);
+            return false;
+        })
+        .catch(err => {
+            console.error('Error de red al crear fee para período ' + m.period + ':', err);
             return false;
         });
     });
     
     Promise.all(promises)
     .then(() => {
-        // Verificar que todos los meses tengan feeId
-        var allHaveIds = _selectedMonths.every(m => m.feeId);
-        if (!allHaveIds) {
-            throw new Error('No se pudieron crear todas las cuotas');
+        // Filtrar y validar que todos los meses tengan feeId válido
+        var feeIds = _selectedMonths.map(m => m.feeId).filter(id => id != null && id !== '');
+        
+        if (feeIds.length === 0 || feeIds.length !== _selectedMonths.length) {
+            throw new Error('No se pudieron crear todas las cuotas necesarias');
         }
+        
+        // Verificar que no haya valores null o undefined
+        var allHaveIds = _selectedMonths.every(m => m.feeId && m.feeId !== '');
+        if (!allHaveIds) {
+            throw new Error('Algunas cuotas no tienen ID válido');
+        }
+        
+        // Preparar datos ANTES de cerrar el modal (que limpia _selectedMonths)
+        var periods = _selectedMonths.map(m => m.period).join(', ');
+        var total = _selectedMonths.reduce((sum, m) => sum + m.amount, 0);
+        var periodsCount = _selectedMonths.length;
         
         // Abrir modal de pago con múltiples fees
         loading.classList.add('hidden');
@@ -685,13 +860,10 @@ function paySelectedMonths() {
         grid.style.pointerEvents = '';
         closeUpcomingMonthsModal();
         
-        var periods = _selectedMonths.map(m => m.period).join(', ');
-        var total = _selectedMonths.reduce((sum, m) => sum + m.amount, 0);
-        var feeIds = _selectedMonths.map(m => m.feeId);
-        
         openMultiplePaymentModal({
             feeIds: feeIds,
             periods: periods,
+            periodsCount: periodsCount,
             totalAmount: total,
             property: _upcomingPropertyNumber,
             resident: _upcomingResidentName
@@ -701,35 +873,60 @@ function paySelectedMonths() {
         loading.classList.add('hidden');
         grid.style.opacity = '';
         grid.style.pointerEvents = '';
-        errorDiv.textContent = err.message || 'Error al preparar el pago';
+        console.error('Error en paySelectedMonths:', err);
+        const errorMessage = err.message || 'Error al preparar el pago múltiple. Revise la consola para más detalles.';
+        errorDiv.textContent = errorMessage;
         errorDiv.classList.remove('hidden');
+        showToast(errorMessage, 'error', 5000);
     });
 }
 
 function openMultiplePaymentModal(data) {
+    // Validar que los datos sean correctos
+    if (!data || !data.feeIds || !Array.isArray(data.feeIds) || data.feeIds.length === 0) {
+        console.error('openMultiplePaymentModal: feeIds inválidos', data);
+        showToast('Error: No se pudieron cargar los datos de los pagos seleccionados', 'error', 5000);
+        return;
+    }
+    
+    // Filtrar valores null/undefined
+    var validFeeIds = data.feeIds.filter(id => id != null && id !== '');
+    if (validFeeIds.length === 0) {
+        console.error('openMultiplePaymentModal: no hay feeIds válidos', data.feeIds);
+        showToast('Error: No hay cuotas válidas para procesar', 'error', 5000);
+        return;
+    }
+    
     var modal = document.getElementById('paymentModal');
     var form = document.getElementById('paymentForm');
     var info = document.getElementById('modalInfo');
     var feeIdInput = document.getElementById('modalFeeId');
     var descInput = document.getElementById('modalDescription');
+    var modalTitle = document.getElementById('modalTitle');
     
     // Usar el campo fee_id para almacenar el array como JSON
-    feeIdInput.value = JSON.stringify(data.feeIds);
+    feeIdInput.value = JSON.stringify(validFeeIds);
+    
+    // Actualizar título del modal
+    var titleText = validFeeIds.length === 1 
+        ? 'Registrar Pago - Cuota de Mantenimiento'
+        : `Registrar Pago - ${data.periodsCount} Meses de Mantenimiento`;
+    modalTitle.innerHTML = '<i class="fas fa-dollar-sign text-green-600 mr-2"></i>' + titleText;
     
     info.innerHTML = '';
     info.appendChild(Object.assign(document.createElement('span'), {innerHTML: '<strong>Propiedad:</strong> '}));
-    info.appendChild(document.createTextNode(data.property));
+    info.appendChild(document.createTextNode(data.property || 'N/A'));
     info.appendChild(document.createTextNode(' \u00a0|\u00a0 '));
     info.appendChild(Object.assign(document.createElement('span'), {innerHTML: '<strong>Residente:</strong> '}));
-    info.appendChild(document.createTextNode(data.resident));
+    info.appendChild(document.createTextNode(data.resident || 'N/A'));
     info.appendChild(document.createElement('br'));
     info.appendChild(Object.assign(document.createElement('span'), {innerHTML: '<strong>Períodos:</strong> '}));
-    info.appendChild(document.createTextNode(data.periods));
+    info.appendChild(document.createTextNode(data.periods || 'N/A'));
     info.appendChild(document.createTextNode(' \u00a0|\u00a0 '));
     info.appendChild(Object.assign(document.createElement('span'), {innerHTML: '<strong>Total:</strong> $'}));
-    info.appendChild(document.createTextNode(data.totalAmount.toFixed(2)));
+    info.appendChild(document.createTextNode((data.totalAmount || 0).toFixed(2)));
     
-    descInput.value = 'Pago de cuotas de mantenimiento - ' + data.periods;
+    descInput.value = 'Pago de cuotas de mantenimiento - ' + (data.periods || '');
     document.getElementById('modalError').classList.add('hidden');
     modal.classList.remove('hidden');
 }

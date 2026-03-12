@@ -122,6 +122,87 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Historial de Pagos de esta Propiedad -->
+                <?php if (!empty($allFees) && count($allFees) > 1): ?>
+                <div class="bg-white rounded-lg shadow overflow-hidden mt-6">
+                    <div class="p-6 border-b border-gray-200">
+                        <h3 class="text-xl font-bold text-gray-900">
+                            <i class="fas fa-history text-blue-600 mr-2"></i>Historial de Cuotas - <?php echo htmlspecialchars($fee['property_number']); ?>
+                        </h3>
+                        <p class="text-sm text-gray-600 mt-1">Últimas 24 cuotas de esta propiedad</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Período</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimiento</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Pago</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <?php foreach ($allFees as $histFee): ?>
+                                <tr class="hover:bg-gray-50 <?php echo $histFee['id'] == $fee['id'] ? 'bg-blue-50' : ''; ?>">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="text-sm font-medium text-gray-900">
+                                            <?php echo htmlspecialchars($histFee['period']); ?>
+                                            <?php if ($histFee['id'] == $fee['id']): ?>
+                                                <span class="ml-2 text-xs text-blue-600">(Actual)</span>
+                                            <?php endif; ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="text-sm text-gray-900">$<?php echo number_format($histFee['amount'], 2); ?></span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="text-sm text-gray-900"><?php echo date('d/m/Y', strtotime($histFee['due_date'])); ?></span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="text-sm text-gray-900">
+                                            <?php echo $histFee['paid_date'] ? date('d/m/Y', strtotime($histFee['paid_date'])) : '-'; ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <?php
+                                        $status = $histFee['status'];
+                                        $statusColors = [
+                                            'paid' => 'bg-green-100 text-green-800',
+                                            'pending' => 'bg-yellow-100 text-yellow-800',
+                                            'overdue' => 'bg-red-100 text-red-800'
+                                        ];
+                                        $statusLabels = [
+                                            'paid' => 'Pagado',
+                                            'pending' => 'Pendiente',
+                                            'overdue' => 'Vencido'
+                                        ];
+                                        ?>
+                                        <span class="px-2 py-1 text-xs rounded-full <?php echo $statusColors[$status] ?? 'bg-gray-100 text-gray-800'; ?>">
+                                            <?php echo $statusLabels[$status] ?? ucfirst($status); ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <?php if ($histFee['status'] === 'paid' && $histFee['id'] != $fee['id']): ?>
+                                            <a href="<?php echo BASE_URL; ?>/residents/viewFeePayment/<?php echo (int)$histFee['id']; ?>"
+                                               class="text-blue-600 hover:text-blue-800">
+                                                <i class="fas fa-eye"></i> Ver
+                                            </a>
+                                        <?php elseif ($histFee['id'] == $fee['id']): ?>
+                                            <span class="text-gray-400"><i class="fas fa-check"></i> Visualizando</span>
+                                        <?php else: ?>
+                                            <span class="text-gray-400">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
         </main>
     </div>

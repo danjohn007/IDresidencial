@@ -1696,7 +1696,7 @@ class ResidentsController extends Controller {
         }
         
         $stmt = $this->db->prepare("
-            SELECT mf.*, p.property_number, p.section,
+            SELECT mf.*, p.property_number, p.section, p.id as property_id,
                    COALESCE(u.first_name, 'Sin asignar') as first_name,
                    COALESCE(u.last_name, '') as last_name,
                    u.phone,
@@ -1716,9 +1716,22 @@ class ResidentsController extends Controller {
             $this->redirect('residents/payments');
         }
         
+        // Obtener todos los pagos de esta propiedad (pagados y pendientes)
+        $allFeesStmt = $this->db->prepare("
+            SELECT mf.*, fm.transaction_date as paid_date
+            FROM maintenance_fees mf
+            LEFT JOIN financial_movements fm ON fm.reference_type = 'maintenance_fee' AND fm.reference_id = mf.id
+            WHERE mf.property_id = ?
+            ORDER BY mf.period DESC
+            LIMIT 24
+        ");
+        $allFeesStmt->execute([$fee['property_id']]);
+        $allFees = $allFeesStmt->fetchAll();
+        
         $data = [
             'title' => 'Detalle de Pago',
-            'fee' => $fee
+            'fee' => $fee,
+            'allFees' => $allFees
         ];
         
         $this->view('residents/view_fee_payment', $data);
