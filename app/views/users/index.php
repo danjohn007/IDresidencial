@@ -30,7 +30,7 @@
             <?php endif; ?>
 
             <!-- Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Total Usuarios</p>
                     <p class="text-3xl font-bold text-blue-600"><?php echo $stats['total']; ?></p>
@@ -46,6 +46,10 @@
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Residentes</p>
                     <p class="text-3xl font-bold text-orange-600"><?php echo $stats['residente']; ?></p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <p class="text-sm text-gray-600 mb-1">Proveedores</p>
+                    <p class="text-3xl font-bold text-yellow-600"><?php echo $stats['proveedor']; ?></p>
                 </div>
             </div>
 
@@ -73,6 +77,7 @@
                                 <option value="administrador" <?php echo ($filters['role'] ?? '') === 'administrador' ? 'selected' : ''; ?>>Administrador</option>
                                 <option value="guardia" <?php echo ($filters['role'] ?? '') === 'guardia' ? 'selected' : ''; ?>>Guardia</option>
                                 <option value="residente" <?php echo ($filters['role'] ?? '') === 'residente' ? 'selected' : ''; ?>>Residente</option>
+                                <option value="proveedor" <?php echo ($filters['role'] ?? '') === 'proveedor' ? 'selected' : ''; ?>>Proveedor</option>
                             </select>
                         </div>
                         
@@ -141,6 +146,7 @@
                                             'administrador' => 'bg-blue-100 text-blue-800',
                                             'guardia' => 'bg-green-100 text-green-800',
                                             'residente' => 'bg-gray-100 text-gray-800',
+                                            'proveedor' => 'bg-yellow-100 text-yellow-800',
                                             default => 'bg-gray-100 text-gray-800'
                                         };
                                     ?>">

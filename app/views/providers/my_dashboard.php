@@ -175,6 +175,10 @@
                                 <?php else: ?>
                                 <span class="text-gray-400 text-xs">—</span>
                                 <?php endif; ?>
+                                <button onclick="viewDetail(<?php echo htmlspecialchars(json_encode($req), ENT_QUOTES); ?>)"
+                                        class="inline-flex items-center px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 mt-1">
+                                    <i class="fas fa-eye mr-1"></i> Ver detalle
+                                </button>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -238,10 +242,136 @@ function updateStatus(requestId, currentStatus, currentCost, currentRate) {
 function closeStatusModal() {
     document.getElementById('statusModal').classList.add('hidden');
 }
+
+var priorityLabels = {urgent:'Urgente',high:'Alta',medium:'Media',low:'Baja'};
+var statusLabels = {pending:'Pendiente',in_progress:'En Proceso',completed:'Completado',cancelled:'Cancelado'};
+
+function viewDetail(req) {
+    document.getElementById('detailTitle').textContent = req.title || '—';
+    document.getElementById('detailCategory').textContent = req.category || '—';
+    document.getElementById('detailArea').textContent = req.area || '—';
+    document.getElementById('detailProperty').textContent = req.property_number || '—';
+    document.getElementById('detailPriority').textContent = priorityLabels[req.priority] || req.priority;
+    document.getElementById('detailStatus').textContent = statusLabels[req.status] || req.status;
+    document.getElementById('detailDescription').textContent = req.description || '—';
+    document.getElementById('detailNotes').textContent = req.notes || '—';
+    document.getElementById('detailRequestedDate').textContent = req.requested_date || '—';
+    document.getElementById('detailScheduledDate').textContent = req.scheduled_date || '—';
+    document.getElementById('detailCompletedDate').textContent = req.completed_date || '—';
+    document.getElementById('detailEstimatedCost').textContent = req.estimated_cost ? '$' + parseFloat(req.estimated_cost).toFixed(2) : '—';
+    document.getElementById('detailActualCost').textContent = req.actual_cost ? '$' + parseFloat(req.actual_cost).toFixed(2) : '—';
+    document.getElementById('detailRate').textContent = req.rate ? '$' + parseFloat(req.rate).toFixed(2) : '—';
+    document.getElementById('detailCreatedAt').textContent = req.created_at || '—';
+    var imgWrap = document.getElementById('detailImageWrap');
+    if (req.image_path) {
+        var imgPath = String(req.image_path).replace(/[^a-zA-Z0-9/_.\-]/g, '');
+        var imgUrl = baseUrl + '/../' + imgPath;
+        var link = document.createElement('a');
+        link.href = imgUrl;
+        link.target = '_blank';
+        var img = document.createElement('img');
+        img.src = imgUrl;
+        img.className = 'max-h-48 rounded border border-gray-200';
+        img.alt = 'Imagen adjunta';
+        link.appendChild(img);
+        imgWrap.innerHTML = '';
+        imgWrap.appendChild(link);
+    } else {
+        imgWrap.textContent = 'Sin imagen';
+    }
+    document.getElementById('detailModal').classList.remove('hidden');
+}
+function closeDetailModal() {
+    document.getElementById('detailModal').classList.add('hidden');
+}
+
 // Auto-hide success messages
 document.querySelectorAll('.alert-auto-hide').forEach(function(el) {
     setTimeout(function() { el.style.display = 'none'; }, 5000);
 });
 </script>
+
+<!-- Detail Modal -->
+<div id="detailModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-screen overflow-y-auto">
+        <div class="flex justify-between items-center p-6 border-b">
+            <h3 class="text-lg font-semibold text-gray-900"><i class="fas fa-clipboard-list mr-2 text-blue-600"></i>Detalle de Solicitud</h3>
+            <button onclick="closeDetailModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase">Título</p>
+                <p id="detailTitle" class="text-gray-900 font-semibold mt-1"></p>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase">Categoría</p>
+                    <p id="detailCategory" class="text-gray-700 mt-1"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase">Área</p>
+                    <p id="detailArea" class="text-gray-700 mt-1"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase">Propiedad</p>
+                    <p id="detailProperty" class="text-gray-700 mt-1"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase">Prioridad</p>
+                    <p id="detailPriority" class="mt-1"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase">Estado</p>
+                    <p id="detailStatus" class="mt-1"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase">Mi Tarifa</p>
+                    <p id="detailRate" class="text-gray-700 mt-1"></p>
+                </div>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase">Descripción</p>
+                <p id="detailDescription" class="text-gray-700 mt-1 whitespace-pre-wrap"></p>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase">Notas</p>
+                <p id="detailNotes" class="text-gray-700 mt-1 whitespace-pre-wrap"></p>
+            </div>
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase">Fecha Solicitada</p>
+                    <p id="detailRequestedDate" class="text-gray-700 mt-1"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase">Fecha Programada</p>
+                    <p id="detailScheduledDate" class="text-gray-700 mt-1"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase">Fecha Completado</p>
+                    <p id="detailCompletedDate" class="text-gray-700 mt-1"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase">Costo Estimado</p>
+                    <p id="detailEstimatedCost" class="text-gray-700 mt-1"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase">Costo Real</p>
+                    <p id="detailActualCost" class="text-gray-700 mt-1"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-gray-500 uppercase">Creada</p>
+                    <p id="detailCreatedAt" class="text-gray-700 mt-1"></p>
+                </div>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-gray-500 uppercase">Imagen</p>
+                <div id="detailImageWrap" class="mt-1"></div>
+            </div>
+        </div>
+        <div class="p-4 border-t flex justify-end">
+            <button onclick="closeDetailModal()" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">Cerrar</button>
+        </div>
+    </div>
+</div>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>

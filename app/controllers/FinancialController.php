@@ -597,6 +597,133 @@ class FinancialController extends Controller {
     }
     
     /**
+     * Aplicar penalizaciones manualmente a cuotas vencidas
+     */
+    public function applyPenalties() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('financial/overdueAccounts');
+        }
+
+        // Load the active penalty rule
+        $ruleStmt = $this->db->query("SELECT * FROM penalty_rules WHERE is_active = 1 ORDER BY id DESC LIMIT 1");
+        $rule = $ruleStmt->fetch();
+
+        if (!$rule) {
+            $_SESSION['error_message'] = 'No hay regla de penalización activa. Configura una en /penaltyRules.';
+            $this->redirect('financial/overdueAccounts');
+        }
+
+        $today = new DateTime('today');
+        $cutDayType = $rule['cut_day_type'];
+        $cutDay     = intval($rule['cut_day']);
+        $graceDays  = intval($rule['grace_days']);
+
+        switch ($cutDayType) {
+            case 'first': $cutDayNum = 1; break;
+            case 'last':  $cutDayNum = (int) $today->format('t'); break;
+            default:      $cutDayNum = max(1, min(28, $cutDay)); break;
+        }
+
+        $dueDate = new DateTime($today->format('Y-m-') . str_pad($cutDayNum, 2, '0', STR_PAD_LEFT));
+        if ($graceDays > 0) {
+            $dueDate->modify("+{$graceDays} days");
+        }
+
+        if ($today <= $dueDate) {
+            $_SESSION['error_message'] = 'Todavía estamos dentro del período de gracia (' . $dueDate->format('d/m/Y') . '). No se pueden aplicar penalizaciones hoy.';
+            $this->redirect('financial/overdueAccounts');
+        }
+
+        // Fetch overdue fees
+        $feesStmt = $this->db->query("
+            SELECT mf.id, mf.property_id, mf.amount, mf.period, mf.due_date,
+                   p.property_number,
+                   DATEDIFF(CURDATE(), mf.due_date) as days_overdue
+            FROM maintenance_fees mf
+            INNER JOIN properties p ON mf.property_id = p.id
+            WHERE mf.status IN ('pending', 'overdue')
+              AND mf.due_date < CURDATE()
+        ");
+        $fees = $feesStmt->fetchAll();
+
+        if (empty($fees)) {
+            $_SESSION['success_message'] = 'No hay cuotas vencidas para penalizar.';
+            $this->redirect('financial/overdueAccounts');
+        }
+
+        // Ensure penalty movement type exists
+        $typeStmt = $this->db->query("SELECT id FROM financial_movement_types WHERE name = 'Penalización' LIMIT 1");
+        $typeRow  = $typeStmt->fetch();
+        if (!$typeRow) {
+            $this->db->exec("INSERT INTO financial_movement_types (name, category) VALUES ('Penalización', 'egreso')");
+            $penaltyTypeId = $this->db->lastInsertId();
+        } else {
+            $penaltyTypeId = $typeRow['id'];
+        }
+
+        $applied = 0;
+        $skipped = 0;
+
+        foreach ($fees as $fee) {
+            $daysOverdue = intval($fee['days_overdue']);
+            $originalAmt = floatval($fee['amount']);
+
+            // Use actual days in the month of the fee's due_date for accurate tier calculation
+            $feeDueDate  = new DateTime($fee['due_date']);
+            $daysInMonth = (int) $feeDueDate->format('t');
+
+            if ($daysOverdue <= $daysInMonth) {
+                $penType  = $rule['after_cutday_type'];
+                $penValue = floatval($rule['after_cutday_value']);
+            } elseif ($daysOverdue <= $daysInMonth * 2) {
+                $penType  = $rule['next_month_type'];
+                $penValue = floatval($rule['next_month_value']);
+            } else {
+                $penType  = $rule['second_month_type'];
+                $penValue = floatval($rule['second_month_value']);
+            }
+
+            if ($penValue <= 0) { $skipped++; continue; }
+
+            $penaltyAmt = ($penType === 'percentage')
+                ? round($originalAmt * $penValue / 100, 2)
+                : round($penValue, 2);
+
+            if ($penaltyAmt <= 0) { $skipped++; continue; }
+
+            // Avoid duplicate penalties for the same fee on the same day
+            $dupCheck = $this->db->prepare("
+                SELECT id FROM financial_movements
+                WHERE reference_type = 'penalty' AND reference_id = ? AND DATE(transaction_date) = CURDATE()
+            ");
+            $dupCheck->execute([$fee['id']]);
+            if ($dupCheck->fetch()) { $skipped++; continue; }
+
+            try {
+                $this->db->beginTransaction();
+                $desc = "Penalización por pago atrasado — Cuota {$fee['period']} ({$fee['property_number']}). Días de atraso: {$daysOverdue}.";
+                $insStmt = $this->db->prepare("
+                    INSERT INTO financial_movements
+                        (movement_type_id, transaction_type, amount, description,
+                         property_id, reference_type, reference_id,
+                         transaction_date, created_by)
+                    VALUES (?, 'egreso', ?, ?, ?, 'penalty', ?, CURDATE(), ?)
+                ");
+                $insStmt->execute([$penaltyTypeId, $penaltyAmt, $desc, $fee['property_id'], $fee['id'], $_SESSION['user_id']]);
+                $this->db->prepare("UPDATE maintenance_fees SET status = 'overdue' WHERE id = ? AND status = 'pending'")->execute([$fee['id']]);
+                $this->db->commit();
+                AuditController::log('create', $desc, 'financial_movements', $this->db->lastInsertId());
+                $applied++;
+            } catch (Exception $e) {
+                $this->db->rollBack();
+            }
+        }
+
+        $_SESSION['success_message'] = "Penalizaciones aplicadas: {$applied}. Omitidas (sin regla o ya aplicadas hoy): {$skipped}.";
+        $this->redirect('financial/overdueAccounts');
+    }
+    
+    /**
      * Importar CSV Bancario
      */
     public function importCSV() {
