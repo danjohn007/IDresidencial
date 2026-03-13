@@ -233,6 +233,7 @@
                 </li>
                 <?php endif; ?>
                 
+                <?php if ($_SESSION['role'] !== 'proveedor'): ?>
                 <!-- Amenidades -->
                 <li>
                     <button onclick="toggleSubmenu('amenities-submenu')" class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
@@ -265,6 +266,7 @@
                         <span>Mantenimiento</span>
                     </a>
                 </li>
+                <?php endif; ?>
                 
                 <!-- Proveedores (admin only) -->
                 <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador'])): ?>

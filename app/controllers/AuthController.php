@@ -28,7 +28,7 @@ class AuthController extends Controller {
         ];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $username = $this->post('username');
+            $username = trim($this->post('username'));
             $password = $this->post('password');
             
             if (empty($username) || empty($password)) {

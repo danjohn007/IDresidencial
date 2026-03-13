@@ -158,9 +158,9 @@ class ProvidersController extends Controller {
                 $firstName = $providerData['contact_name'] ?: $providerData['company_name'];
                 $stmtUser = $this->db->prepare("
                     INSERT INTO users (username, email, password, first_name, last_name, role, status)
-                    VALUES (?, ?, ?, ?, '', 'proveedor', 'active')
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 ");
-                $stmtUser->execute([$username, $providerData['email'], $hashedPassword, $firstName]);
+                $stmtUser->execute([$username, $providerData['email'], $hashedPassword, $firstName, '', 'proveedor', 'active']);
                 $newUserId = $this->db->lastInsertId();
 
                 // Insert provider linked to the new user

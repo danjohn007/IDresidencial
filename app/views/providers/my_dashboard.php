@@ -156,11 +156,12 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 <?php if (!empty($req['image_path'])): ?>
-                                <a href="<?php echo PUBLIC_URL . '/' . htmlspecialchars($req['image_path']); ?>"
+                                <a href="<?php echo BASE_URL . htmlspecialchars($req['image_path']); ?>"
                                    target="_blank" title="Ver imagen adjunta">
-                                    <img src="<?php echo PUBLIC_URL . '/' . htmlspecialchars($req['image_path']); ?>"
+                                    <img src="<?php echo BASE_URL . htmlspecialchars($req['image_path']); ?>"
                                          alt="Imagen adjunta"
-                                         class="w-12 h-12 object-cover rounded border border-gray-200 hover:opacity-80">
+                                         class="w-12 h-12 object-cover rounded border border-gray-200 hover:opacity-80"
+                                         onerror="this.parentElement.innerHTML='<span class=\'text-red-500 text-xs\'>Error al cargar</span>'">
                                 </a>
                                 <?php else: ?>
                                 <span class="text-gray-400">—</span>
@@ -264,18 +265,23 @@ function viewDetail(req) {
     document.getElementById('detailCreatedAt').textContent = req.created_at || '—';
     var imgWrap = document.getElementById('detailImageWrap');
     if (req.image_path) {
-        var imgPath = String(req.image_path).replace(/[^a-zA-Z0-9/_.\-]/g, '');
-        var imgUrl = baseUrl + '/../' + imgPath;
+        // Construir URL exactamente como en la tabla PHP
+        var imgUrl = baseUrl + req.image_path;
         var link = document.createElement('a');
         link.href = imgUrl;
         link.target = '_blank';
         var img = document.createElement('img');
         img.src = imgUrl;
-        img.className = 'max-h-48 rounded border border-gray-200';
+        img.className = 'max-h-48 rounded border border-gray-200 hover:opacity-80 transition-opacity cursor-pointer';
         img.alt = 'Imagen adjunta';
+        img.onerror = function() { this.parentElement.parentElement.innerHTML = '<span class="text-red-500 text-sm">Error al cargar imagen</span>'; };
         link.appendChild(img);
         imgWrap.innerHTML = '';
         imgWrap.appendChild(link);
+        var hint = document.createElement('p');
+        hint.className = 'text-xs text-gray-500 mt-1';
+        hint.textContent = 'Click para ver en tamaño completo';
+        imgWrap.appendChild(hint);
     } else {
         imgWrap.textContent = 'Sin imagen';
     }

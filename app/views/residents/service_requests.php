@@ -177,6 +177,20 @@
                                         <p class="text-gray-600 mt-1"><?php echo nl2br(htmlspecialchars($req['notes'])); ?></p>
                                     </div>
                                     <?php endif; ?>
+                                    <?php if (!empty($req['image_path'])): ?>
+                                    <div class="md:col-span-2">
+                                        <span class="font-medium text-gray-700">Imagen Adjunta:</span>
+                                        <div class="mt-2">
+                                            <a href="<?php echo BASE_URL . htmlspecialchars($req['image_path']); ?>" target="_blank" class="inline-block">
+                                                <img src="<?php echo BASE_URL . htmlspecialchars($req['image_path']); ?>" 
+                                                     alt="Imagen de servicio" 
+                                                     class="max-w-xs max-h-64 rounded-lg shadow-md border border-gray-200 hover:opacity-90 transition-opacity cursor-pointer"
+                                                     onerror="this.parentElement.innerHTML='<span class=\'text-red-500 text-xs\'>Error al cargar imagen</span>'">
+                                            </a>
+                                            <p class="text-xs text-gray-500 mt-1">Click para ver en tamaño completo</p>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
                                     <?php if ($req['completed_date']): ?>
                                     <div>
                                         <span class="font-medium text-gray-700">Fecha de Completado:</span>

@@ -23,7 +23,7 @@ class User {
      * Obtener usuario por username
      */
     public function findByUsername($username) {
-        $stmt = $this->db->prepare("SELECT * FROM users WHERE username = ?");
+        $stmt = $this->db->prepare("SELECT * FROM users WHERE LOWER(username) = LOWER(?)" );
         $stmt->execute([$username]);
         return $stmt->fetch();
     }
@@ -32,7 +32,7 @@ class User {
      * Obtener usuario por email
      */
     public function findByEmail($email) {
-        $stmt = $this->db->prepare("SELECT * FROM users WHERE email = ?");
+        $stmt = $this->db->prepare("SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))" );
         $stmt->execute([$email]);
         return $stmt->fetch();
     }

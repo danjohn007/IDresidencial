@@ -13,9 +13,12 @@ define('DB_CHARSET', 'utf8mb4');
 // Detectar URL base automáticamente
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'];
-$script = str_replace('/index.php', '', $_SERVER['SCRIPT_NAME']);
-$script = str_replace('/public', '', $script);
-define('BASE_URL', $protocol . '://' . $host . $script);
+// Obtener el directorio del script, no el archivo
+$scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+// Remover /public si existe al final
+$scriptDir = rtrim($scriptDir, '/');
+$scriptDir = str_replace('/public', '', $scriptDir);
+define('BASE_URL', $protocol . '://' . $host . $scriptDir);
 define('PUBLIC_URL', BASE_URL . '/public');
 
 // Configuración de zona horaria
