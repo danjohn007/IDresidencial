@@ -105,18 +105,32 @@ try {
         $daysInMonth  = (int) $feeDueDate->format('t');
 
         // Determine which penalty tier applies based on days overdue
-        if ($daysOverdue <= $daysInMonth) {
-            // First tier: after cut day, same month
+        // Tier 1: 1-30 days overdue (primer mes)
+        // Tier 2: 31-60 days overdue (segundo mes - nivel 1)
+        // Tier 3: 61+ days overdue (tercer mes - moroso con retiro de servicios)
+        if ($daysOverdue <= 30) {
+            // First tier: primer mes de atraso
             $penType  = $rule['after_cutday_type'];
             $penValue = floatval($rule['after_cutday_value']);
-        } elseif ($daysOverdue <= $daysInMonth * 2) {
-            // Second tier: next month
+            $tierName = 'Primer mes de atraso';
+        } elseif ($daysOverdue <= 60) {
+            // Second tier: segundo mes de atraso (moroso nivel 1)
             $penType  = $rule['next_month_type'];
             $penValue = floatval($rule['next_month_value']);
+            $tierName = 'Segundo mes de atraso (Moroso Nivel 1)';
         } else {
-            // Third tier: second month or beyond
+            // Third tier: tercer mes o más (moroso - retiro de servicios)
             $penType  = $rule['second_month_type'];
             $penValue = floatval($rule['second_month_value']);
+            $tierName = 'Tercer mes o más (Moroso - Retiro de Servicios)';
+            
+            // Marcar residente como moroso y programar retiro de servicios
+            $markMorosoStmt = $db->prepare("
+                UPDATE residents 
+                SET payment_status = 'moroso' 
+                WHERE property_id = ? AND payment_status != 'moroso'
+            ");
+            $markMorosoStmt->execute([$fee['property_id']]);
         }
 
         if ($penValue <= 0) {
@@ -170,7 +184,7 @@ try {
                      transaction_date, created_by)
                 VALUES (?, 'egreso', ?, ?, ?, 'penalty', ?, CURDATE(), ?)
             ");
-            $desc = "Penalización por pago atrasado — Cuota {$period} ({$propertyNum}). Días de atraso: {$daysOverdue}.";
+            $desc = "Penalización por pago atrasado — Cuota {$period} ({$propertyNum}). {$daysOverdue} días de atraso. Tier: {$tierName}";
             $insStmt->execute([
                 $penaltyTypeId,
                 $penaltyAmt,
@@ -185,7 +199,7 @@ try {
 
             $db->commit();
             $applied++;
-            echo "[" . date('Y-m-d H:i:s') . "] ✓ Penalización de \${$penaltyAmt} aplicada para {$propertyNum} / {$period} ({$daysOverdue} días de atraso).\n";
+            echo "[" . date('Y-m-d H:i:s') . "] ✓ Penalización de \${$penaltyAmt} aplicada para {$propertyNum} / {$period} ({$daysOverdue} días - {$tierName}).\n";
         } catch (Exception $e) {
             $db->rollBack();
             echo "[" . date('Y-m-d H:i:s') . "] ✗ Error al aplicar penalización para cuota #{$fee['id']}: " . $e->getMessage() . "\n";
