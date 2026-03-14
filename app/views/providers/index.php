@@ -147,15 +147,24 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <div class="flex items-center space-x-2">
+                                <div class="flex items-center space-x-3">
                                     <a href="<?php echo BASE_URL; ?>/providers/edit/<?php echo $provider['id']; ?>"
                                        class="text-green-600 hover:text-green-900" title="Editar">
                                         <i class="fas fa-edit"></i>
                                     </a>
+                                    <!-- Toggle Status Checkbox -->
+                                    <label class="relative inline-flex items-center cursor-pointer" title="<?php echo $provider['status'] === 'active' ? 'Desactivar' : 'Activar'; ?>">
+                                        <input type="checkbox" 
+                                               class="sr-only peer provider-status-toggle" 
+                                               data-provider-id="<?php echo $provider['id']; ?>"
+                                               data-provider-name="<?php echo htmlspecialchars($provider['company_name']); ?>"
+                                               <?php echo $provider['status'] === 'active' ? 'checked' : ''; ?>>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                                    </label>
                                     <?php if ($provider['status'] === 'active'): ?>
                                     <button onclick="confirmDeactivate(<?php echo $provider['id']; ?>, '<?php echo addslashes($provider['company_name']); ?>')"
-                                            class="text-red-600 hover:text-red-900" title="Desactivar">
-                                        <i class="fas fa-times-circle"></i>
+                                            class="text-red-600 hover:text-red-900" title="Eliminar permanentemente">
+                                        <i class="fas fa-trash"></i>
                                     </button>
                                     <?php endif; ?>
                                 </div>
@@ -171,8 +180,50 @@
 </div>
 
 <script>
+// Toggle provider status
+document.addEventListener('DOMContentLoaded', function() {
+    const toggles = document.querySelectorAll('.provider-status-toggle');
+    
+    toggles.forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const providerId = this.getAttribute('data-provider-id');
+            const providerName = this.getAttribute('data-provider-name');
+            const isChecked = this.checked;
+            const action = isChecked ? 'activar' : 'desactivar';
+            
+            if (confirm('¿Está seguro de ' + action + ' al proveedor "' + providerName + '"?')) {
+                // Make AJAX call
+                fetch('<?php echo BASE_URL; ?>/providers/toggleStatus/' + providerId, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload page to update stats
+                        location.reload();
+                    } else {
+                        alert('Error al cambiar el estado del proveedor');
+                        this.checked = !isChecked; // Revert checkbox
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al cambiar el estado del proveedor');
+                    this.checked = !isChecked; // Revert checkbox
+                });
+            } else {
+                // User cancelled, revert checkbox
+                this.checked = !isChecked;
+            }
+        });
+    });
+});
+
 function confirmDeactivate(id, name) {
-    if (confirm('¿Desactivar al proveedor "' + name + '"?')) {
+    if (confirm('¿ELIMINAR PERMANENTEMENTE al proveedor "' + name + '"?\n\nEsta acción NO se puede deshacer. Se eliminará de la base de datos.')) {
         window.location.href = '<?php echo BASE_URL; ?>/providers/delete/' + id;
     }
 }

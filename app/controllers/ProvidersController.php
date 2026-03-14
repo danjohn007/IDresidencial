@@ -293,17 +293,50 @@ class ProvidersController extends Controller {
     }
 
     /**
-     * Eliminar proveedor (soft: set inactive)
+     * Eliminar proveedor (eliminación física de la base de datos)
+     * Primero elimina todas las solicitudes asociadas, luego el proveedor
      */
     public function delete($id) {
         $provider = $this->findProvider($id);
 
-        $stmt = $this->db->prepare("UPDATE providers SET status = 'inactive' WHERE id = ?");
-        $stmt->execute([$id]);
+        // Contar solicitudes asociadas para el log
+        $countStmt = $this->db->prepare("SELECT COUNT(*) FROM provider_service_requests WHERE provider_id = ?");
+        $countStmt->execute([$id]);
+        $requestCount = $countStmt->fetchColumn();
 
-        AuditController::log('delete', 'Proveedor desactivado: ' . $provider['company_name'], 'providers', $id);
-        $_SESSION['success_message'] = 'Proveedor desactivado exitosamente.';
+        // Primero eliminar todas las solicitudes asociadas al proveedor
+        $stmtRequests = $this->db->prepare("DELETE FROM provider_service_requests WHERE provider_id = ?");
+        $stmtRequests->execute([$id]);
+
+        // Luego eliminar el proveedor
+        $stmtProvider = $this->db->prepare("DELETE FROM providers WHERE id = ?");
+        $stmtProvider->execute([$id]);
+
+        $logMessage = 'Proveedor eliminado: ' . $provider['company_name'];
+        if ($requestCount > 0) {
+            $logMessage .= ' (con ' . $requestCount . ' solicitud(es) asociada(s))';
+        }
+        
+        AuditController::log('delete', $logMessage, 'providers', $id);
+        $_SESSION['success_message'] = 'Proveedor eliminado exitosamente' . ($requestCount > 0 ? " junto con $requestCount solicitud(es)." : '.');
         $this->redirect('providers');
+    }
+
+    /**
+     * Cambiar estado de proveedor (activo/inactivo)
+     */
+    public function toggleStatus($id) {
+        $provider = $this->findProvider($id);
+
+        $newStatus = $provider['status'] === 'active' ? 'inactive' : 'active';
+        $stmt = $this->db->prepare("UPDATE providers SET status = ? WHERE id = ?");
+        $stmt->execute([$newStatus, $id]);
+
+        $statusText = $newStatus === 'active' ? 'activado' : 'desactivado';
+        AuditController::log('update', 'Proveedor ' . $statusText . ': ' . $provider['company_name'], 'providers', $id);
+        
+        echo json_encode(['success' => true, 'newStatus' => $newStatus]);
+        exit;
     }
 
     /**
