@@ -48,12 +48,14 @@
         <nav class="flex-1 overflow-y-auto p-4">
             <ul class="space-y-1">
                 <!-- Dashboard -->
+                <?php if ($_SESSION['role'] !== 'proveedor'): ?>
                 <li>
                     <a href="<?php echo BASE_URL; ?>/dashboard" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
                         <i class="fas fa-home w-5"></i>
                         <span>Dashboard</span>
                     </a>
                 </li>
+                <?php endif; ?>
                 
                 <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador', 'guardia'])): ?>
                 <!-- Control de Accesos -->

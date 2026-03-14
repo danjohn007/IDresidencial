@@ -87,7 +87,9 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Residente</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Periodo</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto Base</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Multa</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vencimiento</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -96,7 +98,7 @@
                     <tbody class="bg-white divide-y divide-gray-200">
                         <?php if (empty($fees)): ?>
                             <tr>
-                                <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                                <td colspan="10" class="px-6 py-8 text-center text-gray-500">
                                     <i class="fas fa-inbox text-4xl mb-2"></i>
                                     <p>No hay registros de pagos</p>
                                 </td>
@@ -125,57 +127,86 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         <?php echo date('M Y', strtotime($fee['period'] . '-01')); ?>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         $<?php echo number_format($fee['amount'], 2); ?>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <?php if (floatval($fee['late_fee']) > 0): ?>
+                                            <span class="font-semibold text-red-600">$<?php echo number_format($fee['late_fee'], 2); ?></span>
+                                            <?php if ($fee['tier'] > 0): ?>
+                                                <span class="block text-xs text-gray-500 mt-1" title="<?php echo htmlspecialchars($fee['tier_name']); ?>">
+                                                    Tier <?php echo $fee['tier']; ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="text-gray-400">$0.00</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                                        $<?php echo number_format($fee['total_amount'], 2); ?>
+                                        <?php if ($fee['days_overdue'] > 0 && $fee['status'] !== 'paid'): ?>
+                                            <span class="block text-xs text-red-500 mt-1">
+                                                <?php echo $fee['days_overdue']; ?> día<?php echo $fee['days_overdue'] > 1 ? 's' : ''; ?> atraso
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         <?php echo date('d/m/Y', strtotime($fee['due_date'])); ?>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 py-1 text-xs rounded-full <?php 
-                                            echo match($fee['status']) {
-                                                'paid' => 'bg-green-100 text-green-800',
-                                                'pending' => 'bg-yellow-100 text-yellow-800',
-                                                'overdue' => 'bg-red-100 text-red-800',
-                                                default => 'bg-gray-100 text-gray-800'
-                                            };
-                                        ?>">
-                                            <?php 
-                                            echo match($fee['status']) {
-                                                'paid' => 'Pagado',
-                                                'pending' => 'Pendiente',
-                                                'overdue' => 'Vencido',
-                                                default => ucfirst($fee['status'])
-                                            };
-                                            ?>
-                                        </span>
-                                        <?php if (isset($fee['paid_date']) && $fee['paid_date']): ?>
-                                            <span class="text-xs text-gray-500 block mt-1"><?php echo date('d/m/Y', strtotime($fee['paid_date'])); ?></span>
-                                        <?php endif; ?>
+                                        <div class="flex flex-col space-y-1">
+                                            <span class="px-2 py-1 text-xs rounded-full <?php 
+                                                echo match($fee['status']) {
+                                                    'paid' => 'bg-green-100 text-green-800',
+                                                    'pending' => 'bg-yellow-100 text-yellow-800',
+                                                    'overdue' => 'bg-red-100 text-red-800',
+                                                    default => 'bg-gray-100 text-gray-800'
+                                                };
+                                            ?>">
+                                                <?php 
+                                                echo match($fee['status']) {
+                                                    'paid' => 'Pagado',
+                                                    'pending' => 'Pendiente',
+                                                    'overdue' => 'Vencido',
+                                                    default => ucfirst($fee['status'])
+                                                };
+                                                ?>
+                                            </span>
+                                            <?php if (!empty($fee['is_moroso']) && $fee['status'] !== 'paid'): ?>
+                                                <span class="px-2 py-1 text-xs rounded-full bg-red-600 text-white font-bold">
+                                                    ⚠️ MOROSO
+                                                </span>
+                                            <?php endif; ?>
+                                            <?php if (isset($fee['paid_date']) && $fee['paid_date']): ?>
+                                                <span class="text-xs text-gray-500"><?php echo date('d/m/Y', strtotime($fee['paid_date'])); ?></span>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                                         <div class="flex items-center space-x-2">
                                         <?php if ($fee['status'] !== 'paid'): ?>
-                                            <?php if ($fee['period'] === date('Y-m')): ?>
                                             <button type="button"
                                                data-fee-id="<?php echo (int)$fee['id']; ?>"
                                                data-property="<?php echo htmlspecialchars($fee['property_number'], ENT_QUOTES); ?>"
                                                data-resident="<?php echo htmlspecialchars(trim($fee['first_name'] . ' ' . $fee['last_name']), ENT_QUOTES); ?>"
                                                data-period="<?php echo htmlspecialchars($fee['period'], ENT_QUOTES); ?>"
                                                data-amount="<?php echo (float)$fee['amount']; ?>"
+                                               data-late-fee="<?php echo (float)$fee['late_fee']; ?>"
+                                               data-total="<?php echo (float)$fee['total_amount']; ?>"
+                                               data-days-overdue="<?php echo (int)$fee['days_overdue']; ?>"
+                                               data-tier="<?php echo (int)$fee['tier']; ?>"
                                                onclick="openPaymentModal(this)"
                                                title="Registrar Pago"
                                                class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors">
                                                 <i class="fas fa-dollar-sign text-sm"></i>
                                             </button>
-                                            <?php endif; ?>
                                             <button type="button"
                                                data-property-id="<?php echo (int)$fee['property_id']; ?>"
                                                data-property="<?php echo htmlspecialchars($fee['property_number'], ENT_QUOTES); ?>"
                                                data-resident="<?php echo htmlspecialchars(trim($fee['first_name'] . ' ' . $fee['last_name']), ENT_QUOTES); ?>"
                                                data-amount="<?php echo (float)$fee['amount']; ?>"
                                                onclick="openUpcomingMonthsModal(this)"
-                                               title="Pagar Meses Próximos"
+                                               title="Pagar Múltiples Meses"
                                                class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 transition-colors">
                                                 <i class="fas fa-calendar-alt text-sm"></i>
                                             </button>
@@ -254,7 +285,7 @@
             </div>
 
             <!-- Summary -->
-            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Total Registros</p>
                     <p class="text-3xl font-bold text-blue-600"><?php echo $stats['total']; ?></p>
@@ -269,10 +300,19 @@
                     <p class="text-sm text-gray-600 mb-1">Pagos Pendientes</p>
                     <p class="text-3xl font-bold text-yellow-600"><?php echo $stats['pending']; ?></p>
                     <p class="text-sm text-gray-500 mt-1">$<?php echo number_format($stats['pending_amount'] ?? 0, 2); ?></p>
+                    <?php if (floatval($stats['pending_penalties'] ?? 0) > 0): ?>
+                        <p class="text-xs text-red-600 mt-1">+ $<?php echo number_format($stats['pending_penalties'], 2); ?> multas</p>
+                    <?php endif; ?>
                 </div>
                 <div class="bg-white rounded-lg shadow p-6">
                     <p class="text-sm text-gray-600 mb-1">Pagos Vencidos</p>
                     <p class="text-3xl font-bold text-red-600"><?php echo $stats['overdue']; ?></p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6 border-2 border-red-200">
+                    <p class="text-sm text-gray-600 mb-1">Total Multas</p>
+                    <p class="text-3xl font-bold text-red-600">$<?php echo number_format($stats['total_penalties'] ?? 0, 2); ?></p>
+                    <p class="text-xs text-gray-500 mt-1">Total con multas</p>
+                    <p class="text-sm font-semibold text-gray-700">$<?php echo number_format($stats['pending_with_penalties'] ?? 0, 2); ?></p>
                 </div>
             </div>
         </main>
@@ -280,35 +320,41 @@
 </div>
 
 <!-- Upcoming Months Modal -->
-<div id="upcomingMonthsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+<div id="upcomingMonthsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl my-8">
         <div class="p-6 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-gray-900"><i class="fas fa-calendar-alt text-purple-600 mr-2"></i>Próximos 12 Meses</h3>
+            <h3 class="text-lg font-semibold text-gray-900"><i class="fas fa-calendar-alt text-purple-600 mr-2"></i>Gestionar Pagos - Meses Atrasados y Próximos</h3>
             <button type="button" onclick="closeUpcomingMonthsModal()" class="text-gray-400 hover:text-gray-600">
                 <i class="fas fa-times text-xl"></i>
             </button>
         </div>
         <div id="upcomingModalInfo" class="px-6 py-3 bg-blue-50 border-b border-blue-100 text-sm text-blue-700"></div>
         <div class="p-6">
-            <p class="text-sm text-gray-600 mb-4">Selecciona uno o más meses para registrar el pago:</p>
-            <div id="monthsGrid" class="grid grid-cols-3 gap-3"></div>
-            <div id="selectedMonthsSummary" class="hidden mt-4 p-3 bg-purple-50 border border-purple-200 rounded">
-                <p class="text-sm text-gray-700 mb-1">Meses seleccionados: <span id="selectedCount" class="font-bold">0</span></p>
-                <p class="text-sm text-gray-900 font-semibold">Total: $<span id="selectedTotal">0.00</span></p>
+            <p class="text-sm text-gray-600 mb-4">
+                <i class="fas fa-info-circle text-blue-500 mr-1"></i>
+                Selecciona uno o más meses para registrar el pago. 
+                <span class="text-red-600 font-semibold">Los meses en rojo tienen multas por atraso.</span>
+            </p>
+            <!-- Grid de meses con scroll -->
+            <div class="max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div id="monthsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
             </div>
-            <div id="upcomingModalLoading" class="hidden text-center py-4">
-                <i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i>
-                <p class="text-sm text-gray-500 mt-2">Cargando meses...</p>
+            <div id="selectedMonthsSummary" class="hidden mt-4 p-4 bg-purple-50 border-2 border-purple-300 rounded-lg shadow-sm">
+                <!-- Contenido generado dinámicamente por updateSelectedSummary() -->
+            </div>
+            <div id="upcomingModalLoading" class="hidden text-center py-8">
+                <i class="fas fa-spinner fa-spin text-blue-500 text-3xl"></i>
+                <p class="text-sm text-gray-500 mt-3">Cargando meses...</p>
             </div>
             <div id="upcomingModalError" class="hidden mt-3 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded"></div>
         </div>
-        <div class="p-4 border-t border-gray-200 flex justify-between items-center">
+        <div class="p-4 border-t border-gray-200 flex justify-between items-center bg-gray-50">
             <button type="button" onclick="closeUpcomingMonthsModal()"
-                    class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
+                    class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
                 Cancelar
             </button>
             <button type="button" id="paySelectedBtn" onclick="paySelectedMonths()" disabled
-                    class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                    class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
                 <i class="fas fa-credit-card mr-2"></i>Pagar Seleccionados
             </button>
         </div>
@@ -418,6 +464,10 @@
 </style>
 
 <script>
+// FILE VERSION: 2026-03-14-v2 - Fixed multiple selection and textContent errors
+// If you see this version in browser console, the file is up to date
+console.log('payments.php JavaScript loaded - Version: 2026-03-14-v2');
+
 /**
  * Show a toast notification
  * @param {string} message - The message to display
@@ -502,6 +552,10 @@ function openPaymentModal(btn) {
     var residentName = btn.getAttribute('data-resident');
     var period = btn.getAttribute('data-period');
     var amount = parseFloat(btn.getAttribute('data-amount'));
+    var lateFee = parseFloat(btn.getAttribute('data-late-fee') || 0);
+    var total = parseFloat(btn.getAttribute('data-total'));
+    var daysOverdue = parseInt(btn.getAttribute('data-days-overdue') || 0);
+    var tier = parseInt(btn.getAttribute('data-tier') || 0);
 
     document.getElementById('modalFeeId').value = feeId;
     
@@ -519,9 +573,34 @@ function openPaymentModal(btn) {
     info.appendChild(document.createTextNode(' \u00a0|\u00a0 '));
     info.appendChild(Object.assign(document.createElement('span'), {innerHTML: '<strong>Periodo:</strong> '}));
     info.appendChild(document.createTextNode(period));
-    info.appendChild(document.createTextNode(' \u00a0|\u00a0 '));
-    info.appendChild(Object.assign(document.createElement('span'), {innerHTML: '<strong>Monto:</strong> $'}));
-    info.appendChild(document.createTextNode(amount.toFixed(2)));
+    
+    // Add breakdown section if there's a late fee
+    if (lateFee > 0) {
+        info.appendChild(document.createElement('br'));
+        info.appendChild(document.createElement('br'));
+        info.appendChild(Object.assign(document.createElement('div'), {
+            className: 'text-sm space-y-1',
+            innerHTML: `
+                <div class="flex justify-between">
+                    <span><strong>Monto base:</strong></span>
+                    <span>$${amount.toFixed(2)}</span>
+                </div>
+                <div class="flex justify-between text-red-600">
+                    <span><strong>Multa (Tier ${tier}):</strong></span>
+                    <span>$${lateFee.toFixed(2)}</span>
+                </div>
+                ${daysOverdue > 0 ? `<div class="text-xs text-gray-500">${daysOverdue} día${daysOverdue > 1 ? 's' : ''} de atraso</div>` : ''}
+                <div class="flex justify-between pt-2 border-t border-blue-200 font-bold text-base">
+                    <span>Total a pagar:</span>
+                    <span>$${total.toFixed(2)}</span>
+                </div>
+            `
+        }));
+    } else {
+        info.appendChild(document.createTextNode(' \u00a0|\u00a0 '));
+        info.appendChild(Object.assign(document.createElement('span'), {innerHTML: '<strong>Monto:</strong> $'}));
+        info.appendChild(document.createTextNode(amount.toFixed(2)));
+    }
 
     document.getElementById('modalDescription').value = 'Pago de cuota de mantenimiento - ' + period;
     document.getElementById('modalError').classList.add('hidden');
@@ -700,12 +779,23 @@ function generateMonthsGrid(monthsData) {
         var monthIdx = parseInt(month) - 1;
         var isPaid = monthData.status === 'paid';
         var isCurrent = monthData.isCurrent;
+        var isOverdue = monthData.isOverdue || false;
+        var lateFee = parseFloat(monthData.lateFee || 0);
+        var amount = parseFloat(monthData.amount || _upcomingAmount);
+        var total = parseFloat(monthData.total || amount);
+        var daysOverdue = parseInt(monthData.daysOverdue || 0);
+        var tier = parseInt(monthData.tier || 0);
+        var hasLateFee = lateFee > 0;
         
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.dataset.period = period;
         btn.dataset.feeId = monthData.feeId || '';
-        btn.dataset.amount = monthData.amount || _upcomingAmount;
+        btn.dataset.amount = amount;
+        btn.dataset.lateFee = lateFee;
+        btn.dataset.total = total;
+        btn.dataset.daysOverdue = daysOverdue;
+        btn.dataset.tier = tier;
         btn.dataset.status = monthData.status;
         
         var baseClass = 'py-3 px-2 text-sm rounded-lg border-2 transition-all text-center ';
@@ -720,17 +810,34 @@ function generateMonthsGrid(monthsData) {
             btn.addEventListener('click', function() { viewPaidFeeDetail(monthData.feeId); });
         } else {
             // Mes no pagado - seleccionable
-            if (isCurrent) {
+            if (hasLateFee) {
+                // Mes vencido con multa - rojo intenso
+                btn.className = baseClass + 'border-red-500 bg-red-100 hover:border-red-700 hover:bg-red-200 cursor-pointer shadow-sm';
+                btn.innerHTML = `<div class="font-bold text-red-800">${monthNames[monthIdx]}</div>` +
+                              `<div class="text-xs text-red-700">${year}</div>` +
+                              `<div class="text-xs font-semibold text-red-900 mt-1">$${total.toFixed(2)}</div>` +
+                              `<div class="text-xs text-red-600 font-semibold">+$${lateFee.toFixed(2)} multa</div>` +
+                              (tier > 0 ? `<div class="text-xs text-red-800 mt-1">⚠️ Tier ${tier}</div>` : '');
+            } else if (isOverdue) {
+                // Mes vencido SIN multa (dentro de grace period) - naranja
+                btn.className = baseClass + 'border-orange-400 bg-orange-50 hover:border-orange-600 hover:bg-orange-100 cursor-pointer';
+                btn.innerHTML = `<div class="font-semibold text-orange-800">${monthNames[monthIdx]}</div>` +
+                              `<div class="text-xs text-orange-700">${year}</div>` +
+                              `<div class="text-xs text-orange-600 mt-1">⏰ Vencido</div>` +
+                              `<div class="text-xs font-semibold text-orange-900">$${amount.toFixed(2)}</div>`;
+            } else if (isCurrent) {
                 // Mes actual - azul suave
                 btn.className = baseClass + 'border-blue-400 bg-blue-50 hover:border-blue-600 hover:bg-blue-100 cursor-pointer';
                 btn.innerHTML = `<div class="font-semibold">${monthNames[monthIdx]}</div>` +
                               `<div class="text-xs">${year}</div>` +
-                              `<div class="text-xs text-blue-600 mt-1">Actual</div>`;
+                              `<div class="text-xs text-blue-600 mt-1">📅 Actual</div>` +
+                              `<div class="text-xs font-semibold">$${amount.toFixed(2)}</div>`;
             } else {
                 // Meses futuros - gris
                 btn.className = baseClass + 'border-gray-200 hover:border-purple-400 hover:bg-purple-50 cursor-pointer';
                 btn.innerHTML = `<div class="font-semibold">${monthNames[monthIdx]}</div>` +
-                              `<div class="text-xs text-gray-500">${year}</div>`;
+                              `<div class="text-xs text-gray-500">${year}</div>` +
+                              `<div class="text-xs font-semibold mt-1">$${amount.toFixed(2)}</div>`;
             }
             btn.addEventListener('click', function() { toggleMonthSelection(this); });
         }
@@ -742,8 +849,11 @@ function generateMonthsGrid(monthsData) {
 function toggleMonthSelection(btn) {
     var period = btn.dataset.period;
     var feeId = btn.dataset.feeId;
-    var amount = parseFloat(btn.dataset.amount);
-    var monthData = _monthsData[period];
+    var amount = parseFloat(btn.dataset.amount) || 0;
+    var lateFee = parseFloat(btn.dataset.lateFee) || 0;
+    var total = parseFloat(btn.dataset.total) || (amount + lateFee);
+    
+    console.log('Toggle selection:', {period, amount, lateFee, total});
     
     var idx = _selectedMonths.findIndex(m => m.period === period);
     
@@ -751,35 +861,83 @@ function toggleMonthSelection(btn) {
         // Deseleccionar
         _selectedMonths.splice(idx, 1);
         btn.classList.remove('border-purple-600', 'bg-purple-100', 'ring-2', 'ring-purple-400');
+        console.log('Deseleccionado. Total seleccionados:', _selectedMonths.length);
     } else {
         // Seleccionar
-        _selectedMonths.push({
+        var newMonth = {
             period: period,
             feeId: feeId || null,
             amount: amount,
+            lateFee: lateFee,
+            total: total,
             needsCreation: !feeId
-        });
+        };
+        _selectedMonths.push(newMonth);
         btn.classList.add('border-purple-600', 'bg-purple-100', 'ring-2', 'ring-purple-400');
+        console.log('Seleccionado:', newMonth);
+        console.log('Total seleccionados:', _selectedMonths.length, _selectedMonths);
     }
     
     updateSelectedSummary();
 }
 
 function updateSelectedSummary() {
+    console.log('=== updateSelectedSummary called ===');
+    console.log('_selectedMonths:', _selectedMonths);
+    
     var summary = document.getElementById('selectedMonthsSummary');
-    var countSpan = document.getElementById('selectedCount');
-    var totalSpan = document.getElementById('selectedTotal');
     var payBtn = document.getElementById('paySelectedBtn');
+    
+    if (!summary) {
+        console.error('ERROR: selectedMonthsSummary element not found!');
+        return;
+    }
+    if (!payBtn) {
+        console.error('ERROR: paySelectedBtn element not found!');
+        return;
+    }
     
     if (_selectedMonths.length === 0) {
         summary.classList.add('hidden');
         payBtn.disabled = true;
+        console.log('No hay meses seleccionados, ocultando summary');
     } else {
         summary.classList.remove('hidden');
         payBtn.disabled = false;
-        countSpan.textContent = _selectedMonths.length;
-        var total = _selectedMonths.reduce((sum, m) => sum + m.amount, 0);
-        totalSpan.textContent = total.toFixed(2);
+        
+        var total = _selectedMonths.reduce((sum, m) => sum + m.total, 0);
+        var totalPenalties = _selectedMonths.reduce((sum, m) => sum + (m.lateFee || 0), 0);
+        
+        console.log('Calculado - Total:', total, 'Penalties:', totalPenalties);
+        
+        // Show penalty warning if applicable
+        if (totalPenalties > 0) {
+            var baseAmount = _selectedMonths.reduce((sum, m) => sum + m.amount, 0);
+            summary.innerHTML = `
+                <p class="text-sm text-gray-700 mb-1">Meses seleccionados: <span class="font-bold">${_selectedMonths.length}</span></p>
+                <div class="text-sm space-y-1">
+                    <div class="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>$${baseAmount.toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between text-red-600">
+                        <span>Multas:</span>
+                        <span>+$${totalPenalties.toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between font-bold text-base border-t border-purple-300 pt-1">
+                        <span>Total:</span>
+                        <span>$${total.toFixed(2)}</span>
+                    </div>
+                </div>
+            `;
+            console.log('Updated summary HTML (with penalties)');
+        } else {
+            summary.innerHTML = `
+                <p class="text-sm text-gray-700 mb-1">Meses seleccionados: <span class="font-bold">${_selectedMonths.length}</span></p>
+                <p class="text-sm text-gray-900 font-semibold">Total: $${total.toFixed(2)}</p>
+            `;
+            console.log('Updated summary HTML (no penalties)');
+        }
     }
 }
 
@@ -851,8 +1009,10 @@ function paySelectedMonths() {
         
         // Preparar datos ANTES de cerrar el modal (que limpia _selectedMonths)
         var periods = _selectedMonths.map(m => m.period).join(', ');
-        var total = _selectedMonths.reduce((sum, m) => sum + m.amount, 0);
+        var total = _selectedMonths.reduce((sum, m) => sum + m.total, 0); // Usar m.total que incluye multas
         var periodsCount = _selectedMonths.length;
+        
+        console.log('Abriendo modal de pago con total:', total, '(incluye multas)');
         
         // Abrir modal de pago con múltiples fees
         loading.classList.add('hidden');

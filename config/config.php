@@ -21,6 +21,11 @@ $scriptDir = str_replace('/public', '', $scriptDir);
 define('BASE_URL', $protocol . '://' . $host . $scriptDir);
 define('PUBLIC_URL', BASE_URL . '/public');
 
+// URL base para imágenes compartidas (sin versión del sistema)
+// Remueve versiones como /test, /12, /13, etc. para acceder a recursos compartidos
+$sharedPath = preg_replace('#/(test|\d+)$#', '', $scriptDir);
+define('SHARED_IMAGES_URL', $protocol . '://' . $host . $sharedPath);
+
 // Configuración de zona horaria
 date_default_timezone_set('America/Mexico_City');
 

@@ -13,6 +13,12 @@ class DashboardController extends Controller {
      * Dashboard principal
      */
     public function index() {
+        // Redirect providers to their specific dashboard
+        if ($_SESSION['role'] === 'proveedor') {
+            header('Location: ' . BASE_URL . '/providers/myDashboard');
+            exit;
+        }
+        
         $db = Database::getInstance()->getConnection();
         
         // Obtener rango de fechas (por defecto: mes actual)

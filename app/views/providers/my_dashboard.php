@@ -156,9 +156,9 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 <?php if (!empty($req['image_path'])): ?>
-                                <a href="<?php echo BASE_URL . htmlspecialchars($req['image_path']); ?>"
+                                <a href="<?php echo SHARED_IMAGES_URL . htmlspecialchars($req['image_path']); ?>"
                                    target="_blank" title="Ver imagen adjunta">
-                                    <img src="<?php echo BASE_URL . htmlspecialchars($req['image_path']); ?>"
+                                    <img src="<?php echo SHARED_IMAGES_URL . htmlspecialchars($req['image_path']); ?>"
                                          alt="Imagen adjunta"
                                          class="w-12 h-12 object-cover rounded border border-gray-200 hover:opacity-80"
                                          onerror="this.parentElement.innerHTML='<span class=\'text-red-500 text-xs\'>Error al cargar</span>'">
@@ -233,6 +233,7 @@
 
 <script>
 var baseUrl = <?php echo json_encode(BASE_URL); ?>;
+var sharedImagesUrl = <?php echo json_encode(SHARED_IMAGES_URL); ?>;
 function updateStatus(requestId, currentStatus, currentCost, currentRate) {
     document.getElementById('statusForm').action = baseUrl + '/providers/updateRequestStatus/' + requestId;
     document.getElementById('modalStatus').value = currentStatus || 'pending';
@@ -266,7 +267,7 @@ function viewDetail(req) {
     var imgWrap = document.getElementById('detailImageWrap');
     if (req.image_path) {
         // Construir URL exactamente como en la tabla PHP
-        var imgUrl = baseUrl + req.image_path;
+        var imgUrl = sharedImagesUrl + req.image_path;
         var link = document.createElement('a');
         link.href = imgUrl;
         link.target = '_blank';

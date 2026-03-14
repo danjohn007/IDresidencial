@@ -415,7 +415,8 @@ class ResidentsController extends Controller {
                    COALESCE(u.first_name, 'Sin asignar') as first_name, 
                    COALESCE(u.last_name, '') as last_name, 
                    u.phone,
-                   r.id as resident_id
+                   r.id as resident_id,
+                   DATEDIFF(CURDATE(), mf.due_date) as days_overdue
             FROM maintenance_fees mf
             JOIN properties p ON mf.property_id = p.id
             LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
@@ -426,6 +427,35 @@ class ResidentsController extends Controller {
         ");
         $stmt->execute($params);
         $fees = $stmt->fetchAll();
+        
+        // Calculate tier and total for each fee
+        foreach ($fees as &$fee) {
+            $daysOverdue = max(0, intval($fee['days_overdue']));
+            $fee['days_overdue'] = $daysOverdue;
+            
+            // Determine tier based on days overdue
+            if ($daysOverdue <= 0) {
+                $fee['tier'] = 0;
+                $fee['tier_name'] = 'Sin atraso';
+                $fee['is_moroso'] = false;
+            } elseif ($daysOverdue <= 30) {
+                $fee['tier'] = 1;
+                $fee['tier_name'] = 'Tier 1: Primer mes';
+                $fee['is_moroso'] = false;
+            } elseif ($daysOverdue <= 60) {
+                $fee['tier'] = 2;
+                $fee['tier_name'] = 'Tier 2: Moroso Nivel 1';
+                $fee['is_moroso'] = true;
+            } else {
+                $fee['tier'] = 3;
+                $fee['tier_name'] = 'Tier 3: Moroso - Retiro de Servicios';
+                $fee['is_moroso'] = true;
+            }
+            
+            // Calculate total (amount + late_fee)
+            $fee['total_amount'] = floatval($fee['amount']) + floatval($fee['late_fee']);
+        }
+        unset($fee); // Break reference
         
         // Calculate statistics (for all results, not just current page)
         // Use the same where clause but without LIMIT/OFFSET
@@ -440,7 +470,11 @@ class ResidentsController extends Controller {
                 SUM(CASE WHEN mf.status = 'paid' THEN 1 ELSE 0 END) as paid,
                 SUM(mf.amount) as total_amount,
                 SUM(CASE WHEN mf.status = 'paid' THEN mf.amount ELSE 0 END) as paid_amount,
-                SUM(CASE WHEN mf.status = 'pending' OR mf.status = 'overdue' THEN mf.amount ELSE 0 END) as pending_amount
+                SUM(CASE WHEN mf.status = 'pending' OR mf.status = 'overdue' THEN mf.amount ELSE 0 END) as pending_amount,
+                SUM(mf.late_fee) as total_penalties,
+                SUM(CASE WHEN mf.status = 'pending' OR mf.status = 'overdue' THEN mf.late_fee ELSE 0 END) as pending_penalties,
+                SUM(mf.amount + mf.late_fee) as total_with_penalties,
+                SUM(CASE WHEN mf.status = 'pending' OR mf.status = 'overdue' THEN (mf.amount + mf.late_fee) ELSE 0 END) as pending_with_penalties
             FROM maintenance_fees mf
             JOIN properties p ON mf.property_id = p.id
             LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1 AND r.status = 'active'
@@ -1386,6 +1420,9 @@ class ResidentsController extends Controller {
             
             $this->db->commit();
             
+            // Actualizar estado de morosidad si ya no hay deudas vencidas
+            $this->updateResidentPaymentStatus($fee['property_id']);
+            
             AuditController::log('payment', 'Cuota de mantenimiento pagada (admin): ' . $fee['period'], 'maintenance_fees', $feeId);
             
             // Send email notifications
@@ -1509,26 +1546,110 @@ class ResidentsController extends Controller {
 
         $months = [];
         
+        // PASO 1: Obtener todos los meses atrasados/vencidos no pagados
+        $stmt = $this->db->prepare("
+            SELECT id, period, status, amount, late_fee, due_date, paid_date,
+                   DATEDIFF(CURDATE(), due_date) as days_overdue
+            FROM maintenance_fees 
+            WHERE property_id = ? 
+              AND status IN ('pending', 'overdue')
+              AND due_date < CURDATE()
+            ORDER BY period ASC
+        ");
+        $stmt->execute([$propertyId]);
+        $overdueFees = $stmt->fetchAll();
+        
+        // Agregar meses atrasados al inicio
+        foreach ($overdueFees as $fee) {
+            $daysOverdue = max(0, intval($fee['days_overdue']));
+            $lateFee = floatval($fee['late_fee']);
+            $amount = floatval($fee['amount']);
+            $total = $amount + $lateFee;
+            
+            // Determine tier
+            $tier = 0;
+            if ($daysOverdue > 0) {
+                if ($daysOverdue <= 30) {
+                    $tier = 1;
+                } elseif ($daysOverdue <= 60) {
+                    $tier = 2;
+                } else {
+                    $tier = 3;
+                }
+            }
+            
+            $months[] = [
+                'period' => $fee['period'],
+                'isCurrent' => false,
+                'isOverdue' => true,
+                'status' => $fee['status'],
+                'feeId' => (int)$fee['id'],
+                'amount' => $amount,
+                'lateFee' => $lateFee,
+                'total' => $total,
+                'daysOverdue' => $daysOverdue,
+                'tier' => $tier,
+                'dueDate' => $fee['due_date'],
+                'paidDate' => $fee['paid_date']
+            ];
+        }
+        
+        // PASO 2: Agregar los próximos 12 meses (desde el actual)
         for ($i = 0; $i < 12; $i++) {
             $date = new DateTime();
             $date->modify("+$i months");
             $period = $date->format('Y-m');
             
+            // Skip if already included in overdue fees
+            $alreadyIncluded = false;
+            foreach ($months as $m) {
+                if ($m['period'] === $period) {
+                    $alreadyIncluded = true;
+                    break;
+                }
+            }
+            if ($alreadyIncluded) {
+                continue;
+            }
+            
             // Check if fee exists for this period
             $stmt = $this->db->prepare("
-                SELECT id, status, amount, due_date, paid_date
+                SELECT id, status, amount, late_fee, due_date, paid_date,
+                       DATEDIFF(CURDATE(), due_date) as days_overdue
                 FROM maintenance_fees 
                 WHERE property_id = ? AND period = ?
             ");
             $stmt->execute([$propertyId, $period]);
             $fee = $stmt->fetch();
             
+            $daysOverdue = $fee ? max(0, intval($fee['days_overdue'])) : 0;
+            $lateFee = $fee ? floatval($fee['late_fee']) : 0;
+            $amount = $fee ? floatval($fee['amount']) : null;
+            $total = $amount ? ($amount + $lateFee) : null;
+            
+            // Determine tier
+            $tier = 0;
+            if ($fee && $daysOverdue > 0) {
+                if ($daysOverdue <= 30) {
+                    $tier = 1;
+                } elseif ($daysOverdue <= 60) {
+                    $tier = 2;
+                } else {
+                    $tier = 3;
+                }
+            }
+            
             $months[] = [
                 'period' => $period,
                 'isCurrent' => $i === 0,
+                'isOverdue' => false,
                 'status' => $fee ? $fee['status'] : 'none',
                 'feeId' => $fee ? (int)$fee['id'] : null,
-                'amount' => $fee ? (float)$fee['amount'] : null,
+                'amount' => $amount,
+                'lateFee' => $lateFee,
+                'total' => $total,
+                'daysOverdue' => $daysOverdue,
+                'tier' => $tier,
                 'dueDate' => $fee ? $fee['due_date'] : null,
                 'paidDate' => $fee ? $fee['paid_date'] : null
             ];
@@ -1669,6 +1790,15 @@ class ResidentsController extends Controller {
             }
             
             $this->db->commit();
+            
+            // Actualizar estado de morosidad para cada propiedad pagada
+            $processedProperties = [];
+            foreach ($fees as $fee) {
+                if (!in_array($fee['property_id'], $processedProperties)) {
+                    $this->updateResidentPaymentStatus($fee['property_id']);
+                    $processedProperties[] = $fee['property_id'];
+                }
+            }
             
             echo json_encode([
                 'success' => true, 
@@ -2297,6 +2427,46 @@ class ResidentsController extends Controller {
     }
 
     /**
+     * Update resident payment_status based on current overdue fees
+     * Reverts 'moroso' to 'current' if all fees are paid up
+     * 
+     * @param int $propertyId Property ID to check
+     */
+    private function updateResidentPaymentStatus(int $propertyId): void {
+        try {
+            // Check if there are any overdue/unpaid fees for this property
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as overdue_count
+                FROM maintenance_fees
+                WHERE property_id = ?
+                  AND status IN ('pending', 'overdue')
+                  AND due_date < CURDATE()
+            ");
+            $stmt->execute([$propertyId]);
+            $result = $stmt->fetch();
+            $overdueCount = intval($result['overdue_count'] ?? 0);
+            
+            if ($overdueCount === 0) {
+                // No overdue fees - resident is current, revert moroso status
+                $updateStmt = $this->db->prepare("
+                    UPDATE residents
+                    SET payment_status = 'current'
+                    WHERE property_id = ?
+                      AND payment_status = 'moroso'
+                ");
+                $updateStmt->execute([$propertyId]);
+                
+                if ($updateStmt->rowCount() > 0) {
+                    error_log("Resident payment_status reverted to 'current' for property_id={$propertyId}");
+                }
+            }
+        } catch (PDOException $e) {
+            // Log but don't fail the payment process
+            error_log("Error updating resident payment_status: " . $e->getMessage());
+        }
+    }
+    
+    /**
      * Send email notification for fee payment registration or cancellation
      * Sends to superadmin(s) and the resident
      *
@@ -2702,7 +2872,16 @@ class ResidentsController extends Controller {
 
             // Process image upload if provided
             if (isset($_FILES['service_image']) && $_FILES['service_image']['error'] === UPLOAD_ERR_OK) {
-                $uploadDir = PUBLIC_PATH . '/uploads/service_requests/';
+                // Determine the upload directory
+                // For cPanel hosting, use the shared uploads directory
+                $cpanelBasePath = '/home2/residencial/public_html/sistema/public/uploads/residencial_imagenes/';
+                if (file_exists('/home2/residencial/public_html/sistema/')) {
+                    $uploadDir = $cpanelBasePath;
+                } else {
+                    // Local development or other environment
+                    $uploadDir = PUBLIC_PATH . '/uploads/residencial_imagenes/';
+                }
+
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0755, true);
                 }
@@ -2726,7 +2905,8 @@ class ResidentsController extends Controller {
                 $uploadPath = $uploadDir . $fileName;
 
                 if (move_uploaded_file($_FILES['service_image']['tmp_name'], $uploadPath)) {
-                    $imagePath = '/uploads/service_requests/' . $fileName;
+                    // Store relative path in database
+                    $imagePath = '/public/uploads/residencial_imagenes/' . $fileName;
                 } else {
                     error_log('Failed to move uploaded file to: ' . $uploadPath);
                 }

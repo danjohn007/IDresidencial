@@ -181,8 +181,8 @@
                                     <div class="md:col-span-2">
                                         <span class="font-medium text-gray-700">Imagen Adjunta:</span>
                                         <div class="mt-2">
-                                            <a href="<?php echo BASE_URL . htmlspecialchars($req['image_path']); ?>" target="_blank" class="inline-block">
-                                                <img src="<?php echo BASE_URL . htmlspecialchars($req['image_path']); ?>" 
+                                            <a href="<?php echo SHARED_IMAGES_URL . htmlspecialchars($req['image_path']); ?>" target="_blank" class="inline-block">
+                                                <img src="<?php echo SHARED_IMAGES_URL . htmlspecialchars($req['image_path']); ?>" 
                                                      alt="Imagen de servicio" 
                                                      class="max-w-xs max-h-64 rounded-lg shadow-md border border-gray-200 hover:opacity-90 transition-opacity cursor-pointer"
                                                      onerror="this.parentElement.innerHTML='<span class=\'text-red-500 text-xs\'>Error al cargar imagen</span>'">
@@ -254,8 +254,8 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                        <select id="category" name="category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Categoría <span class="text-red-500">*</span></label>
+                        <select id="category" name="category" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             <option value="">Seleccione una categoría...</option>
                             <option value="Plomería">Plomería</option>
                             <option value="Electricidad">Electricidad</option>

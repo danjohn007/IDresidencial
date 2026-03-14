@@ -23,7 +23,7 @@
             <?php endif; ?>
 
             <div class="bg-white rounded-lg shadow p-6">
-                <form method="POST" action="<?php echo BASE_URL; ?>/providers/createRequest" class="space-y-5">
+                <form method="POST" action="<?php echo BASE_URL; ?>/providers/createRequest" enctype="multipart/form-data" class="space-y-5">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Título <span class="text-red-500">*</span></label>
@@ -44,23 +44,20 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                            <input type="text" name="category"
-                                   list="categorySuggestions"
-                                   value="<?php echo htmlspecialchars($request['category'] ?? ''); ?>"
-                                   placeholder="Ej: Plomería, Electricidad..."
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                            <datalist id="categorySuggestions">
-                                <option value="Plomería">
-                                <option value="Electricidad">
-                                <option value="Jardinería">
-                                <option value="Limpieza">
-                                <option value="Pintura">
-                                <option value="Carpintería">
-                                <option value="Albañilería">
-                                <option value="Computación">
-                                <option value="General">
-                            </datalist>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Categoría <span class="text-red-500">*</span></label>
+                            <select name="category" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">Seleccione una categoría...</option>
+                                <option value="Plomería" <?php echo ($request['category'] ?? '') === 'Plomería' ? 'selected' : ''; ?>>Plomería</option>
+                                <option value="Electricidad" <?php echo ($request['category'] ?? '') === 'Electricidad' ? 'selected' : ''; ?>>Electricidad</option>
+                                <option value="Jardinería" <?php echo ($request['category'] ?? '') === 'Jardinería' ? 'selected' : ''; ?>>Jardinería</option>
+                                <option value="Limpieza" <?php echo ($request['category'] ?? '') === 'Limpieza' ? 'selected' : ''; ?>>Limpieza</option>
+                                <option value="Pintura" <?php echo ($request['category'] ?? '') === 'Pintura' ? 'selected' : ''; ?>>Pintura</option>
+                                <option value="Carpintería" <?php echo ($request['category'] ?? '') === 'Carpintería' ? 'selected' : ''; ?>>Carpintería</option>
+                                <option value="Albañilería" <?php echo ($request['category'] ?? '') === 'Albañilería' ? 'selected' : ''; ?>>Albañilería</option>
+                                <option value="Computación" <?php echo ($request['category'] ?? '') === 'Computación' ? 'selected' : ''; ?>>Computación</option>
+                                <option value="General" <?php echo ($request['category'] ?? '') === 'General' ? 'selected' : ''; ?>>General</option>
+                                <option value="Otros" <?php echo ($request['category'] ?? '') === 'Otros' ? 'selected' : ''; ?>>Otros</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Área / Ubicación</label>
@@ -121,6 +118,14 @@
                         <textarea name="notes" rows="2"
                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                   ><?php echo htmlspecialchars($request['notes'] ?? ''); ?></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            <i class="fas fa-image text-gray-400 mr-1"></i>Imagen (Opcional)
+                        </label>
+                        <input type="file" name="service_image" id="serviceImage" accept="image/jpeg,image/jpg,image/png,image/webp"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <p class="text-xs text-gray-500 mt-1">JPG, PNG o WEBP. Máximo 5MB</p>
                     </div>
                     <div class="flex space-x-3">
                         <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">

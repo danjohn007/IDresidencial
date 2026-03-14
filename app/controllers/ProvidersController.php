@@ -402,6 +402,7 @@ class ProvidersController extends Controller {
                 'created_by'     => $_SESSION['user_id']
             ];
 
+            // Validaciones
             if (empty($requestData['title'])) {
                 $data['error'] = 'El título de la solicitud es obligatorio.';
                 $data['request'] = $requestData;
@@ -409,11 +410,69 @@ class ProvidersController extends Controller {
                 return;
             }
 
+            if (empty($requestData['category'])) {
+                $data['error'] = 'La categoría es obligatoria.';
+                $data['request'] = $requestData;
+                $this->view('providers/create_request', $data);
+                return;
+            }
+
+            // Process image upload if provided
+            $imagePath = null;
+            if (isset($_FILES['service_image']) && $_FILES['service_image']['error'] === UPLOAD_ERR_OK) {
+                // Determine the upload directory
+                // For cPanel hosting, use the shared uploads directory
+                $cpanelBasePath = '/home2/residencial/public_html/sistema/public/uploads/residencial_imagenes/';
+                if (file_exists('/home2/residencial/public_html/sistema/')) {
+                    $uploadDir = $cpanelBasePath;
+                } else {
+                    // Local development or other environment
+                    $uploadDir = PUBLIC_PATH . '/uploads/residencial_imagenes/';
+                }
+
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+
+                $fileInfo = pathinfo($_FILES['service_image']['name']);
+                $extension = strtolower($fileInfo['extension']);
+                $allowedTypes = ['jpg', 'jpeg', 'png', 'webp'];
+
+                if (!in_array($extension, $allowedTypes)) {
+                    $data['error'] = 'Tipo de archivo no permitido. Use JPG, PNG o WEBP.';
+                    $data['request'] = $requestData;
+                    $this->view('providers/create_request', $data);
+                    return;
+                }
+
+                // Check file size (5MB max)
+                if ($_FILES['service_image']['size'] > 5 * 1024 * 1024) {
+                    $data['error'] = 'El archivo es muy grande. Máximo 5MB.';
+                    $data['request'] = $requestData;
+                    $this->view('providers/create_request', $data);
+                    return;
+                }
+
+                $fileName = 'service_' . date('YmdHis') . '_' . uniqid() . '.' . $extension;
+                $uploadPath = $uploadDir . $fileName;
+
+                if (move_uploaded_file($_FILES['service_image']['tmp_name'], $uploadPath)) {
+                    // Store relative path in database
+                    $imagePath = '/public/uploads/residencial_imagenes/' . $fileName;
+                } else {
+                    error_log('Failed to move uploaded file to: ' . $uploadPath);
+                    $data['error'] = 'Error al subir la imagen.';
+                    $data['request'] = $requestData;
+                    $this->view('providers/create_request', $data);
+                    return;
+                }
+            }
+
             $stmt = $this->db->prepare("
                 INSERT INTO provider_service_requests
                 (provider_id, title, description, category, area, property_id, priority,
-                 requested_date, scheduled_date, estimated_cost, notes, status, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 requested_date, scheduled_date, estimated_cost, notes, status, image_path, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([
                 $requestData['provider_id'],
@@ -428,6 +487,7 @@ class ProvidersController extends Controller {
                 $requestData['estimated_cost'],
                 $requestData['notes'] ?: null,
                 $requestData['status'],
+                $imagePath,
                 $requestData['created_by']
             ]);
             $newId = $this->db->lastInsertId();
