@@ -210,6 +210,65 @@ class ImportController extends Controller {
         $this->view('import/paypal_config', $data);
     }
 
+    /**
+     * Descargar plantilla CSV para cada tipo de importación
+     */
+    public function downloadTemplate($type = '') {
+        $templates = [
+            'residents' => [
+                'filename' => 'plantilla_residentes.csv',
+                'headers'  => ['username', 'email', 'first_name', 'last_name', 'phone', 'property_number', 'relationship'],
+            ],
+            'properties' => [
+                'filename' => 'plantilla_propiedades.csv',
+                'headers'  => ['property_number', 'section', 'street', 'property_type', 'tower', 'bedrooms', 'bathrooms', 'area_m2', 'status'],
+            ],
+            'users' => [
+                'filename' => 'plantilla_usuarios.csv',
+                'headers'  => ['username', 'email', 'first_name', 'last_name', 'phone', 'role'],
+            ],
+            'maintenanceFees' => [
+                'filename' => 'plantilla_cuotas_mantenimiento.csv',
+                'headers'  => ['property_number', 'period', 'amount', 'due_date', 'status'],
+            ],
+            'amenities' => [
+                'filename' => 'plantilla_amenidades.csv',
+                'headers'  => ['name', 'amenity_type', 'description', 'capacity', 'hourly_rate', 'hours_open', 'hours_close', 'requires_payment', 'status'],
+            ],
+            'financialMovements' => [
+                'filename' => 'plantilla_movimientos_financieros.csv',
+                'headers'  => ['movement_type_id', 'transaction_type', 'amount', 'description', 'payment_method', 'transaction_date', 'property_number', 'notes'],
+            ],
+            'cfdiConfig' => [
+                'filename' => 'plantilla_cfdi.csv',
+                'headers'  => ['setting_key', 'setting_value'],
+            ],
+            'paypalConfig' => [
+                'filename' => 'plantilla_paypal.csv',
+                'headers'  => ['setting_key', 'setting_value'],
+            ],
+        ];
+
+        if (!isset($templates[$type])) {
+            header('Location: ' . BASE_URL . '/import');
+            exit;
+        }
+
+        $template = $templates[$type];
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $template['filename'] . '"');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $output = fopen('php://output', 'w');
+        fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
+        fputcsv($output, $template['headers']);
+        fclose($output);
+        exit;
+    }
+
     // ─────────────────────────────────────────────────────────────
     //  Métodos privados de procesamiento
     // ─────────────────────────────────────────────────────────────

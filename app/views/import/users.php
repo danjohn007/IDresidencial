@@ -42,6 +42,10 @@
                                class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                                 Volver
                             </a>
+                            <a href="<?php echo BASE_URL; ?>/import/downloadTemplate/users"
+                               class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                <i class="fas fa-file-download mr-2"></i> Descargar Plantilla
+                            </a>
                             <button type="submit" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
                                 <i class="fas fa-upload mr-2"></i> Importar
                             </button>
