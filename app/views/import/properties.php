@@ -10,20 +10,20 @@
             <div class="max-w-3xl mx-auto">
                 <div class="mb-6">
                     <h1 class="text-3xl font-bold text-gray-900">📥 Importar Propiedades</h1>
-                    <p class="text-gray-600 mt-1">Importar propiedades desde archivo CSV</p>
+                    <p class="text-gray-600 mt-1">Importar casas, departamentos y torres desde archivo CSV</p>
                 </div>
 
                 <?php if (!empty($success)): ?>
                     <div class="mb-4 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded">
                         <i class="fas fa-check-circle mr-2"></i>
-                        <?php echo $success; ?>
+                        <?php echo htmlspecialchars($success); ?>
                     </div>
                 <?php endif; ?>
 
                 <?php if (!empty($error)): ?>
                     <div class="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded">
                         <i class="fas fa-exclamation-circle mr-2"></i>
-                        <?php echo $error; ?>
+                        <?php echo htmlspecialchars($error); ?>
                     </div>
                 <?php endif; ?>
 
@@ -52,7 +52,15 @@
                 <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <h4 class="font-semibold text-blue-900 mb-2">Formato del CSV</h4>
                     <p class="text-sm text-blue-800 mb-2">El archivo CSV debe tener las siguientes columnas en orden:</p>
-                    <code class="text-xs bg-white p-2 rounded block">property_number,section,street,property_type</code>
+                    <code class="text-xs bg-white p-2 rounded block">property_number,section,street,property_type,tower,bedrooms,bathrooms,area_m2,status</code>
+                    <ul class="text-xs text-blue-800 mt-3 space-y-1 list-disc list-inside">
+                        <li><strong>property_number, section, street</strong> – obligatorios</li>
+                        <li><strong>property_type</strong> – opcional; valores: <code>casa</code>, <code>departamento</code>, <code>lote</code> (por defecto: casa)</li>
+                        <li><strong>tower</strong> – opcional; nombre o número de torre (dejar vacío si no aplica)</li>
+                        <li><strong>bedrooms, bathrooms</strong> – opcionales; número entero</li>
+                        <li><strong>area_m2</strong> – opcional; área en metros cuadrados</li>
+                        <li><strong>status</strong> – opcional; valores: <code>ocupada</code>, <code>desocupada</code>, <code>en_construccion</code> (por defecto: desocupada)</li>
+                    </ul>
                 </div>
             </div>
         </main>
@@ -60,3 +68,4 @@
 </div>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
+
