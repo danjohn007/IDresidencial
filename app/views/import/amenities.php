@@ -37,14 +37,20 @@
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
 
-                        <div class="flex justify-end space-x-4">
-                            <a href="<?php echo BASE_URL; ?>/import"
-                               class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                                Volver
+                        <div class="flex justify-between items-center">
+                            <a href="<?php echo BASE_URL; ?>/import/downloadTemplateAmenities"
+                               class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                                <i class="fas fa-file-download mr-2"></i> Descargar Plantilla
                             </a>
-                            <button type="submit" class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">
-                                <i class="fas fa-upload mr-2"></i> Importar
-                            </button>
+                            <div class="flex space-x-4">
+                                <a href="<?php echo BASE_URL; ?>/import"
+                                   class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                                    Volver
+                                </a>
+                                <button type="submit" class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">
+                                    <i class="fas fa-upload mr-2"></i> Importar
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>

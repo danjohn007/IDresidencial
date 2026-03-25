@@ -14,8 +14,8 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Import Residents -->
-                <a href="<?php echo BASE_URL; ?>/import/residents" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-                    <div class="flex items-center space-x-4">
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <a href="<?php echo BASE_URL; ?>/import/residents" class="flex items-center space-x-4 mb-4">
                         <div class="bg-blue-100 p-4 rounded-lg">
                             <i class="fas fa-users text-blue-600 text-3xl"></i>
                         </div>
@@ -23,12 +23,16 @@
                             <h3 class="font-bold text-lg text-gray-900">Importar Residentes</h3>
                             <p class="text-sm text-gray-600">Carga masiva de residentes desde CSV</p>
                         </div>
-                    </div>
-                </a>
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>/import/downloadTemplateResidents"
+                       class="block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                        <i class="fas fa-file-download mr-2"></i> Descargar Plantilla
+                    </a>
+                </div>
 
                 <!-- Import Properties -->
-                <a href="<?php echo BASE_URL; ?>/import/properties" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-                    <div class="flex items-center space-x-4">
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <a href="<?php echo BASE_URL; ?>/import/properties" class="flex items-center space-x-4 mb-4">
                         <div class="bg-green-100 p-4 rounded-lg">
                             <i class="fas fa-home text-green-600 text-3xl"></i>
                         </div>
@@ -36,12 +40,16 @@
                             <h3 class="font-bold text-lg text-gray-900">Importar Propiedades</h3>
                             <p class="text-sm text-gray-600">Casas, departamentos y torres desde CSV</p>
                         </div>
-                    </div>
-                </a>
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>/import/downloadTemplateProperties"
+                       class="block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                        <i class="fas fa-file-download mr-2"></i> Descargar Plantilla
+                    </a>
+                </div>
 
                 <!-- Import Users -->
-                <a href="<?php echo BASE_URL; ?>/import/users" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-                    <div class="flex items-center space-x-4">
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <a href="<?php echo BASE_URL; ?>/import/users" class="flex items-center space-x-4 mb-4">
                         <div class="bg-purple-100 p-4 rounded-lg">
                             <i class="fas fa-user-shield text-purple-600 text-3xl"></i>
                         </div>
@@ -49,12 +57,16 @@
                             <h3 class="font-bold text-lg text-gray-900">Importar Usuarios</h3>
                             <p class="text-sm text-gray-600">Administradores, guardias y residentes desde CSV</p>
                         </div>
-                    </div>
-                </a>
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>/import/downloadTemplateUsers"
+                       class="block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                        <i class="fas fa-file-download mr-2"></i> Descargar Plantilla
+                    </a>
+                </div>
 
                 <!-- Import Maintenance Fees -->
-                <a href="<?php echo BASE_URL; ?>/import/maintenanceFees" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-                    <div class="flex items-center space-x-4">
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <a href="<?php echo BASE_URL; ?>/import/maintenanceFees" class="flex items-center space-x-4 mb-4">
                         <div class="bg-yellow-100 p-4 rounded-lg">
                             <i class="fas fa-file-invoice-dollar text-yellow-600 text-3xl"></i>
                         </div>
@@ -62,12 +74,16 @@
                             <h3 class="font-bold text-lg text-gray-900">Importar Cuotas</h3>
                             <p class="text-sm text-gray-600">Cuotas de mantenimiento desde CSV</p>
                         </div>
-                    </div>
-                </a>
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>/import/downloadTemplateMaintenanceFees"
+                       class="block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                        <i class="fas fa-file-download mr-2"></i> Descargar Plantilla
+                    </a>
+                </div>
 
                 <!-- Import Amenities -->
-                <a href="<?php echo BASE_URL; ?>/import/amenities" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-                    <div class="flex items-center space-x-4">
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <a href="<?php echo BASE_URL; ?>/import/amenities" class="flex items-center space-x-4 mb-4">
                         <div class="bg-teal-100 p-4 rounded-lg">
                             <i class="fas fa-swimming-pool text-teal-600 text-3xl"></i>
                         </div>
@@ -75,12 +91,16 @@
                             <h3 class="font-bold text-lg text-gray-900">Importar Amenidades</h3>
                             <p class="text-sm text-gray-600">Albercas, salones y más desde CSV</p>
                         </div>
-                    </div>
-                </a>
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>/import/downloadTemplateAmenities"
+                       class="block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                        <i class="fas fa-file-download mr-2"></i> Descargar Plantilla
+                    </a>
+                </div>
 
                 <!-- Import Financial Movements -->
-                <a href="<?php echo BASE_URL; ?>/import/financialMovements" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-                    <div class="flex items-center space-x-4">
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <a href="<?php echo BASE_URL; ?>/import/financialMovements" class="flex items-center space-x-4 mb-4">
                         <div class="bg-red-100 p-4 rounded-lg">
                             <i class="fas fa-exchange-alt text-red-600 text-3xl"></i>
                         </div>
@@ -88,12 +108,16 @@
                             <h3 class="font-bold text-lg text-gray-900">Importar Movimientos Financieros</h3>
                             <p class="text-sm text-gray-600">Ingresos y egresos desde CSV</p>
                         </div>
-                    </div>
-                </a>
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>/import/downloadTemplateFinancialMovements"
+                       class="block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                        <i class="fas fa-file-download mr-2"></i> Descargar Plantilla
+                    </a>
+                </div>
 
                 <!-- Import CFDI Config -->
-                <a href="<?php echo BASE_URL; ?>/import/cfdiConfig" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-                    <div class="flex items-center space-x-4">
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <a href="<?php echo BASE_URL; ?>/import/cfdiConfig" class="flex items-center space-x-4 mb-4">
                         <div class="bg-indigo-100 p-4 rounded-lg">
                             <i class="fas fa-receipt text-indigo-600 text-3xl"></i>
                         </div>
@@ -101,12 +125,16 @@
                             <h3 class="font-bold text-lg text-gray-900">Configuración CFDI</h3>
                             <p class="text-sm text-gray-600">RFC, régimen fiscal y datos de facturación</p>
                         </div>
-                    </div>
-                </a>
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>/import/downloadTemplateCfdiConfig"
+                       class="block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                        <i class="fas fa-file-download mr-2"></i> Descargar Plantilla
+                    </a>
+                </div>
 
                 <!-- Import PayPal Config -->
-                <a href="<?php echo BASE_URL; ?>/import/paypalConfig" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-                    <div class="flex items-center space-x-4">
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <a href="<?php echo BASE_URL; ?>/import/paypalConfig" class="flex items-center space-x-4 mb-4">
                         <div class="bg-sky-100 p-4 rounded-lg">
                             <i class="fab fa-paypal text-sky-600 text-3xl"></i>
                         </div>
@@ -114,8 +142,12 @@
                             <h3 class="font-bold text-lg text-gray-900">Cuenta PayPal</h3>
                             <p class="text-sm text-gray-600">Credenciales y configuración de PayPal</p>
                         </div>
-                    </div>
-                </a>
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>/import/downloadTemplatePaypalConfig"
+                       class="block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                        <i class="fas fa-file-download mr-2"></i> Descargar Plantilla
+                    </a>
+                </div>
             </div>
 
             <!-- Info Box -->

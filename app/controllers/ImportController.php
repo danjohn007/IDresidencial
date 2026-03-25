@@ -211,6 +211,163 @@ class ImportController extends Controller {
     }
 
     // ─────────────────────────────────────────────────────────────
+    //  Descarga de plantillas CSV
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Descargar plantilla CSV para residentes
+     */
+    public function downloadTemplateResidents() {
+        $this->requireRole('superadmin');
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="plantilla_residentes.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $output = fopen('php://output', 'w');
+        fputs($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['username', 'email', 'first_name', 'last_name', 'phone', 'property_number', 'relationship']);
+        fputcsv($output, ['jperez', 'jperez@example.com', 'Juan', 'Pérez', '5551234567', 'A-101', 'propietario']);
+        fputcsv($output, ['mlopez', 'mlopez@example.com', 'María', 'López', '5559876543', 'B-202', 'inquilino']);
+        fclose($output);
+        exit;
+    }
+
+    /**
+     * Descargar plantilla CSV para propiedades
+     */
+    public function downloadTemplateProperties() {
+        $this->requireRole('superadmin');
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="plantilla_propiedades.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $output = fopen('php://output', 'w');
+        fputs($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['property_number', 'section', 'street', 'property_type', 'tower', 'bedrooms', 'bathrooms', 'area_m2', 'status']);
+        fputcsv($output, ['A-101', 'A', 'Calle Principal', 'casa', '', '3', '2', '120.00', 'desocupada']);
+        fputcsv($output, ['B-202', 'B', 'Av. Central', 'departamento', 'Torre 1', '2', '1', '75.50', 'ocupada']);
+        fclose($output);
+        exit;
+    }
+
+    /**
+     * Descargar plantilla CSV para usuarios
+     */
+    public function downloadTemplateUsers() {
+        $this->requireRole('superadmin');
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="plantilla_usuarios.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $output = fopen('php://output', 'w');
+        fputs($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['username', 'email', 'first_name', 'last_name', 'phone', 'role']);
+        fputcsv($output, ['jperez', 'jperez@example.com', 'Juan', 'Pérez', '5551234567', 'residente']);
+        fputcsv($output, ['aguardia', 'aguardia@example.com', 'Ana', 'Guardia', '5557654321', 'guardia']);
+        fclose($output);
+        exit;
+    }
+
+    /**
+     * Descargar plantilla CSV para cuotas de mantenimiento
+     */
+    public function downloadTemplateMaintenanceFees() {
+        $this->requireRole('superadmin');
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="plantilla_cuotas.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $output = fopen('php://output', 'w');
+        fputs($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['property_number', 'period', 'amount', 'due_date', 'status']);
+        fputcsv($output, ['A-101', date('Y-m'), '1500.00', date('Y-m-d', strtotime('last day of this month')), 'pending']);
+        fputcsv($output, ['B-202', date('Y-m'), '1500.00', date('Y-m-d', strtotime('last day of this month')), 'paid']);
+        fclose($output);
+        exit;
+    }
+
+    /**
+     * Descargar plantilla CSV para amenidades
+     */
+    public function downloadTemplateAmenities() {
+        $this->requireRole('superadmin');
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="plantilla_amenidades.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $output = fopen('php://output', 'w');
+        fputs($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['name', 'amenity_type', 'description', 'capacity', 'hourly_rate', 'hours_open', 'hours_close', 'requires_payment', 'status']);
+        fputcsv($output, ['Alberca Principal', 'alberca', 'Alberca olímpica con área de descanso', '50', '0.00', '07:00', '21:00', '0', 'active']);
+        fputcsv($output, ['Salón de Eventos', 'salon', 'Salón para 100 personas con cocina', '100', '500.00', '08:00', '22:00', '1', 'active']);
+        fclose($output);
+        exit;
+    }
+
+    /**
+     * Descargar plantilla CSV para movimientos financieros
+     */
+    public function downloadTemplateFinancialMovements() {
+        $this->requireRole('superadmin');
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="plantilla_movimientos_financieros.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $output = fopen('php://output', 'w');
+        fputs($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['movement_type_id', 'transaction_type', 'amount', 'description', 'payment_method', 'transaction_date', 'property_number', 'notes']);
+        fputcsv($output, ['1', 'ingreso', '1500.00', 'Cuota de mantenimiento enero', 'transferencia', date('Y-m-d'), 'A-101', '']);
+        fputcsv($output, ['2', 'egreso', '500.00', 'Pago de servicio de limpieza', 'efectivo', date('Y-m-d'), '', 'Servicio mensual']);
+        fclose($output);
+        exit;
+    }
+
+    /**
+     * Descargar plantilla CSV para configuración CFDI
+     */
+    public function downloadTemplateCfdiConfig() {
+        $this->requireRole('superadmin');
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="plantilla_cfdi_config.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $output = fopen('php://output', 'w');
+        fputs($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['setting_key', 'setting_value']);
+        fputcsv($output, ['cfdi_rfc', 'XAXX010101000']);
+        fputcsv($output, ['cfdi_razon_social', 'Mi Residencial SA de CV']);
+        fputcsv($output, ['cfdi_regimen_fiscal', '601']);
+        fputcsv($output, ['cfdi_cp', '76000']);
+        fputcsv($output, ['cfdi_uso_cfdi', 'G03']);
+        fputcsv($output, ['cfdi_metodo_pago', 'PUE']);
+        fputcsv($output, ['cfdi_forma_pago', '01']);
+        fputcsv($output, ['cfdi_serie', 'A']);
+        fputcsv($output, ['cfdi_folio_inicio', '1']);
+        fclose($output);
+        exit;
+    }
+
+    /**
+     * Descargar plantilla CSV para configuración PayPal
+     */
+    public function downloadTemplatePaypalConfig() {
+        $this->requireRole('superadmin');
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="plantilla_paypal_config.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $output = fopen('php://output', 'w');
+        fputs($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['setting_key', 'setting_value']);
+        fputcsv($output, ['paypal_enabled', '1']);
+        fputcsv($output, ['paypal_mode', 'sandbox']);
+        fputcsv($output, ['paypal_client_id', 'TU_CLIENT_ID_AQUI']);
+        fputcsv($output, ['paypal_secret', 'TU_SECRET_KEY_AQUI']);
+        fclose($output);
+        exit;
+    }
+
+    // ─────────────────────────────────────────────────────────────
     //  Métodos privados de procesamiento
     // ─────────────────────────────────────────────────────────────
 
