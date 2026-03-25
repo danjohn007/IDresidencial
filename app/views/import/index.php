@@ -12,7 +12,7 @@
                 <p class="text-gray-600 mt-1">Importación masiva de datos desde archivos CSV</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Import Residents -->
                 <a href="<?php echo BASE_URL; ?>/import/residents" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
                     <div class="flex items-center space-x-4">
@@ -34,7 +34,85 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-lg text-gray-900">Importar Propiedades</h3>
-                            <p class="text-sm text-gray-600">Carga masiva de propiedades desde CSV</p>
+                            <p class="text-sm text-gray-600">Casas, departamentos y torres desde CSV</p>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Import Users -->
+                <a href="<?php echo BASE_URL; ?>/import/users" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-purple-100 p-4 rounded-lg">
+                            <i class="fas fa-user-shield text-purple-600 text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-900">Importar Usuarios</h3>
+                            <p class="text-sm text-gray-600">Administradores, guardias y residentes desde CSV</p>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Import Maintenance Fees -->
+                <a href="<?php echo BASE_URL; ?>/import/maintenanceFees" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-yellow-100 p-4 rounded-lg">
+                            <i class="fas fa-file-invoice-dollar text-yellow-600 text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-900">Importar Cuotas</h3>
+                            <p class="text-sm text-gray-600">Cuotas de mantenimiento desde CSV</p>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Import Amenities -->
+                <a href="<?php echo BASE_URL; ?>/import/amenities" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-teal-100 p-4 rounded-lg">
+                            <i class="fas fa-swimming-pool text-teal-600 text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-900">Importar Amenidades</h3>
+                            <p class="text-sm text-gray-600">Albercas, salones y más desde CSV</p>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Import Financial Movements -->
+                <a href="<?php echo BASE_URL; ?>/import/financialMovements" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-red-100 p-4 rounded-lg">
+                            <i class="fas fa-exchange-alt text-red-600 text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-900">Importar Movimientos Financieros</h3>
+                            <p class="text-sm text-gray-600">Ingresos y egresos desde CSV</p>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Import CFDI Config -->
+                <a href="<?php echo BASE_URL; ?>/import/cfdiConfig" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-indigo-100 p-4 rounded-lg">
+                            <i class="fas fa-receipt text-indigo-600 text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-900">Configuración CFDI</h3>
+                            <p class="text-sm text-gray-600">RFC, régimen fiscal y datos de facturación</p>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Import PayPal Config -->
+                <a href="<?php echo BASE_URL; ?>/import/paypalConfig" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-sky-100 p-4 rounded-lg">
+                            <i class="fab fa-paypal text-sky-600 text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-900">Cuenta PayPal</h3>
+                            <p class="text-sm text-gray-600">Credenciales y configuración de PayPal</p>
                         </div>
                     </div>
                 </a>
@@ -50,7 +128,8 @@
                     <li>Los archivos deben estar en formato CSV</li>
                     <li>La primera fila debe contener los encabezados de las columnas</li>
                     <li>Asegúrate de que los datos estén correctamente formateados</li>
-                    <li>Los registros duplicados serán omitidos</li>
+                    <li>Los registros duplicados serán omitidos o actualizados según el módulo</li>
+                    <li>Se recomienda importar primero Propiedades, luego Residentes y finalmente Cuotas</li>
                 </ul>
             </div>
         </main>
@@ -58,3 +137,4 @@
 </div>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
+

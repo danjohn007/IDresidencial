@@ -9,8 +9,8 @@
         <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
             <div class="max-w-3xl mx-auto">
                 <div class="mb-6">
-                    <h1 class="text-3xl font-bold text-gray-900">📥 Importar Residentes</h1>
-                    <p class="text-gray-600 mt-1">Importar residentes desde archivo CSV</p>
+                    <h1 class="text-3xl font-bold text-gray-900">📥 Importar Cuotas de Mantenimiento</h1>
+                    <p class="text-gray-600 mt-1">Importar cuotas de mantenimiento desde archivo CSV</p>
                 </div>
 
                 <?php if (!empty($success)): ?>
@@ -38,11 +38,11 @@
                         </div>
 
                         <div class="flex justify-end space-x-4">
-                            <a href="<?php echo BASE_URL; ?>/import" 
+                            <a href="<?php echo BASE_URL; ?>/import"
                                class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                                 Volver
                             </a>
-                            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            <button type="submit" class="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
                                 <i class="fas fa-upload mr-2"></i> Importar
                             </button>
                         </div>
@@ -52,12 +52,18 @@
                 <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <h4 class="font-semibold text-blue-900 mb-2">Formato del CSV</h4>
                     <p class="text-sm text-blue-800 mb-2">El archivo CSV debe tener las siguientes columnas en orden:</p>
-                    <code class="text-xs bg-white p-2 rounded block">username,email,first_name,last_name,phone,property_number,relationship</code>
+                    <code class="text-xs bg-white p-2 rounded block">property_number,period,amount,due_date,status</code>
                     <ul class="text-xs text-blue-800 mt-3 space-y-1 list-disc list-inside">
-                        <li><strong>username, email, first_name, last_name, phone</strong> – obligatorios</li>
-                        <li><strong>property_number</strong> – opcional; número de propiedad existente para vincular al residente</li>
-                        <li><strong>relationship</strong> – opcional; valores: <code>propietario</code>, <code>inquilino</code>, <code>familiar</code> (por defecto: propietario)</li>
+                        <li><strong>property_number</strong> – obligatorio; número de propiedad existente en el sistema (ej. A-101)</li>
+                        <li><strong>period</strong> – obligatorio; período en formato YYYY-MM (ej. 2025-01)</li>
+                        <li><strong>amount</strong> – obligatorio; monto numérico (ej. 1500.00)</li>
+                        <li><strong>due_date</strong> – obligatorio; fecha de vencimiento en formato YYYY-MM-DD</li>
+                        <li><strong>status</strong> – opcional; valores: <code>pending</code>, <code>paid</code>, <code>overdue</code>, <code>cancelled</code> (por defecto: pending)</li>
                     </ul>
+                    <p class="text-xs text-yellow-700 mt-3 font-semibold">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        La propiedad debe existir previamente en el sistema. Importa primero las propiedades.
+                    </p>
                 </div>
             </div>
         </main>
@@ -65,4 +71,3 @@
 </div>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
-
