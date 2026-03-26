@@ -721,18 +721,18 @@ class ImportController extends Controller {
             $description     = trim($row[3]);
             $paymentRaw      = isset($row[4]) ? strtolower(trim($row[4])) : '';
             $paymentMethod   = in_array($paymentRaw, $allowedPayMethods) ? $paymentRaw : null;
-            $transactionDate = trim($row[5]);
+            $transactionDate = $this->parseImportDate($row[5] ?? '');
             $propertyNumber  = isset($row[6]) ? trim($row[6]) : '';
             $notes           = isset($row[7]) ? trim($row[7]) : null;
 
             if ($movementTypeRaw === '' || $transactionType === null || $amount === null
-                || $description === '' || $transactionDate === '') {
+                || $description === '' || $transactionDate === null) {
                 $reasons = [];
                 if ($movementTypeRaw === '') $reasons[] = 'tipo de movimiento vacío';
                 if ($transactionType === null) $reasons[] = 'tipo de transacción inválido (use: ingreso, egreso)';
                 if ($amount === null) $reasons[] = 'monto inválido';
                 if ($description === '') $reasons[] = 'descripción vacía';
-                if ($transactionDate === '') $reasons[] = 'fecha vacía';
+                if ($transactionDate === null) $reasons[] = 'fecha vacía o con formato inválido (use DD/MM/YYYY)';
                 $errorDetails[] = "Fila {$rowNum}: " . implode(', ', $reasons);
                 $errors++;
                 continue;
@@ -1272,17 +1272,17 @@ class ImportController extends Controller {
             $description     = trim($row[3]);
             $paymentRaw      = isset($row[4]) ? strtolower(trim($row[4])) : '';
             $paymentMethod   = in_array($paymentRaw, $allowedPayMethods) ? $paymentRaw : null;
-            $transactionDate = trim($row[5]);
+            $transactionDate = $this->parseImportDate($row[5] ?? '');
             $propertyNumber  = isset($row[6]) ? trim($row[6]) : '';
             $notes           = isset($row[7]) && trim($row[7]) !== '' ? trim($row[7]) : null;
             if ($movementTypeRaw === '' || $transactionType === null || $amount === null
-                || $description === '' || $transactionDate === '') {
+                || $description === '' || $transactionDate === null) {
                 $reasons = [];
                 if ($movementTypeRaw === '') $reasons[] = 'tipo de movimiento vacío';
                 if ($transactionType === null) $reasons[] = 'tipo de transacción inválido (use: ingreso, egreso)';
                 if ($amount === null) $reasons[] = 'monto inválido';
                 if ($description === '') $reasons[] = 'descripción vacía';
-                if ($transactionDate === '') $reasons[] = 'fecha vacía';
+                if ($transactionDate === null) $reasons[] = 'fecha vacía o con formato inválido (use DD/MM/YYYY)';
                 $errorDetails[] = "Fila {$rowNum}: " . implode(', ', $reasons);
                 $errors++;
                 continue;
@@ -1385,5 +1385,42 @@ class ImportController extends Controller {
             }
         }
         return ['imported' => $imported, 'errors' => $errors, 'error_details' => $errorDetails];
+    }
+
+    /**
+     * Convierte una fecha de importación al formato MySQL (YYYY-MM-DD).
+     * Soporta:
+     *   - DD/MM/YYYY  (ej. 26/03/2026)
+     *   - DD-MM-YYYY  (ej. 26-03-2026)
+     *   - YYYY-MM-DD  (ya en formato MySQL)
+     *   - Número de serie de Excel (días desde 1900-01-01)
+     *
+     * @param  string $value  Valor crudo leído del archivo de importación.
+     * @return string|null    Fecha en formato YYYY-MM-DD, o null si no se puede parsear.
+     */
+    private function parseImportDate($value) {
+        $value = trim($value);
+        if ($value === '') return null;
+
+        // Número de serie de Excel (solo dígitos, posiblemente con decimales de tiempo)
+        if (is_numeric($value) && !str_contains($value, '/') && !str_contains($value, '-')) {
+            $serial = (int)$value;
+            // Excel epoch: 1899-12-30 (ajustado por el bug del año bisiesto 1900 de Excel)
+            $unixTimestamp = ($serial - 25569) * 86400;
+            $date = DateTime::createFromFormat('U', (string)$unixTimestamp);
+            if ($date !== false) return $date->format('Y-m-d');
+            return null;
+        }
+
+        // Intentar formatos comunes en orden de prioridad
+        $formats = ['d/m/Y', 'd-m-Y', 'Y-m-d', 'd/m/y', 'd-m-y'];
+        foreach ($formats as $fmt) {
+            $date = DateTime::createFromFormat($fmt, $value);
+            if ($date !== false && $date->format($fmt) === $value) {
+                return $date->format('Y-m-d');
+            }
+        }
+
+        return null;
     }
 }
