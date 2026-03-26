@@ -3,6 +3,9 @@
  * Controlador de Importación de Datos
  */
 
+require_once APP_PATH . '/helpers/XlsxWriter.php';
+require_once APP_PATH . '/helpers/XlsxReader.php';
+
 class ImportController extends Controller {
     
     private $db;
@@ -782,6 +785,63 @@ class ImportController extends Controller {
     }
 
     /**
+     * Importación Masiva – muestra el formulario y procesa el archivo Excel subido
+     */
+    public function bulkImport() {
+        $data = [
+            'title'   => 'Importación Masiva',
+            'error'   => '',
+            'success' => '',
+            'details' => [],
+        ];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['xlsx_file'])) {
+            $result = $this->processBulkImport($_FILES['xlsx_file']);
+            if ($result['success']) {
+                $data['success'] = $result['message'];
+                $data['details'] = $result['details'] ?? [];
+            } else {
+                $data['error'] = $result['message'];
+            }
+        }
+
+        $this->view('import/bulk', $data);
+    }
+
+    /**
+     * Genera y descarga la plantilla Excel multi-hoja para Importación Masiva
+     */
+    public function downloadBulkTemplate() {
+        $writer = new XlsxWriter();
+
+        $writer->addSheet('Residentes', [
+            'username', 'email', 'first_name', 'last_name', 'phone', 'property_number', 'relationship',
+        ]);
+        $writer->addSheet('Propiedades', [
+            'property_number', 'section', 'street', 'property_type', 'tower',
+            'bedrooms', 'bathrooms', 'area_m2', 'status',
+        ]);
+        $writer->addSheet('Usuarios', [
+            'username', 'email', 'first_name', 'last_name', 'phone', 'role',
+        ]);
+        $writer->addSheet('Cuotas', [
+            'property_number', 'period', 'amount', 'due_date', 'status',
+        ]);
+        $writer->addSheet('Amenidades', [
+            'name', 'amenity_type', 'description', 'capacity', 'hourly_rate',
+            'hours_open', 'hours_close', 'requires_payment', 'status',
+        ]);
+        $writer->addSheet('Movimientos Financieros', [
+            'movement_type_id', 'transaction_type', 'amount', 'description',
+            'payment_method', 'transaction_date', 'property_number', 'notes',
+        ]);
+        $writer->addSheet('CFDI Config', ['setting_key', 'setting_value']);
+        $writer->addSheet('PayPal Config', ['setting_key', 'setting_value']);
+
+        $writer->download('plantilla_importacion_masiva.xlsx');
+    }
+
+    /**
      * Procesar CSV de configuración PayPal
      * Columnas: setting_key,setting_value
      * Las claves permitidas son las de PayPal en system_settings
@@ -840,5 +900,337 @@ class ImportController extends Controller {
             'success' => true,
             'message' => "Importación completada: {$imported} parámetros PayPal importados, {$errors} errores"
         ];
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Importación Masiva – procesamiento por hoja
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Procesa el archivo XLSX de importación masiva.
+     * Lee cada hoja y la despacha al procesador correspondiente según el nombre.
+     */
+    private function processBulkImport($file) {
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            return ['success' => false, 'message' => 'Error al subir el archivo'];
+        }
+
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if ($extension !== 'xlsx') {
+            return ['success' => false, 'message' => 'El archivo debe ser .xlsx (Excel)'];
+        }
+
+        try {
+            $reader = new XlsxReader($file['tmp_name']);
+            $sheets = $reader->getSheets();
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'No se pudo leer el archivo Excel: ' . $e->getMessage()];
+        }
+
+        if (empty($sheets)) {
+            return ['success' => false, 'message' => 'El archivo Excel no contiene hojas con datos'];
+        }
+
+        // Mapa nombre de hoja → método procesador (array de filas, sin cabecera)
+        $sheetMap = [
+            'Residentes'             => 'processBulkResidentes',
+            'Propiedades'            => 'processBulkPropiedades',
+            'Usuarios'               => 'processBulkUsuarios',
+            'Cuotas'                 => 'processBulkCuotas',
+            'Amenidades'             => 'processBulkAmenidades',
+            'Movimientos Financieros'=> 'processBulkMovimientosFinancieros',
+            'CFDI Config'            => 'processBulkCfdiConfig',
+            'PayPal Config'          => 'processBulkPaypalConfig',
+        ];
+
+        $details     = [];
+        $totalImport = 0;
+        $totalErrors = 0;
+
+        foreach ($sheets as $sheetName => $rows) {
+            // La primera fila es el encabezado; los datos empiezan en la segunda
+            if (count($rows) < 2) continue;
+
+            $dataRows = array_slice($rows, 1); // excluir cabecera
+
+            if (isset($sheetMap[$sheetName])) {
+                $method = $sheetMap[$sheetName];
+                $result = $this->$method($dataRows);
+                $details[] = [
+                    'sheet'    => $sheetName,
+                    'imported' => $result['imported'],
+                    'errors'   => $result['errors'],
+                ];
+                $totalImport += $result['imported'];
+                $totalErrors += $result['errors'];
+            }
+        }
+
+        return [
+            'success' => true,
+            'message' => "Importación masiva completada: {$totalImport} registros importados, {$totalErrors} errores.",
+            'details' => $details,
+        ];
+    }
+
+    private function processBulkResidentes(array $rows) {
+        $imported = 0;
+        $errors   = 0;
+        foreach ($rows as $row) {
+            if (count($row) < 5) { $errors++; continue; }
+            try {
+                $this->db->beginTransaction();
+                $randomPassword = bin2hex(random_bytes(16));
+                $password = password_hash($randomPassword, PASSWORD_DEFAULT);
+                $stmt = $this->db->prepare("
+                    INSERT INTO users (username, email, password, first_name, last_name, phone, role, status)
+                    VALUES (?, ?, ?, ?, ?, ?, 'residente', 'active')
+                ");
+                $stmt->execute([trim($row[0]), trim($row[1]), $password, trim($row[2]), trim($row[3]), trim($row[4])]);
+                $userId = $this->db->lastInsertId();
+
+                $propertyNumber = isset($row[5]) ? trim($row[5]) : '';
+                if ($propertyNumber !== '') {
+                    $propStmt = $this->db->prepare("SELECT id FROM properties WHERE property_number = ? LIMIT 1");
+                    $propStmt->execute([$propertyNumber]);
+                    $property = $propStmt->fetch();
+                    if ($property) {
+                        $relationship = isset($row[6]) ? trim($row[6]) : 'propietario';
+                        if (!in_array($relationship, ['propietario', 'inquilino', 'familiar'])) $relationship = 'propietario';
+                        $resStmt = $this->db->prepare("
+                            INSERT INTO residents (user_id, property_id, relationship, is_primary, status)
+                            VALUES (?, ?, ?, 1, 'active')
+                        ");
+                        $resStmt->execute([$userId, $property['id'], $relationship]);
+                    }
+                }
+                $imported++;
+                $this->db->commit();
+            } catch (Exception $e) {
+                $this->db->rollBack();
+                $errors++;
+            }
+        }
+        return ['imported' => $imported, 'errors' => $errors];
+    }
+
+    private function processBulkPropiedades(array $rows) {
+        $imported = 0;
+        $errors   = 0;
+        $allowedTypes  = ['casa', 'departamento', 'lote'];
+        $allowedStatus = ['ocupada', 'desocupada', 'en_construccion'];
+        foreach ($rows as $row) {
+            if (count($row) < 3) { $errors++; continue; }
+            $propertyNumber = trim($row[0]);
+            $section        = trim($row[1]);
+            $street         = trim($row[2]);
+            $propertyType   = isset($row[3]) && in_array(trim($row[3]), $allowedTypes) ? trim($row[3]) : 'casa';
+            $tower          = isset($row[4]) && trim($row[4]) !== '' ? trim($row[4]) : null;
+            $bedrooms       = isset($row[5]) && is_numeric($row[5]) ? (int)$row[5] : 0;
+            $bathrooms      = isset($row[6]) && is_numeric($row[6]) ? (int)$row[6] : 0;
+            $areaM2         = isset($row[7]) && is_numeric($row[7]) ? (float)$row[7] : null;
+            $status         = isset($row[8]) && in_array(trim($row[8]), $allowedStatus) ? trim($row[8]) : 'desocupada';
+            try {
+                $stmt = $this->db->prepare("
+                    INSERT INTO properties
+                        (property_number, section, street, property_type, tower, bedrooms, bathrooms, area_m2, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE
+                        section=VALUES(section), street=VALUES(street), property_type=VALUES(property_type),
+                        tower=VALUES(tower), bedrooms=VALUES(bedrooms), bathrooms=VALUES(bathrooms),
+                        area_m2=VALUES(area_m2), status=VALUES(status)
+                ");
+                $stmt->execute([$propertyNumber, $section, $street, $propertyType, $tower, $bedrooms, $bathrooms, $areaM2, $status]);
+                $imported++;
+            } catch (Exception $e) {
+                $errors++;
+            }
+        }
+        return ['imported' => $imported, 'errors' => $errors];
+    }
+
+    private function processBulkUsuarios(array $rows) {
+        $imported     = 0;
+        $errors       = 0;
+        $allowedRoles = ['superadmin', 'administrador', 'guardia', 'residente'];
+        foreach ($rows as $row) {
+            if (count($row) < 5) { $errors++; continue; }
+            $role = isset($row[5]) && in_array(trim($row[5]), $allowedRoles) ? trim($row[5]) : 'residente';
+            try {
+                $randomPassword = bin2hex(random_bytes(16));
+                $password = password_hash($randomPassword, PASSWORD_DEFAULT);
+                $stmt = $this->db->prepare("
+                    INSERT INTO users (username, email, password, first_name, last_name, phone, role, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+                ");
+                $stmt->execute([trim($row[0]), trim($row[1]), $password, trim($row[2]), trim($row[3]), trim($row[4]), $role]);
+                $imported++;
+            } catch (Exception $e) {
+                $errors++;
+            }
+        }
+        return ['imported' => $imported, 'errors' => $errors];
+    }
+
+    private function processBulkCuotas(array $rows) {
+        $imported      = 0;
+        $errors        = 0;
+        $allowedStatus = ['pending', 'paid', 'overdue', 'cancelled'];
+        foreach ($rows as $row) {
+            if (count($row) < 4) { $errors++; continue; }
+            $propertyNumber = trim($row[0]);
+            $period         = trim($row[1]);
+            $amount         = is_numeric($row[2]) ? (float)$row[2] : null;
+            $dueDate        = trim($row[3]);
+            $status         = isset($row[4]) && in_array(trim($row[4]), $allowedStatus) ? trim($row[4]) : 'pending';
+            if ($amount === null || $propertyNumber === '' || $period === '' || $dueDate === '') { $errors++; continue; }
+            try {
+                $propStmt = $this->db->prepare("SELECT id FROM properties WHERE property_number = ? LIMIT 1");
+                $propStmt->execute([$propertyNumber]);
+                $property = $propStmt->fetch();
+                if (!$property) { $errors++; continue; }
+                $stmt = $this->db->prepare("
+                    INSERT INTO maintenance_fees (property_id, period, amount, due_date, status)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE amount=VALUES(amount), due_date=VALUES(due_date), status=VALUES(status)
+                ");
+                $stmt->execute([$property['id'], $period, $amount, $dueDate, $status]);
+                $imported++;
+            } catch (Exception $e) {
+                $errors++;
+            }
+        }
+        return ['imported' => $imported, 'errors' => $errors];
+    }
+
+    private function processBulkAmenidades(array $rows) {
+        $imported      = 0;
+        $errors        = 0;
+        $allowedTypes  = ['salon', 'alberca', 'asadores', 'cancha', 'gimnasio', 'otro'];
+        $allowedStatus = ['active', 'maintenance', 'inactive'];
+        foreach ($rows as $row) {
+            if (count($row) < 1) { $errors++; continue; }
+            $name            = trim($row[0]);
+            if ($name === '') { $errors++; continue; }
+            $amenityType     = isset($row[1]) && in_array(trim($row[1]), $allowedTypes) ? trim($row[1]) : 'otro';
+            $description     = isset($row[2]) && trim($row[2]) !== '' ? trim($row[2]) : null;
+            $capacity        = isset($row[3]) && is_numeric($row[3]) ? (int)$row[3] : 0;
+            $hourlyRate      = isset($row[4]) && is_numeric($row[4]) ? (float)$row[4] : 0.00;
+            $hoursOpen       = isset($row[5]) && trim($row[5]) !== '' ? trim($row[5]) : null;
+            $hoursClose      = isset($row[6]) && trim($row[6]) !== '' ? trim($row[6]) : null;
+            $requiresPayment = isset($row[7]) ? (int)(bool)$row[7] : 0;
+            $status          = isset($row[8]) && in_array(trim($row[8]), $allowedStatus) ? trim($row[8]) : 'active';
+            try {
+                $stmt = $this->db->prepare("
+                    INSERT INTO amenities
+                        (name, amenity_type, description, capacity, hourly_rate,
+                         hours_open, hours_close, requires_payment, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([$name, $amenityType, $description, $capacity, $hourlyRate, $hoursOpen, $hoursClose, $requiresPayment, $status]);
+                $imported++;
+            } catch (Exception $e) {
+                $errors++;
+            }
+        }
+        return ['imported' => $imported, 'errors' => $errors];
+    }
+
+    private function processBulkMovimientosFinancieros(array $rows) {
+        $imported          = 0;
+        $errors            = 0;
+        $allowedTransTypes = ['ingreso', 'egreso'];
+        $allowedPayMethods = ['efectivo', 'tarjeta', 'transferencia', 'paypal', 'otro'];
+        $currentUser       = $this->getCurrentUser();
+        $createdBy         = $currentUser['id'];
+        foreach ($rows as $row) {
+            if (count($row) < 6) { $errors++; continue; }
+            $movementTypeId  = is_numeric($row[0]) ? (int)$row[0] : null;
+            $transactionType = in_array(trim($row[1]), $allowedTransTypes) ? trim($row[1]) : null;
+            $amount          = is_numeric($row[2]) ? (float)$row[2] : null;
+            $description     = trim($row[3]);
+            $paymentMethod   = isset($row[4]) && in_array(trim($row[4]), $allowedPayMethods) ? trim($row[4]) : null;
+            $transactionDate = trim($row[5]);
+            $propertyNumber  = isset($row[6]) ? trim($row[6]) : '';
+            $notes           = isset($row[7]) && trim($row[7]) !== '' ? trim($row[7]) : null;
+            if ($movementTypeId === null || $transactionType === null || $amount === null
+                || $description === '' || $transactionDate === '') { $errors++; continue; }
+            try {
+                $typeStmt = $this->db->prepare("SELECT id FROM financial_movement_types WHERE id = ? AND is_active = 1 LIMIT 1");
+                $typeStmt->execute([$movementTypeId]);
+                if (!$typeStmt->fetch()) { $errors++; continue; }
+                $propertyId = null;
+                if ($propertyNumber !== '') {
+                    $propStmt = $this->db->prepare("SELECT id FROM properties WHERE property_number = ? LIMIT 1");
+                    $propStmt->execute([$propertyNumber]);
+                    $property = $propStmt->fetch();
+                    if ($property) $propertyId = $property['id'];
+                }
+                $stmt = $this->db->prepare("
+                    INSERT INTO financial_movements
+                        (movement_type_id, transaction_type, amount, description,
+                         payment_method, transaction_date, property_id, notes, created_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([$movementTypeId, $transactionType, $amount, $description,
+                    $paymentMethod, $transactionDate, $propertyId, $notes, $createdBy]);
+                $imported++;
+            } catch (Exception $e) {
+                $errors++;
+            }
+        }
+        return ['imported' => $imported, 'errors' => $errors];
+    }
+
+    private function processBulkCfdiConfig(array $rows) {
+        $imported    = 0;
+        $errors      = 0;
+        $allowedKeys = [
+            'cfdi_rfc', 'cfdi_razon_social', 'cfdi_regimen_fiscal',
+            'cfdi_cp', 'cfdi_uso_cfdi', 'cfdi_metodo_pago',
+            'cfdi_forma_pago', 'cfdi_serie', 'cfdi_folio_inicio',
+        ];
+        foreach ($rows as $row) {
+            if (count($row) < 2) { $errors++; continue; }
+            $key   = trim($row[0]);
+            $value = trim($row[1]);
+            if (!in_array($key, $allowedKeys)) { $errors++; continue; }
+            try {
+                $stmt = $this->db->prepare("
+                    INSERT INTO system_settings (setting_key, setting_value, setting_type, description)
+                    VALUES (?, ?, 'text', 'Configuración CFDI importada')
+                    ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
+                ");
+                $stmt->execute([$key, $value]);
+                $imported++;
+            } catch (Exception $e) {
+                $errors++;
+            }
+        }
+        return ['imported' => $imported, 'errors' => $errors];
+    }
+
+    private function processBulkPaypalConfig(array $rows) {
+        $imported    = 0;
+        $errors      = 0;
+        $allowedKeys = ['paypal_enabled', 'paypal_mode', 'paypal_client_id', 'paypal_secret'];
+        foreach ($rows as $row) {
+            if (count($row) < 2) { $errors++; continue; }
+            $key   = trim($row[0]);
+            $value = trim($row[1]);
+            if (!in_array($key, $allowedKeys)) { $errors++; continue; }
+            try {
+                $stmt = $this->db->prepare("
+                    INSERT INTO system_settings (setting_key, setting_value, setting_type, description)
+                    VALUES (?, ?, 'text', 'Configuración PayPal importada')
+                    ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
+                ");
+                $stmt->execute([$key, $value]);
+                $imported++;
+            } catch (Exception $e) {
+                $errors++;
+            }
+        }
+        return ['imported' => $imported, 'errors' => $errors];
     }
 }

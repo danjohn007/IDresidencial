@@ -116,6 +116,19 @@
                         </div>
                     </div>
                 </a>
+
+                <!-- Importación Masiva -->
+                <a href="<?php echo BASE_URL; ?>/import/bulkImport" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition border-2 border-orange-200">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-orange-100 p-4 rounded-lg">
+                            <i class="fas fa-layer-group text-orange-600 text-3xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-900">Importación Masiva</h3>
+                            <p class="text-sm text-gray-600">Importar todos los datos desde un único archivo Excel</p>
+                        </div>
+                    </div>
+                </a>
             </div>
 
             <!-- Info Box -->
