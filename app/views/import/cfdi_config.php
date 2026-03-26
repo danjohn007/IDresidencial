@@ -27,6 +27,17 @@
                     </div>
                 <?php endif; ?>
 
+                <?php if (!empty($error_details)): ?>
+                    <div class="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 text-yellow-800 rounded">
+                        <p class="font-semibold mb-2"><i class="fas fa-exclamation-triangle mr-2"></i>Detalle de errores:</p>
+                        <ul class="text-sm list-disc list-inside space-y-1">
+                            <?php foreach ($error_details as $detail): ?>
+                                <li><?php echo htmlspecialchars($detail); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+
                 <div class="bg-white rounded-lg shadow p-6">
                     <form method="POST" enctype="multipart/form-data">
                         <div class="mb-6">

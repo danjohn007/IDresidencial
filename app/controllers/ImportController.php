@@ -36,7 +36,8 @@ class ImportController extends Controller {
         $data = [
             'title' => 'Importar Residentes',
             'error' => '',
-            'success' => ''
+            'success' => '',
+            'error_details' => [],
         ];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
@@ -44,6 +45,7 @@ class ImportController extends Controller {
             
             if ($result['success']) {
                 $data['success'] = $result['message'];
+                $data['error_details'] = $result['error_details'] ?? [];
             } else {
                 $data['error'] = $result['message'];
             }
@@ -59,7 +61,8 @@ class ImportController extends Controller {
         $data = [
             'title' => 'Importar Propiedades',
             'error' => '',
-            'success' => ''
+            'success' => '',
+            'error_details' => [],
         ];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
@@ -67,6 +70,7 @@ class ImportController extends Controller {
             
             if ($result['success']) {
                 $data['success'] = $result['message'];
+                $data['error_details'] = $result['error_details'] ?? [];
             } else {
                 $data['error'] = $result['message'];
             }
@@ -82,7 +86,8 @@ class ImportController extends Controller {
         $data = [
             'title' => 'Importar Usuarios',
             'error' => '',
-            'success' => ''
+            'success' => '',
+            'error_details' => [],
         ];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
@@ -90,6 +95,7 @@ class ImportController extends Controller {
 
             if ($result['success']) {
                 $data['success'] = $result['message'];
+                $data['error_details'] = $result['error_details'] ?? [];
             } else {
                 $data['error'] = $result['message'];
             }
@@ -105,7 +111,8 @@ class ImportController extends Controller {
         $data = [
             'title' => 'Importar Cuotas de Mantenimiento',
             'error' => '',
-            'success' => ''
+            'success' => '',
+            'error_details' => [],
         ];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
@@ -113,6 +120,7 @@ class ImportController extends Controller {
 
             if ($result['success']) {
                 $data['success'] = $result['message'];
+                $data['error_details'] = $result['error_details'] ?? [];
             } else {
                 $data['error'] = $result['message'];
             }
@@ -128,7 +136,8 @@ class ImportController extends Controller {
         $data = [
             'title' => 'Importar Amenidades',
             'error' => '',
-            'success' => ''
+            'success' => '',
+            'error_details' => [],
         ];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
@@ -136,6 +145,7 @@ class ImportController extends Controller {
 
             if ($result['success']) {
                 $data['success'] = $result['message'];
+                $data['error_details'] = $result['error_details'] ?? [];
             } else {
                 $data['error'] = $result['message'];
             }
@@ -151,7 +161,8 @@ class ImportController extends Controller {
         $data = [
             'title' => 'Importar Movimientos Financieros',
             'error' => '',
-            'success' => ''
+            'success' => '',
+            'error_details' => [],
         ];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
@@ -159,6 +170,7 @@ class ImportController extends Controller {
 
             if ($result['success']) {
                 $data['success'] = $result['message'];
+                $data['error_details'] = $result['error_details'] ?? [];
             } else {
                 $data['error'] = $result['message'];
             }
@@ -174,7 +186,8 @@ class ImportController extends Controller {
         $data = [
             'title' => 'Importar Configuración CFDI',
             'error' => '',
-            'success' => ''
+            'success' => '',
+            'error_details' => [],
         ];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
@@ -182,6 +195,7 @@ class ImportController extends Controller {
 
             if ($result['success']) {
                 $data['success'] = $result['message'];
+                $data['error_details'] = $result['error_details'] ?? [];
             } else {
                 $data['error'] = $result['message'];
             }
@@ -197,7 +211,8 @@ class ImportController extends Controller {
         $data = [
             'title' => 'Importar Configuración PayPal',
             'error' => '',
-            'success' => ''
+            'success' => '',
+            'error_details' => [],
         ];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
@@ -205,6 +220,7 @@ class ImportController extends Controller {
 
             if ($result['success']) {
                 $data['success'] = $result['message'];
+                $data['error_details'] = $result['error_details'] ?? [];
             } else {
                 $data['error'] = $result['message'];
             }
@@ -312,8 +328,11 @@ class ImportController extends Controller {
 
         $imported = 0;
         $errors   = 0;
+        $errorDetails = [];
+        $rowNum = 1;
 
         while (($row = fgetcsv($handle)) !== false) {
+            $rowNum++;
             if (count($row) < 5) continue;
 
             try {
@@ -356,6 +375,7 @@ class ImportController extends Controller {
             } catch (Exception $e) {
                 $this->db->rollBack();
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
 
@@ -363,7 +383,8 @@ class ImportController extends Controller {
 
         return [
             'success' => true,
-            'message' => "Importación completada: {$imported} registros importados, {$errors} errores"
+            'message' => "Importación completada: {$imported} registros importados, {$errors} errores",
+            'error_details' => $errorDetails,
         ];
     }
 
@@ -388,8 +409,11 @@ class ImportController extends Controller {
 
         $imported = 0;
         $errors   = 0;
+        $errorDetails = [];
+        $rowNum = 1;
 
         while (($row = fgetcsv($handle)) !== false) {
+            $rowNum++;
             if (count($row) < 3) continue;
 
             $propertyNumber = trim($row[0]);
@@ -431,6 +455,7 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
 
@@ -438,7 +463,8 @@ class ImportController extends Controller {
 
         return [
             'success' => true,
-            'message' => "Importación completada: {$imported} registros importados, {$errors} errores"
+            'message' => "Importación completada: {$imported} registros importados, {$errors} errores",
+            'error_details' => $errorDetails,
         ];
     }
 
@@ -464,8 +490,11 @@ class ImportController extends Controller {
         $allowedRoles = ['superadmin', 'administrador', 'guardia', 'residente'];
         $imported = 0;
         $errors   = 0;
+        $errorDetails = [];
+        $rowNum = 1;
 
         while (($row = fgetcsv($handle)) !== false) {
+            $rowNum++;
             if (count($row) < 5) continue;
 
             $role = isset($row[5]) && in_array(trim($row[5]), $allowedRoles) ? trim($row[5]) : 'residente';
@@ -483,6 +512,7 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
 
@@ -490,7 +520,8 @@ class ImportController extends Controller {
 
         return [
             'success' => true,
-            'message' => "Importación completada: {$imported} usuarios importados, {$errors} errores"
+            'message' => "Importación completada: {$imported} usuarios importados, {$errors} errores",
+            'error_details' => $errorDetails,
         ];
     }
 
@@ -516,8 +547,11 @@ class ImportController extends Controller {
         $allowedStatus = ['pending', 'paid', 'overdue', 'cancelled'];
         $imported = 0;
         $errors   = 0;
+        $errorDetails = [];
+        $rowNum = 1;
 
         while (($row = fgetcsv($handle)) !== false) {
+            $rowNum++;
             if (count($row) < 4) continue;
 
             $propertyNumber = trim($row[0]);
@@ -527,6 +561,12 @@ class ImportController extends Controller {
             $status         = isset($row[4]) && in_array(trim($row[4]), $allowedStatus) ? trim($row[4]) : 'pending';
 
             if ($amount === null || $propertyNumber === '' || $period === '' || $dueDate === '') {
+                $reasons = [];
+                if ($propertyNumber === '') $reasons[] = 'número de propiedad vacío';
+                if ($period === '') $reasons[] = 'período vacío';
+                if ($amount === null) $reasons[] = 'monto inválido';
+                if ($dueDate === '') $reasons[] = 'fecha de vencimiento vacía';
+                $errorDetails[] = "Fila {$rowNum}: " . implode(', ', $reasons);
                 $errors++;
                 continue;
             }
@@ -538,6 +578,7 @@ class ImportController extends Controller {
 
                 if (!$property) {
                     $errors++;
+                    $errorDetails[] = "Fila {$rowNum}: propiedad '{$propertyNumber}' no encontrada";
                     continue;
                 }
 
@@ -554,6 +595,7 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
 
@@ -561,7 +603,8 @@ class ImportController extends Controller {
 
         return [
             'success' => true,
-            'message' => "Importación completada: {$imported} cuotas importadas, {$errors} errores"
+            'message' => "Importación completada: {$imported} cuotas importadas, {$errors} errores",
+            'error_details' => $errorDetails,
         ];
     }
 
@@ -588,8 +631,11 @@ class ImportController extends Controller {
         $allowedStatus = ['active', 'maintenance', 'inactive'];
         $imported = 0;
         $errors   = 0;
+        $errorDetails = [];
+        $rowNum = 1;
 
         while (($row = fgetcsv($handle)) !== false) {
+            $rowNum++;
             if (count($row) < 2) continue;
 
             $name            = trim($row[0]);
@@ -604,6 +650,7 @@ class ImportController extends Controller {
 
             if ($name === '') {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: nombre de amenidad vacío";
                 continue;
             }
 
@@ -622,6 +669,7 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
 
@@ -629,7 +677,8 @@ class ImportController extends Controller {
 
         return [
             'success' => true,
-            'message' => "Importación completada: {$imported} amenidades importadas, {$errors} errores"
+            'message' => "Importación completada: {$imported} amenidades importadas, {$errors} errores",
+            'error_details' => $errorDetails,
         ];
     }
 
@@ -658,21 +707,33 @@ class ImportController extends Controller {
         $createdBy          = $currentUser['id'];
         $imported = 0;
         $errors   = 0;
+        $errorDetails = [];
+        $rowNum = 1;
 
         while (($row = fgetcsv($handle)) !== false) {
+            $rowNum++;
             if (count($row) < 6) continue;
 
             $movementTypeRaw = trim($row[0] ?? '');
-            $transactionType = in_array(trim($row[1]), $allowedTransTypes) ? trim($row[1]) : null;
+            $transactionRaw  = strtolower(trim($row[1]));
+            $transactionType = in_array($transactionRaw, $allowedTransTypes) ? $transactionRaw : null;
             $amount          = is_numeric($row[2]) ? (float)$row[2] : null;
             $description     = trim($row[3]);
-            $paymentMethod   = isset($row[4]) && in_array(trim($row[4]), $allowedPayMethods) ? trim($row[4]) : null;
+            $paymentRaw      = isset($row[4]) ? strtolower(trim($row[4])) : '';
+            $paymentMethod   = in_array($paymentRaw, $allowedPayMethods) ? $paymentRaw : null;
             $transactionDate = trim($row[5]);
             $propertyNumber  = isset($row[6]) ? trim($row[6]) : '';
             $notes           = isset($row[7]) ? trim($row[7]) : null;
 
             if ($movementTypeRaw === '' || $transactionType === null || $amount === null
                 || $description === '' || $transactionDate === '') {
+                $reasons = [];
+                if ($movementTypeRaw === '') $reasons[] = 'tipo de movimiento vacío';
+                if ($transactionType === null) $reasons[] = 'tipo de transacción inválido (use: ingreso, egreso)';
+                if ($amount === null) $reasons[] = 'monto inválido';
+                if ($description === '') $reasons[] = 'descripción vacía';
+                if ($transactionDate === '') $reasons[] = 'fecha vacía';
+                $errorDetails[] = "Fila {$rowNum}: " . implode(', ', $reasons);
                 $errors++;
                 continue;
             }
@@ -689,6 +750,7 @@ class ImportController extends Controller {
                 $typeRow = $typeStmt->fetch();
                 if (!$typeRow) {
                     $errors++;
+                    $errorDetails[] = "Fila {$rowNum}: tipo de movimiento '{$movementTypeRaw}' no encontrado";
                     continue;
                 }
                 $movementTypeId = $typeRow['id'];
@@ -717,6 +779,7 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
 
@@ -724,7 +787,8 @@ class ImportController extends Controller {
 
         return [
             'success' => true,
-            'message' => "Importación completada: {$imported} movimientos importados, {$errors} errores"
+            'message' => "Importación completada: {$imported} movimientos importados, {$errors} errores",
+            'error_details' => $errorDetails,
         ];
     }
 
@@ -757,8 +821,11 @@ class ImportController extends Controller {
 
         $imported = 0;
         $errors   = 0;
+        $errorDetails = [];
+        $rowNum = 1;
 
         while (($row = fgetcsv($handle)) !== false) {
+            $rowNum++;
             if (count($row) < 2) continue;
 
             $key   = trim($row[0]);
@@ -766,6 +833,7 @@ class ImportController extends Controller {
 
             if (!in_array($key, $allowedKeys)) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: clave '{$key}' no permitida";
                 continue;
             }
 
@@ -780,6 +848,7 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
 
@@ -787,7 +856,8 @@ class ImportController extends Controller {
 
         return [
             'success' => true,
-            'message' => "Importación completada: {$imported} parámetros CFDI importados, {$errors} errores"
+            'message' => "Importación completada: {$imported} parámetros CFDI importados, {$errors} errores",
+            'error_details' => $errorDetails,
         ];
     }
 
@@ -875,8 +945,11 @@ class ImportController extends Controller {
 
         $imported = 0;
         $errors   = 0;
+        $errorDetails = [];
+        $rowNum = 1;
 
         while (($row = fgetcsv($handle)) !== false) {
+            $rowNum++;
             if (count($row) < 2) continue;
 
             $key   = trim($row[0]);
@@ -884,6 +957,7 @@ class ImportController extends Controller {
 
             if (!in_array($key, $allowedKeys)) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: clave '{$key}' no permitida";
                 continue;
             }
 
@@ -898,6 +972,7 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
 
@@ -905,7 +980,8 @@ class ImportController extends Controller {
 
         return [
             'success' => true,
-            'message' => "Importación completada: {$imported} parámetros PayPal importados, {$errors} errores"
+            'message' => "Importación completada: {$imported} parámetros PayPal importados, {$errors} errores",
+            'error_details' => $errorDetails,
         ];
     }
 
@@ -964,9 +1040,10 @@ class ImportController extends Controller {
                 $method = $sheetMap[$sheetName];
                 $result = $this->$method($dataRows);
                 $details[] = [
-                    'sheet'    => $sheetName,
-                    'imported' => $result['imported'],
-                    'errors'   => $result['errors'],
+                    'sheet'        => $sheetName,
+                    'imported'     => $result['imported'],
+                    'errors'       => $result['errors'],
+                    'error_details'=> $result['error_details'] ?? [],
                 ];
                 $totalImport += $result['imported'];
                 $totalErrors += $result['errors'];
@@ -983,8 +1060,11 @@ class ImportController extends Controller {
     private function processBulkResidentes(array $rows) {
         $imported = 0;
         $errors   = 0;
+        $errorDetails = [];
+        $rowNum = 1;
         foreach ($rows as $row) {
-            if (count($row) < 5) { $errors++; continue; }
+            $rowNum++;
+            if (count($row) < 5) { $errors++; $errorDetails[] = "Fila {$rowNum}: datos insuficientes"; continue; }
             try {
                 $this->db->beginTransaction();
                 $randomPassword = bin2hex(random_bytes(16));
@@ -1016,18 +1096,22 @@ class ImportController extends Controller {
             } catch (Exception $e) {
                 $this->db->rollBack();
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
-        return ['imported' => $imported, 'errors' => $errors];
+        return ['imported' => $imported, 'errors' => $errors, 'error_details' => $errorDetails];
     }
 
     private function processBulkPropiedades(array $rows) {
         $imported = 0;
         $errors   = 0;
+        $errorDetails = [];
+        $rowNum = 1;
         $allowedTypes  = ['casa', 'departamento', 'lote'];
         $allowedStatus = ['ocupada', 'desocupada', 'en_construccion'];
         foreach ($rows as $row) {
-            if (count($row) < 3) { $errors++; continue; }
+            $rowNum++;
+            if (count($row) < 3) { $errors++; $errorDetails[] = "Fila {$rowNum}: datos insuficientes"; continue; }
             $propertyNumber = trim($row[0]);
             $section        = trim($row[1]);
             $street         = trim($row[2]);
@@ -1051,17 +1135,21 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
-        return ['imported' => $imported, 'errors' => $errors];
+        return ['imported' => $imported, 'errors' => $errors, 'error_details' => $errorDetails];
     }
 
     private function processBulkUsuarios(array $rows) {
         $imported     = 0;
         $errors       = 0;
+        $errorDetails = [];
+        $rowNum = 1;
         $allowedRoles = ['superadmin', 'administrador', 'guardia', 'residente'];
         foreach ($rows as $row) {
-            if (count($row) < 5) { $errors++; continue; }
+            $rowNum++;
+            if (count($row) < 5) { $errors++; $errorDetails[] = "Fila {$rowNum}: datos insuficientes"; continue; }
             $role = isset($row[5]) && in_array(trim($row[5]), $allowedRoles) ? trim($row[5]) : 'residente';
             try {
                 $randomPassword = bin2hex(random_bytes(16));
@@ -1074,28 +1162,45 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
-        return ['imported' => $imported, 'errors' => $errors];
+        return ['imported' => $imported, 'errors' => $errors, 'error_details' => $errorDetails];
     }
 
     private function processBulkCuotas(array $rows) {
         $imported      = 0;
         $errors        = 0;
+        $errorDetails  = [];
+        $rowNum = 1;
         $allowedStatus = ['pending', 'paid', 'overdue', 'cancelled'];
         foreach ($rows as $row) {
-            if (count($row) < 4) { $errors++; continue; }
+            $rowNum++;
+            if (count($row) < 4) { $errors++; $errorDetails[] = "Fila {$rowNum}: datos insuficientes"; continue; }
             $propertyNumber = trim($row[0]);
             $period         = trim($row[1]);
             $amount         = is_numeric($row[2]) ? (float)$row[2] : null;
             $dueDate        = trim($row[3]);
             $status         = isset($row[4]) && in_array(trim($row[4]), $allowedStatus) ? trim($row[4]) : 'pending';
-            if ($amount === null || $propertyNumber === '' || $period === '' || $dueDate === '') { $errors++; continue; }
+            if ($amount === null || $propertyNumber === '' || $period === '' || $dueDate === '') {
+                $reasons = [];
+                if ($propertyNumber === '') $reasons[] = 'número de propiedad vacío';
+                if ($period === '') $reasons[] = 'período vacío';
+                if ($amount === null) $reasons[] = 'monto inválido';
+                if ($dueDate === '') $reasons[] = 'fecha de vencimiento vacía';
+                $errorDetails[] = "Fila {$rowNum}: " . implode(', ', $reasons);
+                $errors++;
+                continue;
+            }
             try {
                 $propStmt = $this->db->prepare("SELECT id FROM properties WHERE property_number = ? LIMIT 1");
                 $propStmt->execute([$propertyNumber]);
                 $property = $propStmt->fetch();
-                if (!$property) { $errors++; continue; }
+                if (!$property) {
+                    $errors++;
+                    $errorDetails[] = "Fila {$rowNum}: propiedad '{$propertyNumber}' no encontrada";
+                    continue;
+                }
                 $stmt = $this->db->prepare("
                     INSERT INTO maintenance_fees (property_id, period, amount, due_date, status)
                     VALUES (?, ?, ?, ?, ?)
@@ -1105,20 +1210,24 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
-        return ['imported' => $imported, 'errors' => $errors];
+        return ['imported' => $imported, 'errors' => $errors, 'error_details' => $errorDetails];
     }
 
     private function processBulkAmenidades(array $rows) {
         $imported      = 0;
         $errors        = 0;
+        $errorDetails  = [];
+        $rowNum = 1;
         $allowedTypes  = ['salon', 'alberca', 'asadores', 'cancha', 'gimnasio', 'otro'];
         $allowedStatus = ['active', 'maintenance', 'inactive'];
         foreach ($rows as $row) {
-            if (count($row) < 1) { $errors++; continue; }
+            $rowNum++;
+            if (count($row) < 1) { $errors++; $errorDetails[] = "Fila {$rowNum}: datos insuficientes"; continue; }
             $name            = trim($row[0]);
-            if ($name === '') { $errors++; continue; }
+            if ($name === '') { $errors++; $errorDetails[] = "Fila {$rowNum}: nombre de amenidad vacío"; continue; }
             $amenityType     = isset($row[1]) && in_array(trim($row[1]), $allowedTypes) ? trim($row[1]) : 'otro';
             $description     = isset($row[2]) && trim($row[2]) !== '' ? trim($row[2]) : null;
             $capacity        = isset($row[3]) && is_numeric($row[3]) ? (int)$row[3] : 0;
@@ -1138,30 +1247,46 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
-        return ['imported' => $imported, 'errors' => $errors];
+        return ['imported' => $imported, 'errors' => $errors, 'error_details' => $errorDetails];
     }
 
     private function processBulkMovimientosFinancieros(array $rows) {
         $imported          = 0;
         $errors            = 0;
+        $errorDetails      = [];
+        $rowNum            = 1;
         $allowedTransTypes = ['ingreso', 'egreso'];
         $allowedPayMethods = ['efectivo', 'tarjeta', 'transferencia', 'paypal', 'otro'];
         $currentUser       = $this->getCurrentUser();
         $createdBy         = $currentUser['id'];
         foreach ($rows as $row) {
-            if (count($row) < 6) { $errors++; continue; }
+            $rowNum++;
+            if (count($row) < 6) { $errors++; $errorDetails[] = "Fila {$rowNum}: datos insuficientes"; continue; }
             $movementTypeRaw = trim($row[0] ?? '');
-            $transactionType = in_array(trim($row[1]), $allowedTransTypes) ? trim($row[1]) : null;
+            $transactionRaw  = strtolower(trim($row[1]));
+            $transactionType = in_array($transactionRaw, $allowedTransTypes) ? $transactionRaw : null;
             $amount          = is_numeric($row[2]) ? (float)$row[2] : null;
             $description     = trim($row[3]);
-            $paymentMethod   = isset($row[4]) && in_array(trim($row[4]), $allowedPayMethods) ? trim($row[4]) : null;
+            $paymentRaw      = isset($row[4]) ? strtolower(trim($row[4])) : '';
+            $paymentMethod   = in_array($paymentRaw, $allowedPayMethods) ? $paymentRaw : null;
             $transactionDate = trim($row[5]);
             $propertyNumber  = isset($row[6]) ? trim($row[6]) : '';
             $notes           = isset($row[7]) && trim($row[7]) !== '' ? trim($row[7]) : null;
             if ($movementTypeRaw === '' || $transactionType === null || $amount === null
-                || $description === '' || $transactionDate === '') { $errors++; continue; }
+                || $description === '' || $transactionDate === '') {
+                $reasons = [];
+                if ($movementTypeRaw === '') $reasons[] = 'tipo de movimiento vacío';
+                if ($transactionType === null) $reasons[] = 'tipo de transacción inválido (use: ingreso, egreso)';
+                if ($amount === null) $reasons[] = 'monto inválido';
+                if ($description === '') $reasons[] = 'descripción vacía';
+                if ($transactionDate === '') $reasons[] = 'fecha vacía';
+                $errorDetails[] = "Fila {$rowNum}: " . implode(', ', $reasons);
+                $errors++;
+                continue;
+            }
             try {
                 // Buscar tipo de movimiento por ID (numérico) o por nombre (sin distinción de mayúsculas)
                 if (is_numeric($movementTypeRaw)) {
@@ -1172,7 +1297,11 @@ class ImportController extends Controller {
                     $typeStmt->execute([$movementTypeRaw]);
                 }
                 $typeRow = $typeStmt->fetch();
-                if (!$typeRow) { $errors++; continue; }
+                if (!$typeRow) {
+                    $errors++;
+                    $errorDetails[] = "Fila {$rowNum}: tipo de movimiento '{$movementTypeRaw}' no encontrado";
+                    continue;
+                }
                 $movementTypeId = $typeRow['id'];
                 $propertyId = null;
                 if ($propertyNumber !== '') {
@@ -1192,24 +1321,28 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
-        return ['imported' => $imported, 'errors' => $errors];
+        return ['imported' => $imported, 'errors' => $errors, 'error_details' => $errorDetails];
     }
 
     private function processBulkCfdiConfig(array $rows) {
         $imported    = 0;
         $errors      = 0;
+        $errorDetails = [];
+        $rowNum = 1;
         $allowedKeys = [
             'cfdi_rfc', 'cfdi_razon_social', 'cfdi_regimen_fiscal',
             'cfdi_cp', 'cfdi_uso_cfdi', 'cfdi_metodo_pago',
             'cfdi_forma_pago', 'cfdi_serie', 'cfdi_folio_inicio',
         ];
         foreach ($rows as $row) {
-            if (count($row) < 2) { $errors++; continue; }
+            $rowNum++;
+            if (count($row) < 2) { $errors++; $errorDetails[] = "Fila {$rowNum}: datos insuficientes"; continue; }
             $key   = trim($row[0]);
             $value = trim($row[1]);
-            if (!in_array($key, $allowedKeys)) { $errors++; continue; }
+            if (!in_array($key, $allowedKeys)) { $errors++; $errorDetails[] = "Fila {$rowNum}: clave '{$key}' no permitida"; continue; }
             try {
                 $stmt = $this->db->prepare("
                     INSERT INTO system_settings (setting_key, setting_value, setting_type, description)
@@ -1220,20 +1353,24 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
-        return ['imported' => $imported, 'errors' => $errors];
+        return ['imported' => $imported, 'errors' => $errors, 'error_details' => $errorDetails];
     }
 
     private function processBulkPaypalConfig(array $rows) {
         $imported    = 0;
         $errors      = 0;
+        $errorDetails = [];
+        $rowNum = 1;
         $allowedKeys = ['paypal_enabled', 'paypal_mode', 'paypal_client_id', 'paypal_secret'];
         foreach ($rows as $row) {
-            if (count($row) < 2) { $errors++; continue; }
+            $rowNum++;
+            if (count($row) < 2) { $errors++; $errorDetails[] = "Fila {$rowNum}: datos insuficientes"; continue; }
             $key   = trim($row[0]);
             $value = trim($row[1]);
-            if (!in_array($key, $allowedKeys)) { $errors++; continue; }
+            if (!in_array($key, $allowedKeys)) { $errors++; $errorDetails[] = "Fila {$rowNum}: clave '{$key}' no permitida"; continue; }
             try {
                 $stmt = $this->db->prepare("
                     INSERT INTO system_settings (setting_key, setting_value, setting_type, description)
@@ -1244,8 +1381,9 @@ class ImportController extends Controller {
                 $imported++;
             } catch (Exception $e) {
                 $errors++;
+                $errorDetails[] = "Fila {$rowNum}: " . $e->getMessage();
             }
         }
-        return ['imported' => $imported, 'errors' => $errors];
+        return ['imported' => $imported, 'errors' => $errors, 'error_details' => $errorDetails];
     }
 }
