@@ -35,6 +35,17 @@
                                             <td class="px-4 py-2 text-right text-green-700 font-semibold"><?php echo (int)$d['imported']; ?></td>
                                             <td class="px-4 py-2 text-right <?php echo $d['errors'] > 0 ? 'text-red-600 font-semibold' : 'text-gray-500'; ?>"><?php echo (int)$d['errors']; ?></td>
                                         </tr>
+                                        <?php if (!empty($d['error_details'])): ?>
+                                            <tr class="border-t border-yellow-100 bg-yellow-50">
+                                                <td colspan="3" class="px-4 py-2">
+                                                    <ul class="text-xs text-yellow-800 list-disc list-inside space-y-1">
+                                                        <?php foreach ($d['error_details'] as $detail): ?>
+                                                            <li><?php echo htmlspecialchars($detail); ?></li>
+                                                        <?php endforeach; ?>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                        <?php endif; ?>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
