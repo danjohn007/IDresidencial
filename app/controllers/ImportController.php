@@ -715,10 +715,12 @@ class ImportController extends Controller {
             if (count($row) < 6) continue;
 
             $movementTypeRaw = trim($row[0] ?? '');
-            $transactionType = in_array(strtolower(trim($row[1])), $allowedTransTypes) ? strtolower(trim($row[1])) : null;
+            $transactionRaw  = strtolower(trim($row[1]));
+            $transactionType = in_array($transactionRaw, $allowedTransTypes) ? $transactionRaw : null;
             $amount          = is_numeric($row[2]) ? (float)$row[2] : null;
             $description     = trim($row[3]);
-            $paymentMethod   = isset($row[4]) && in_array(strtolower(trim($row[4])), $allowedPayMethods) ? strtolower(trim($row[4])) : null;
+            $paymentRaw      = isset($row[4]) ? strtolower(trim($row[4])) : '';
+            $paymentMethod   = in_array($paymentRaw, $allowedPayMethods) ? $paymentRaw : null;
             $transactionDate = trim($row[5]);
             $propertyNumber  = isset($row[6]) ? trim($row[6]) : '';
             $notes           = isset($row[7]) ? trim($row[7]) : null;
@@ -1264,10 +1266,12 @@ class ImportController extends Controller {
             $rowNum++;
             if (count($row) < 6) { $errors++; $errorDetails[] = "Fila {$rowNum}: datos insuficientes"; continue; }
             $movementTypeRaw = trim($row[0] ?? '');
-            $transactionType = in_array(strtolower(trim($row[1])), $allowedTransTypes) ? strtolower(trim($row[1])) : null;
+            $transactionRaw  = strtolower(trim($row[1]));
+            $transactionType = in_array($transactionRaw, $allowedTransTypes) ? $transactionRaw : null;
             $amount          = is_numeric($row[2]) ? (float)$row[2] : null;
             $description     = trim($row[3]);
-            $paymentMethod   = isset($row[4]) && in_array(strtolower(trim($row[4])), $allowedPayMethods) ? strtolower(trim($row[4])) : null;
+            $paymentRaw      = isset($row[4]) ? strtolower(trim($row[4])) : '';
+            $paymentMethod   = in_array($paymentRaw, $allowedPayMethods) ? $paymentRaw : null;
             $transactionDate = trim($row[5]);
             $propertyNumber  = isset($row[6]) ? trim($row[6]) : '';
             $notes           = isset($row[7]) && trim($row[7]) !== '' ? trim($row[7]) : null;
