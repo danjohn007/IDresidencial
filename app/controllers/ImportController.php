@@ -662,7 +662,7 @@ class ImportController extends Controller {
         while (($row = fgetcsv($handle)) !== false) {
             if (count($row) < 6) continue;
 
-            $movementTypeId  = is_numeric($row[0]) ? (int)$row[0] : null;
+            $movementTypeRaw = trim($row[0] ?? '');
             $transactionType = in_array(trim($row[1]), $allowedTransTypes) ? trim($row[1]) : null;
             $amount          = is_numeric($row[2]) ? (float)$row[2] : null;
             $description     = trim($row[3]);
@@ -671,20 +671,27 @@ class ImportController extends Controller {
             $propertyNumber  = isset($row[6]) ? trim($row[6]) : '';
             $notes           = isset($row[7]) ? trim($row[7]) : null;
 
-            if ($movementTypeId === null || $transactionType === null || $amount === null
+            if ($movementTypeRaw === '' || $transactionType === null || $amount === null
                 || $description === '' || $transactionDate === '') {
                 $errors++;
                 continue;
             }
 
             try {
-                // Verificar que el tipo de movimiento existe
-                $typeStmt = $this->db->prepare("SELECT id FROM financial_movement_types WHERE id = ? AND is_active = 1 LIMIT 1");
-                $typeStmt->execute([$movementTypeId]);
-                if (!$typeStmt->fetch()) {
+                // Buscar tipo de movimiento por ID (numérico) o por nombre (sin distinción de mayúsculas)
+                if (is_numeric($movementTypeRaw)) {
+                    $typeStmt = $this->db->prepare("SELECT id FROM financial_movement_types WHERE id = ? AND is_active = 1 LIMIT 1");
+                    $typeStmt->execute([(int)$movementTypeRaw]);
+                } else {
+                    $typeStmt = $this->db->prepare("SELECT id FROM financial_movement_types WHERE name = ? AND is_active = 1 LIMIT 1");
+                    $typeStmt->execute([$movementTypeRaw]);
+                }
+                $typeRow = $typeStmt->fetch();
+                if (!$typeRow) {
                     $errors++;
                     continue;
                 }
+                $movementTypeId = $typeRow['id'];
 
                 $propertyId = null;
                 if ($propertyNumber !== '') {
@@ -1145,7 +1152,7 @@ class ImportController extends Controller {
         $createdBy         = $currentUser['id'];
         foreach ($rows as $row) {
             if (count($row) < 6) { $errors++; continue; }
-            $movementTypeId  = is_numeric($row[0]) ? (int)$row[0] : null;
+            $movementTypeRaw = trim($row[0] ?? '');
             $transactionType = in_array(trim($row[1]), $allowedTransTypes) ? trim($row[1]) : null;
             $amount          = is_numeric($row[2]) ? (float)$row[2] : null;
             $description     = trim($row[3]);
@@ -1153,12 +1160,20 @@ class ImportController extends Controller {
             $transactionDate = trim($row[5]);
             $propertyNumber  = isset($row[6]) ? trim($row[6]) : '';
             $notes           = isset($row[7]) && trim($row[7]) !== '' ? trim($row[7]) : null;
-            if ($movementTypeId === null || $transactionType === null || $amount === null
+            if ($movementTypeRaw === '' || $transactionType === null || $amount === null
                 || $description === '' || $transactionDate === '') { $errors++; continue; }
             try {
-                $typeStmt = $this->db->prepare("SELECT id FROM financial_movement_types WHERE id = ? AND is_active = 1 LIMIT 1");
-                $typeStmt->execute([$movementTypeId]);
-                if (!$typeStmt->fetch()) { $errors++; continue; }
+                // Buscar tipo de movimiento por ID (numérico) o por nombre (sin distinción de mayúsculas)
+                if (is_numeric($movementTypeRaw)) {
+                    $typeStmt = $this->db->prepare("SELECT id FROM financial_movement_types WHERE id = ? AND is_active = 1 LIMIT 1");
+                    $typeStmt->execute([(int)$movementTypeRaw]);
+                } else {
+                    $typeStmt = $this->db->prepare("SELECT id FROM financial_movement_types WHERE name = ? AND is_active = 1 LIMIT 1");
+                    $typeStmt->execute([$movementTypeRaw]);
+                }
+                $typeRow = $typeStmt->fetch();
+                if (!$typeRow) { $errors++; continue; }
+                $movementTypeId = $typeRow['id'];
                 $propertyId = null;
                 if ($propertyNumber !== '') {
                     $propStmt = $this->db->prepare("SELECT id FROM properties WHERE property_number = ? LIMIT 1");

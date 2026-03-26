@@ -90,7 +90,7 @@
                         <div><span class="font-semibold">Hoja 3 – Usuarios:</span> username, email, first_name, last_name, phone, role</div>
                         <div><span class="font-semibold">Hoja 4 – Cuotas:</span> property_number, period, amount, due_date, status</div>
                         <div><span class="font-semibold">Hoja 5 – Amenidades:</span> name, amenity_type, description, capacity, hourly_rate, hours_open, hours_close, requires_payment, status</div>
-                        <div><span class="font-semibold">Hoja 6 – Movimientos Financieros:</span> movement_type_id, transaction_type, amount, description, payment_method, transaction_date, property_number, notes</div>
+                        <div><span class="font-semibold">Hoja 6 – Movimientos Financieros:</span> movement_type_id (ID numérico o nombre del tipo, sin distinción de mayúsculas), transaction_type, amount, description, payment_method, transaction_date, property_number, notes</div>
                         <div><span class="font-semibold">Hoja 7 – CFDI Config:</span> setting_key, setting_value</div>
                         <div><span class="font-semibold">Hoja 8 – PayPal Config:</span> setting_key, setting_value</div>
                     </div>
