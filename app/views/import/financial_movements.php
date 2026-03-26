@@ -58,7 +58,7 @@
                     <p class="text-sm text-blue-800 mb-2">El archivo CSV debe tener las siguientes columnas en orden:</p>
                     <code class="text-xs bg-white p-2 rounded block">movement_type_id,transaction_type,amount,description,payment_method,transaction_date,property_number,notes</code>
                     <ul class="text-xs text-blue-800 mt-3 space-y-1 list-disc list-inside">
-                        <li><strong>movement_type_id</strong> – obligatorio; ID del tipo de movimiento existente en el sistema</li>
+                        <li><strong>movement_type_id</strong> – obligatorio; ID numérico <em>o nombre</em> del tipo de movimiento (ej. <code>1</code> o <code>Cuota de Mantenimiento</code>); sin distinción de mayúsculas</li>
                         <li><strong>transaction_type</strong> – obligatorio; valores: <code>ingreso</code>, <code>egreso</code></li>
                         <li><strong>amount</strong> – obligatorio; monto numérico (ej. 1500.00)</li>
                         <li><strong>description</strong> – obligatorio; descripción del movimiento</li>
