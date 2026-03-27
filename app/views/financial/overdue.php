@@ -94,10 +94,19 @@
                             <td colspan="8" class="px-6 py-8 text-center text-gray-500">No se encontraron registros</td>
                         </tr>
                         <?php else: ?>
-                        <?php foreach ($records as $record): ?>
+                        <?php foreach ($records as $index => $record): ?>
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 text-sm font-medium text-gray-900"><?php echo htmlspecialchars($record['property_number']); ?></td>
-                            <td class="px-6 py-4 text-sm text-gray-900"><?php echo htmlspecialchars($record['resident_name'] ?? 'Sin asignar'); ?></td>
+                            <td class="px-6 py-4 text-sm text-gray-900">
+                                <span id="name-text-<?php echo $index; ?>" class="hidden"><?php echo htmlspecialchars($record['resident_name'] ?? 'Sin asignar'); ?></span>
+                                <button type="button"
+                                        id="name-btn-<?php echo $index; ?>"
+                                        onclick="openPasswordModal(<?php echo $index; ?>, <?php echo htmlspecialchars(json_encode($record['resident_name'] ?? 'Sin asignar'), ENT_QUOTES); ?>)"
+                                        class="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition"
+                                        title="Ver nombre del residente">
+                                    <i class="fas fa-eye mr-1"></i> Ver
+                                </button>
+                            </td>
                             <td class="px-6 py-4 text-sm text-gray-500"><?php echo htmlspecialchars($record['resident_phone'] ?? '-'); ?></td>
                             <td class="px-6 py-4 text-sm text-gray-900"><?php echo htmlspecialchars($record['period']); ?></td>
                             <td class="px-6 py-4 text-sm font-medium text-gray-900">$<?php echo number_format($record['amount'], 2); ?></td>
@@ -119,6 +128,29 @@
                 </table>
             </div>
 
+            <!-- Password Modal -->
+            <div id="passwordModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+                <div class="absolute inset-0 bg-black bg-opacity-50" onclick="closePasswordModal()"></div>
+                <div class="relative bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">Verificación de Seguridad</h3>
+                    <p class="text-sm text-gray-600 mb-4">Ingresa la contraseña de un Superadmin para ver el nombre del residente.</p>
+                    <div id="passwordModalError" class="mb-3 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded hidden"></div>
+                    <input type="password" id="superadminPassword" placeholder="Contraseña Superadmin"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           onkeydown="if(event.key==='Enter') submitPassword()">
+                    <div class="flex space-x-3">
+                        <button type="button" onclick="submitPassword()"
+                                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold">
+                            <i class="fas fa-unlock mr-1"></i> Verificar
+                        </button>
+                        <button type="button" onclick="closePasswordModal()"
+                                class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Pagination -->
             <?php if ($total_pages > 1): ?>
             <div class="flex justify-center mt-6 space-x-2">
@@ -133,5 +165,63 @@
         </main>
     </div>
 </div>
+
+<script>
+var _currentModalIndex = null;
+var _currentModalName = null;
+
+function openPasswordModal(index, name) {
+    _currentModalIndex = index;
+    _currentModalName = name;
+    document.getElementById('superadminPassword').value = '';
+    document.getElementById('passwordModalError').classList.add('hidden');
+    document.getElementById('passwordModalError').textContent = '';
+    document.getElementById('passwordModal').classList.remove('hidden');
+    setTimeout(function(){ document.getElementById('superadminPassword').focus(); }, 100);
+}
+
+function closePasswordModal() {
+    document.getElementById('passwordModal').classList.add('hidden');
+    _currentModalIndex = null;
+    _currentModalName = null;
+}
+
+function submitPassword() {
+    var password = document.getElementById('superadminPassword').value;
+    if (!password) {
+        showModalError('Por favor ingresa la contraseña.');
+        return;
+    }
+
+    var formData = new FormData();
+    formData.append('password', password);
+
+    fetch('<?php echo BASE_URL; ?>/financial/verifyResidentPassword', {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(res){ return res.json(); })
+    .then(function(data) {
+        if (data.success) {
+            var nameText = document.getElementById('name-text-' + _currentModalIndex);
+            var nameBtn  = document.getElementById('name-btn-'  + _currentModalIndex);
+            if (nameText) nameText.classList.remove('hidden');
+            if (nameBtn)  nameBtn.classList.add('hidden');
+            closePasswordModal();
+        } else {
+            showModalError('Contraseña incorrecta. Solo se aceptan contraseñas de Superadmin.');
+        }
+    })
+    .catch(function() {
+        showModalError('Error de conexión. Intenta de nuevo.');
+    });
+}
+
+function showModalError(msg) {
+    var el = document.getElementById('passwordModalError');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+}
+</script>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>

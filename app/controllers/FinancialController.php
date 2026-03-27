@@ -595,7 +595,45 @@ class FinancialController extends Controller {
         
         $this->view('financial/overdue', $data);
     }
-    
+
+    /**
+     * Verifica si la contraseña proporcionada corresponde a un usuario Superadmin.
+     * Responde JSON: {"success": true/false}
+     */
+    public function verifyResidentPassword() {
+        header('Content-Type: application/json');
+
+        if (!isset($_SESSION['user_id'])) {
+            echo json_encode(['success' => false, 'error' => 'No autorizado']);
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'error' => 'Método no permitido']);
+            exit;
+        }
+
+        $password = isset($_POST['password']) ? $_POST['password'] : '';
+        if (empty($password)) {
+            echo json_encode(['success' => false, 'error' => 'Contraseña requerida']);
+            exit;
+        }
+
+        $stmt = $this->db->query("SELECT password FROM users WHERE role = 'superadmin' AND status = 'active' LIMIT 10");
+        $superadmins = $stmt->fetchAll();
+
+        $verified = false;
+        foreach ($superadmins as $sa) {
+            if (password_verify($password, $sa['password'])) {
+                $verified = true;
+                break;
+            }
+        }
+
+        echo json_encode(['success' => $verified]);
+        exit;
+    }
+
     /**
      * Aplicar penalizaciones manualmente a cuotas vencidas
      */

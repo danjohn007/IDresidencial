@@ -103,6 +103,92 @@ class MaintenanceController extends Controller {
     }
     
     /**
+     * Vista de Áreas Comunes
+     */
+    public function commonAreas() {
+        $filters = [
+            'status' => $this->get('status'),
+            'category' => $this->get('category'),
+            'priority' => $this->get('priority')
+        ];
+
+        $db = Database::getInstance()->getConnection();
+
+        $where = ['mr.property_id IS NULL'];
+        $params = [];
+        if (!empty($filters['status'])) {
+            $where[] = 'mr.status = ?';
+            $params[] = $filters['status'];
+        }
+        if (!empty($filters['category'])) {
+            $where[] = 'mr.category = ?';
+            $params[] = $filters['category'];
+        }
+        if (!empty($filters['priority'])) {
+            $where[] = 'mr.priority = ?';
+            $params[] = $filters['priority'];
+        }
+        $whereClause = 'WHERE ' . implode(' AND ', $where);
+
+        $stmt = $db->prepare("
+            SELECT mr.*,
+                   COALESCE(u.first_name, '') as first_name,
+                   COALESCE(u.last_name, '') as last_name,
+                   '' as property_number
+            FROM maintenance_reports mr
+            LEFT JOIN users u ON mr.resident_id IS NOT NULL AND u.id = (
+                SELECT r2.user_id FROM residents r2 WHERE r2.id = mr.resident_id LIMIT 1
+            )
+            $whereClause
+            ORDER BY mr.created_at DESC
+        ");
+        $stmt->execute($params);
+        $reports = $stmt->fetchAll();
+
+        $data = [
+            'title' => 'Áreas Comunes - Mantenimiento',
+            'reports' => $reports,
+            'filters' => $filters
+        ];
+
+        $this->view('maintenance/common_areas', $data);
+    }
+
+    /**
+     * Crear reporte de área común
+     */
+    public function createCommonArea() {
+        $this->requireRole(['superadmin', 'administrador', 'guardia']);
+
+        $data = [
+            'title' => 'Nuevo Reporte - Área Común',
+            'error' => ''
+        ];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $reportData = [
+                'resident_id' => null,
+                'property_id' => null,
+                'category' => $this->post('category'),
+                'title' => $this->post('title'),
+                'description' => $this->post('description'),
+                'priority' => $this->post('priority', 'media'),
+                'location' => $this->post('location'),
+                'status' => 'pendiente'
+            ];
+
+            if ($this->maintenanceModel->create($reportData)) {
+                $_SESSION['success_message'] = 'Reporte de área común creado exitosamente';
+                $this->redirect('maintenance/commonAreas');
+            } else {
+                $data['error'] = 'Error al crear el reporte';
+            }
+        }
+
+        $this->view('maintenance/create_common_area', $data);
+    }
+
+    /**
      * Ver detalles del reporte
      */
     public function viewDetails($id) {
@@ -140,7 +226,9 @@ class MaintenanceController extends Controller {
                 $_SESSION['error_message'] = 'Estado inválido';
             }
         }
-        
-        $this->redirect('maintenance');
+
+        $redirectTo = $this->post('_redirect', 'maintenance');
+        $allowed = ['maintenance', 'maintenance/commonAreas'];
+        $this->redirect(in_array($redirectTo, $allowed) ? $redirectTo : 'maintenance');
     }
 }
