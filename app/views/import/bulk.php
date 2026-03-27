@@ -96,14 +96,14 @@
                         La plantilla Excel contiene una hoja por cada tipo de dato. Llena únicamente las hojas que necesites importar.
                     </p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-800">
-                        <div><span class="font-semibold">Hoja 1 – Residentes:</span> username, email, first_name, last_name, phone, property_number, relationship</div>
-                        <div><span class="font-semibold">Hoja 2 – Propiedades:</span> property_number, section, street, property_type, tower, bedrooms, bathrooms, area_m2, status</div>
-                        <div><span class="font-semibold">Hoja 3 – Usuarios:</span> username, email, first_name, last_name, phone, role</div>
-                        <div><span class="font-semibold">Hoja 4 – Cuotas:</span> property_number, period, amount, due_date, status</div>
-                        <div><span class="font-semibold">Hoja 5 – Amenidades:</span> name, amenity_type, description, capacity, hourly_rate, hours_open, hours_close, requires_payment, status</div>
-                        <div><span class="font-semibold">Hoja 6 – Movimientos Financieros:</span> movement_type_id (ID numérico o nombre del tipo, sin distinción de mayúsculas), transaction_type, amount, description, payment_method, transaction_date, property_number, notes</div>
-                        <div><span class="font-semibold">Hoja 7 – CFDI Config:</span> setting_key, setting_value</div>
-                        <div><span class="font-semibold">Hoja 8 – PayPal Config:</span> setting_key, setting_value</div>
+                        <div><span class="font-semibold">Hoja 1 – Residentes:</span> usuario, email, nombre, apellido, telefono, numero_propiedad, relacion</div>
+                        <div><span class="font-semibold">Hoja 2 – Propiedades:</span> numero_propiedad, seccion, calle, tipo_propiedad, torre, habitaciones, banos, area_m2, estado</div>
+                        <div><span class="font-semibold">Hoja 3 – Usuarios:</span> usuario, email, nombre, apellido, telefono, rol</div>
+                        <div><span class="font-semibold">Hoja 4 – Cuotas:</span> numero_propiedad, periodo, monto, fecha_vencimiento, estado</div>
+                        <div><span class="font-semibold">Hoja 5 – Amenidades:</span> nombre, tipo_amenidad, descripcion, capacidad, tarifa_por_hora, hora_apertura, hora_cierre, requiere_pago, estado</div>
+                        <div><span class="font-semibold">Hoja 6 – Movimientos Financieros:</span> id_tipo_movimiento (ID numérico o nombre del tipo, sin distinción de mayúsculas), tipo_transaccion, monto, descripcion, metodo_pago, fecha_transaccion, numero_propiedad, notas</div>
+                        <div><span class="font-semibold">Hoja 7 – CFDI Config:</span> clave, valor</div>
+                        <div><span class="font-semibold">Hoja 8 – PayPal Config:</span> clave, valor</div>
                     </div>
                     <p class="text-xs text-blue-700 mt-3">
                         <i class="fas fa-lightbulb mr-1"></i>

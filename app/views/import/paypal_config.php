@@ -66,8 +66,8 @@
 
                 <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <h4 class="font-semibold text-blue-900 mb-2">Formato del CSV</h4>
-                    <p class="text-sm text-blue-800 mb-2">El archivo CSV debe tener dos columnas: <strong>setting_key</strong> y <strong>setting_value</strong>.</p>
-                    <code class="text-xs bg-white p-2 rounded block">setting_key,setting_value</code>
+                    <p class="text-sm text-blue-800 mb-2">El archivo CSV debe tener dos columnas: <strong>clave</strong> y <strong>valor</strong>.</p>
+                    <code class="text-xs bg-white p-2 rounded block">clave,valor</code>
                     <p class="text-sm text-blue-800 mt-3 mb-1">Claves permitidas:</p>
                     <table class="text-xs text-blue-800 w-full border-collapse">
                         <thead>

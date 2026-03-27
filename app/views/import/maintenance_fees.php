@@ -67,13 +67,13 @@
                 <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <h4 class="font-semibold text-blue-900 mb-2">Formato del CSV</h4>
                     <p class="text-sm text-blue-800 mb-2">El archivo CSV debe tener las siguientes columnas en orden:</p>
-                    <code class="text-xs bg-white p-2 rounded block">property_number,period,amount,due_date,status</code>
+                    <code class="text-xs bg-white p-2 rounded block">numero_propiedad,periodo,monto,fecha_vencimiento,estado</code>
                     <ul class="text-xs text-blue-800 mt-3 space-y-1 list-disc list-inside">
-                        <li><strong>property_number</strong> – obligatorio; número de propiedad existente en el sistema (ej. A-101)</li>
-                        <li><strong>period</strong> – obligatorio; período en formato YYYY-MM (ej. 2025-01)</li>
-                        <li><strong>amount</strong> – obligatorio; monto numérico (ej. 1500.00)</li>
-                        <li><strong>due_date</strong> – obligatorio; fecha de vencimiento en formato YYYY-MM-DD</li>
-                        <li><strong>status</strong> – opcional; valores: <code>pending</code>, <code>paid</code>, <code>overdue</code>, <code>cancelled</code> (por defecto: pending)</li>
+                        <li><strong>numero_propiedad</strong> – obligatorio; número de propiedad existente en el sistema (ej. A-101)</li>
+                        <li><strong>periodo</strong> – obligatorio; período en formato YYYY-MM (ej. 2025-01)</li>
+                        <li><strong>monto</strong> – obligatorio; monto numérico (ej. 1500.00)</li>
+                        <li><strong>fecha_vencimiento</strong> – obligatorio; fecha de vencimiento en formato YYYY-MM-DD</li>
+                        <li><strong>estado</strong> – opcional; valores: <code>pending</code>, <code>paid</code>, <code>overdue</code>, <code>cancelled</code> (por defecto: pending)</li>
                     </ul>
                     <p class="text-xs text-yellow-700 mt-3 font-semibold">
                         <i class="fas fa-exclamation-triangle mr-1"></i>

@@ -236,35 +236,35 @@ class ImportController extends Controller {
         $templates = [
             'residents' => [
                 'filename' => 'plantilla_residentes.csv',
-                'headers'  => ['username', 'email', 'first_name', 'last_name', 'phone', 'property_number', 'relationship'],
+                'headers'  => ['usuario', 'email', 'nombre', 'apellido', 'telefono', 'numero_propiedad', 'relacion'],
             ],
             'properties' => [
                 'filename' => 'plantilla_propiedades.csv',
-                'headers'  => ['property_number', 'section', 'street', 'property_type', 'tower', 'bedrooms', 'bathrooms', 'area_m2', 'status'],
+                'headers'  => ['numero_propiedad', 'seccion', 'calle', 'tipo_propiedad', 'torre', 'habitaciones', 'banos', 'area_m2', 'estado'],
             ],
             'users' => [
                 'filename' => 'plantilla_usuarios.csv',
-                'headers'  => ['username', 'email', 'first_name', 'last_name', 'phone', 'role'],
+                'headers'  => ['usuario', 'email', 'nombre', 'apellido', 'telefono', 'rol'],
             ],
             'maintenanceFees' => [
                 'filename' => 'plantilla_cuotas_mantenimiento.csv',
-                'headers'  => ['property_number', 'period', 'amount', 'due_date', 'status'],
+                'headers'  => ['numero_propiedad', 'periodo', 'monto', 'fecha_vencimiento', 'estado'],
             ],
             'amenities' => [
                 'filename' => 'plantilla_amenidades.csv',
-                'headers'  => ['name', 'amenity_type', 'description', 'capacity', 'hourly_rate', 'hours_open', 'hours_close', 'requires_payment', 'status'],
+                'headers'  => ['nombre', 'tipo_amenidad', 'descripcion', 'capacidad', 'tarifa_por_hora', 'hora_apertura', 'hora_cierre', 'requiere_pago', 'estado'],
             ],
             'financialMovements' => [
                 'filename' => 'plantilla_movimientos_financieros.csv',
-                'headers'  => ['movement_type_id', 'transaction_type', 'amount', 'description', 'payment_method', 'transaction_date', 'property_number', 'notes'],
+                'headers'  => ['id_tipo_movimiento', 'tipo_transaccion', 'monto', 'descripcion', 'metodo_pago', 'fecha_transaccion', 'numero_propiedad', 'notas'],
             ],
             'cfdiConfig' => [
                 'filename' => 'plantilla_cfdi.csv',
-                'headers'  => ['setting_key', 'setting_value'],
+                'headers'  => ['clave', 'valor'],
             ],
             'paypalConfig' => [
                 'filename' => 'plantilla_paypal.csv',
-                'headers'  => ['setting_key', 'setting_value'],
+                'headers'  => ['clave', 'valor'],
             ],
         ];
 
@@ -947,28 +947,28 @@ class ImportController extends Controller {
         $writer = new XlsxWriter();
 
         $writer->addSheet('Residentes', [
-            'username', 'email', 'first_name', 'last_name', 'phone', 'property_number', 'relationship',
+            'usuario', 'email', 'nombre', 'apellido', 'telefono', 'numero_propiedad', 'relacion',
         ]);
         $writer->addSheet('Propiedades', [
-            'property_number', 'section', 'street', 'property_type', 'tower',
-            'bedrooms', 'bathrooms', 'area_m2', 'status',
+            'numero_propiedad', 'seccion', 'calle', 'tipo_propiedad', 'torre',
+            'habitaciones', 'banos', 'area_m2', 'estado',
         ]);
         $writer->addSheet('Usuarios', [
-            'username', 'email', 'first_name', 'last_name', 'phone', 'role',
+            'usuario', 'email', 'nombre', 'apellido', 'telefono', 'rol',
         ]);
         $writer->addSheet('Cuotas', [
-            'property_number', 'period', 'amount', 'due_date', 'status',
+            'numero_propiedad', 'periodo', 'monto', 'fecha_vencimiento', 'estado',
         ]);
         $writer->addSheet('Amenidades', [
-            'name', 'amenity_type', 'description', 'capacity', 'hourly_rate',
-            'hours_open', 'hours_close', 'requires_payment', 'status',
+            'nombre', 'tipo_amenidad', 'descripcion', 'capacidad', 'tarifa_por_hora',
+            'hora_apertura', 'hora_cierre', 'requiere_pago', 'estado',
         ]);
         $writer->addSheet('Movimientos Financieros', [
-            'movement_type_id', 'transaction_type', 'amount', 'description',
-            'payment_method', 'transaction_date', 'property_number', 'notes',
+            'id_tipo_movimiento', 'tipo_transaccion', 'monto', 'descripcion',
+            'metodo_pago', 'fecha_transaccion', 'numero_propiedad', 'notas',
         ]);
-        $writer->addSheet('CFDI Config', ['setting_key', 'setting_value']);
-        $writer->addSheet('PayPal Config', ['setting_key', 'setting_value']);
+        $writer->addSheet('CFDI Config', ['clave', 'valor']);
+        $writer->addSheet('PayPal Config', ['clave', 'valor']);
 
         $writer->download('plantilla_importacion_masiva.xlsx');
     }

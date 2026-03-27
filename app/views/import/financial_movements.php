@@ -67,16 +67,16 @@
                 <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <h4 class="font-semibold text-blue-900 mb-2">Formato del CSV</h4>
                     <p class="text-sm text-blue-800 mb-2">El archivo CSV debe tener las siguientes columnas en orden:</p>
-                    <code class="text-xs bg-white p-2 rounded block">movement_type_id,transaction_type,amount,description,payment_method,transaction_date,property_number,notes</code>
+                    <code class="text-xs bg-white p-2 rounded block">id_tipo_movimiento,tipo_transaccion,monto,descripcion,metodo_pago,fecha_transaccion,numero_propiedad,notas</code>
                     <ul class="text-xs text-blue-800 mt-3 space-y-1 list-disc list-inside">
-                        <li><strong>movement_type_id</strong> – obligatorio; ID numérico <em>o nombre</em> del tipo de movimiento (ej. <code>1</code> o <code>Cuota de Mantenimiento</code>); sin distinción de mayúsculas</li>
-                        <li><strong>transaction_type</strong> – obligatorio; valores: <code>ingreso</code>, <code>egreso</code></li>
-                        <li><strong>amount</strong> – obligatorio; monto numérico (ej. 1500.00)</li>
-                        <li><strong>description</strong> – obligatorio; descripción del movimiento</li>
-                        <li><strong>payment_method</strong> – opcional; valores: <code>efectivo</code>, <code>tarjeta</code>, <code>transferencia</code>, <code>paypal</code>, <code>otro</code></li>
-                        <li><strong>transaction_date</strong> – obligatorio; fecha en formato YYYY-MM-DD</li>
-                        <li><strong>property_number</strong> – opcional; número de propiedad relacionada</li>
-                        <li><strong>notes</strong> – opcional; notas adicionales</li>
+                        <li><strong>id_tipo_movimiento</strong> – obligatorio; ID numérico <em>o nombre</em> del tipo de movimiento (ej. <code>1</code> o <code>Cuota de Mantenimiento</code>); sin distinción de mayúsculas</li>
+                        <li><strong>tipo_transaccion</strong> – obligatorio; valores: <code>ingreso</code>, <code>egreso</code></li>
+                        <li><strong>monto</strong> – obligatorio; monto numérico (ej. 1500.00)</li>
+                        <li><strong>descripcion</strong> – obligatorio; descripción del movimiento</li>
+                        <li><strong>metodo_pago</strong> – opcional; valores: <code>efectivo</code>, <code>tarjeta</code>, <code>transferencia</code>, <code>paypal</code>, <code>otro</code></li>
+                        <li><strong>fecha_transaccion</strong> – obligatorio; fecha en formato YYYY-MM-DD</li>
+                        <li><strong>numero_propiedad</strong> – opcional; número de propiedad relacionada</li>
+                        <li><strong>notas</strong> – opcional; notas adicionales</li>
                     </ul>
                 </div>
             </div>
