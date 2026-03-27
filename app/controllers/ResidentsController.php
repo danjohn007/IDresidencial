@@ -19,7 +19,7 @@ class ResidentsController extends Controller {
         $action = isset($url[1]) ? $url[1] : 'index';
         
         // Methods that residents can access
-        $residentMethods = ['myPayments', 'generateAccess', 'myAccesses', 'cancelPass', 'makePayment', 'processPayment', 'financialReport', 'serviceRequests', 'createServiceRequest'];
+        $residentMethods = ['myPayments', 'generateAccess', 'myAccesses', 'cancelPass', 'makePayment', 'processPayment', 'financialReport', 'serviceRequests', 'createServiceRequest', 'myPackages', 'confirmPackageReceipt'];
         
         // If not a resident method, require admin roles
         if (!in_array($action, $residentMethods)) {
@@ -2985,5 +2985,122 @@ class ResidentsController extends Controller {
         }
 
         exit;
+    }
+
+    /**
+     * Mis paquetes - historial de mensajería para el residente
+     */
+    public function myPackages() {
+        if ($_SESSION['role'] !== 'residente') {
+            $_SESSION['error_message'] = 'Acceso denegado';
+            $this->redirect('dashboard');
+        }
+
+        $userId = $_SESSION['user_id'];
+        $stmt = $this->db->prepare("
+            SELECT r.*, p.property_number
+            FROM residents r
+            JOIN properties p ON r.property_id = p.id
+            WHERE r.user_id = ? AND r.status = 'active'
+            LIMIT 1
+        ");
+        $stmt->execute([$userId]);
+        $resident = $stmt->fetch();
+
+        if (!$resident) {
+            $_SESSION['error_message'] = 'No se encontró información del residente';
+            $this->redirect('dashboard');
+        }
+
+        $statusFilter = $this->get('status', '');
+
+        $where = ['pkg.property_id = ?'];
+        $params = [$resident['property_id']];
+
+        if (!empty($statusFilter)) {
+            $where[] = 'pkg.status = ?';
+            $params[] = $statusFilter;
+        }
+
+        $whereClause = 'WHERE ' . implode(' AND ', $where);
+
+        $stmt = $this->db->prepare("
+            SELECT pkg.*
+            FROM packages pkg
+            $whereClause
+            ORDER BY pkg.received_at DESC
+        ");
+        $stmt->execute($params);
+        $packages = $stmt->fetchAll();
+
+        // Stats
+        $stmt = $this->db->prepare("
+            SELECT status, COUNT(*) as count
+            FROM packages
+            WHERE property_id = ?
+            GROUP BY status
+        ");
+        $stmt->execute([$resident['property_id']]);
+        $statsRaw = $stmt->fetchAll();
+        $stats = [];
+        foreach ($statsRaw as $row) {
+            $stats[$row['status']] = $row['count'];
+        }
+
+        $data = [
+            'title'    => 'Mis Paquetes',
+            'resident' => $resident,
+            'packages' => $packages,
+            'stats'    => $stats,
+            'status'   => $statusFilter,
+        ];
+
+        $this->view('residents/my_packages', $data);
+    }
+
+    /**
+     * Confirmar recepción de paquete por el residente
+     */
+    public function confirmPackageReceipt($id) {
+        if ($_SESSION['role'] !== 'residente') {
+            $_SESSION['error_message'] = 'Acceso denegado';
+            $this->redirect('dashboard');
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('residents/myPackages');
+        }
+
+        $userId = $_SESSION['user_id'];
+
+        // Verify the package belongs to the resident's property
+        $stmt = $this->db->prepare("
+            SELECT pkg.id
+            FROM packages pkg
+            JOIN properties p ON pkg.property_id = p.id
+            JOIN residents r ON r.property_id = p.id
+            WHERE pkg.id = ? AND r.user_id = ? AND r.status = 'active' AND pkg.status = 'pendiente'
+            LIMIT 1
+        ");
+        $stmt->execute([$id, $userId]);
+        $package = $stmt->fetch();
+
+        if (!$package) {
+            $_SESSION['error_message'] = 'No se pudo confirmar el paquete';
+            $this->redirect('residents/myPackages');
+        }
+
+        $stmt = $this->db->prepare("
+            UPDATE packages SET status = 'entregado', delivered_at = NOW(), delivered_by = ?
+            WHERE id = ? AND status = 'pendiente'
+        ");
+        if ($stmt->execute([$userId, $id]) && $stmt->rowCount() > 0) {
+            AuditController::log('update', 'Paquete confirmado como recibido #' . $id, 'packages', $id);
+            $_SESSION['success_message'] = 'Paquete confirmado como recibido';
+        } else {
+            $_SESSION['error_message'] = 'No se pudo confirmar el paquete';
+        }
+
+        $this->redirect('residents/myPackages');
     }
 }

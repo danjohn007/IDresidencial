@@ -233,6 +233,14 @@
                         <span>Solicitudes de Servicio</span>
                     </a>
                 </li>
+
+                <!-- Mensajería -->
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/residents/myPackages" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fas fa-box w-5"></i>
+                        <span>Mensajería</span>
+                    </a>
+                </li>
                 <?php endif; ?>
                 
                 <?php if ($_SESSION['role'] !== 'proveedor'): ?>
