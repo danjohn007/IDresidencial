@@ -67,11 +67,11 @@
                 <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <h4 class="font-semibold text-blue-900 mb-2">Formato del CSV</h4>
                     <p class="text-sm text-blue-800 mb-2">El archivo CSV debe tener las siguientes columnas en orden:</p>
-                    <code class="text-xs bg-white p-2 rounded block">username,email,first_name,last_name,phone,property_number,relationship</code>
+                    <code class="text-xs bg-white p-2 rounded block">usuario,email,nombre,apellido,telefono,numero_propiedad,relacion</code>
                     <ul class="text-xs text-blue-800 mt-3 space-y-1 list-disc list-inside">
-                        <li><strong>username, email, first_name, last_name, phone</strong> – obligatorios</li>
-                        <li><strong>property_number</strong> – opcional; número de propiedad existente para vincular al residente</li>
-                        <li><strong>relationship</strong> – opcional; valores: <code>propietario</code>, <code>inquilino</code>, <code>familiar</code> (por defecto: propietario)</li>
+                        <li><strong>usuario, email, nombre, apellido, telefono</strong> – obligatorios</li>
+                        <li><strong>numero_propiedad</strong> – opcional; número de propiedad existente para vincular al residente</li>
+                        <li><strong>relacion</strong> – opcional; valores: <code>propietario</code>, <code>inquilino</code>, <code>familiar</code> (por defecto: propietario)</li>
                     </ul>
                 </div>
             </div>

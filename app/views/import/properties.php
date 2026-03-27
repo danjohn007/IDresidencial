@@ -67,14 +67,14 @@
                 <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <h4 class="font-semibold text-blue-900 mb-2">Formato del CSV</h4>
                     <p class="text-sm text-blue-800 mb-2">El archivo CSV debe tener las siguientes columnas en orden:</p>
-                    <code class="text-xs bg-white p-2 rounded block">property_number,section,street,property_type,tower,bedrooms,bathrooms,area_m2,status</code>
+                    <code class="text-xs bg-white p-2 rounded block">numero_propiedad,seccion,calle,tipo_propiedad,torre,habitaciones,banos,area_m2,estado</code>
                     <ul class="text-xs text-blue-800 mt-3 space-y-1 list-disc list-inside">
-                        <li><strong>property_number, section, street</strong> – obligatorios</li>
-                        <li><strong>property_type</strong> – opcional; valores: <code>casa</code>, <code>departamento</code>, <code>lote</code> (por defecto: casa)</li>
-                        <li><strong>tower</strong> – opcional; nombre o número de torre (dejar vacío si no aplica)</li>
-                        <li><strong>bedrooms, bathrooms</strong> – opcionales; número entero</li>
+                        <li><strong>numero_propiedad, seccion, calle</strong> – obligatorios</li>
+                        <li><strong>tipo_propiedad</strong> – opcional; valores: <code>casa</code>, <code>departamento</code>, <code>lote</code> (por defecto: casa)</li>
+                        <li><strong>torre</strong> – opcional; nombre o número de torre (dejar vacío si no aplica)</li>
+                        <li><strong>habitaciones, banos</strong> – opcionales; número entero</li>
                         <li><strong>area_m2</strong> – opcional; área en metros cuadrados</li>
-                        <li><strong>status</strong> – opcional; valores: <code>ocupada</code>, <code>desocupada</code>, <code>en_construccion</code> (por defecto: desocupada)</li>
+                        <li><strong>estado</strong> – opcional; valores: <code>ocupada</code>, <code>desocupada</code>, <code>en_construccion</code> (por defecto: desocupada)</li>
                     </ul>
                 </div>
             </div>

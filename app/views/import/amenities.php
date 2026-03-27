@@ -67,17 +67,17 @@
                 <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <h4 class="font-semibold text-blue-900 mb-2">Formato del CSV</h4>
                     <p class="text-sm text-blue-800 mb-2">El archivo CSV debe tener las siguientes columnas en orden:</p>
-                    <code class="text-xs bg-white p-2 rounded block">name,amenity_type,description,capacity,hourly_rate,hours_open,hours_close,requires_payment,status</code>
+                    <code class="text-xs bg-white p-2 rounded block">nombre,tipo_amenidad,descripcion,capacidad,tarifa_por_hora,hora_apertura,hora_cierre,requiere_pago,estado</code>
                     <ul class="text-xs text-blue-800 mt-3 space-y-1 list-disc list-inside">
-                        <li><strong>name</strong> – obligatorio; nombre de la amenidad</li>
-                        <li><strong>amenity_type</strong> – obligatorio; valores: <code>salon</code>, <code>alberca</code>, <code>asadores</code>, <code>cancha</code>, <code>gimnasio</code>, <code>otro</code></li>
-                        <li><strong>description</strong> – opcional; descripción de la amenidad</li>
-                        <li><strong>capacity</strong> – opcional; capacidad en personas (número entero)</li>
-                        <li><strong>hourly_rate</strong> – opcional; tarifa por hora (ej. 150.00)</li>
-                        <li><strong>hours_open</strong> – opcional; hora de apertura en formato HH:MM (ej. 08:00)</li>
-                        <li><strong>hours_close</strong> – opcional; hora de cierre en formato HH:MM (ej. 22:00)</li>
-                        <li><strong>requires_payment</strong> – opcional; 1 si requiere pago, 0 si no (por defecto: 0)</li>
-                        <li><strong>status</strong> – opcional; valores: <code>active</code>, <code>maintenance</code>, <code>inactive</code> (por defecto: active)</li>
+                        <li><strong>nombre</strong> – obligatorio; nombre de la amenidad</li>
+                        <li><strong>tipo_amenidad</strong> – obligatorio; valores: <code>salon</code>, <code>alberca</code>, <code>asadores</code>, <code>cancha</code>, <code>gimnasio</code>, <code>otro</code></li>
+                        <li><strong>descripcion</strong> – opcional; descripción de la amenidad</li>
+                        <li><strong>capacidad</strong> – opcional; capacidad en personas (número entero)</li>
+                        <li><strong>tarifa_por_hora</strong> – opcional; tarifa por hora (ej. 150.00)</li>
+                        <li><strong>hora_apertura</strong> – opcional; hora de apertura en formato HH:MM (ej. 08:00)</li>
+                        <li><strong>hora_cierre</strong> – opcional; hora de cierre en formato HH:MM (ej. 22:00)</li>
+                        <li><strong>requiere_pago</strong> – opcional; 1 si requiere pago, 0 si no (por defecto: 0)</li>
+                        <li><strong>estado</strong> – opcional; valores: <code>active</code>, <code>maintenance</code>, <code>inactive</code> (por defecto: active)</li>
                     </ul>
                 </div>
             </div>
