@@ -557,15 +557,15 @@ class ImportController extends Controller {
             $propertyNumber = trim($row[0]);
             $period         = trim($row[1]);
             $amount         = is_numeric($row[2]) ? (float)$row[2] : null;
-            $dueDate        = trim($row[3]);
+            $dueDate        = $this->parseImportDate($row[3]);
             $status         = isset($row[4]) && in_array(trim($row[4]), $allowedStatus) ? trim($row[4]) : 'pending';
 
-            if ($amount === null || $propertyNumber === '' || $period === '' || $dueDate === '') {
+            if ($amount === null || $propertyNumber === '' || $period === '' || $dueDate === null) {
                 $reasons = [];
                 if ($propertyNumber === '') $reasons[] = 'número de propiedad vacío';
                 if ($period === '') $reasons[] = 'período vacío';
                 if ($amount === null) $reasons[] = 'monto inválido';
-                if ($dueDate === '') $reasons[] = 'fecha de vencimiento vacía';
+                if ($dueDate === null) $reasons[] = 'fecha de vencimiento vacía o inválida';
                 $errorDetails[] = "Fila {$rowNum}: " . implode(', ', $reasons);
                 $errors++;
                 continue;
@@ -1235,14 +1235,14 @@ class ImportController extends Controller {
             $propertyNumber = trim($row[0]);
             $period         = trim($row[1]);
             $amount         = is_numeric($row[2]) ? (float)$row[2] : null;
-            $dueDate        = trim($row[3]);
+            $dueDate        = $this->parseImportDate($row[3]);
             $status         = isset($row[4]) && in_array(trim($row[4]), $allowedStatus) ? trim($row[4]) : 'pending';
-            if ($amount === null || $propertyNumber === '' || $period === '' || $dueDate === '') {
+            if ($amount === null || $propertyNumber === '' || $period === '' || $dueDate === null) {
                 $reasons = [];
                 if ($propertyNumber === '') $reasons[] = 'número de propiedad vacío';
                 if ($period === '') $reasons[] = 'período vacío';
                 if ($amount === null) $reasons[] = 'monto inválido';
-                if ($dueDate === '') $reasons[] = 'fecha de vencimiento vacía';
+                if ($dueDate === null) $reasons[] = 'fecha de vencimiento vacía o inválida';
                 $errorDetails[] = "Fila {$rowNum}: " . implode(', ', $reasons);
                 $errors++;
                 continue;
