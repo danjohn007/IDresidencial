@@ -609,6 +609,51 @@ class ImportController extends Controller {
     }
 
     /**
+     * Normaliza un valor de tiempo a formato HH:MM:SS.
+     * Acepta: HH:MM, HH:MM:SS, fracciones decimales de Excel (0–1) y formato 12h con AM/PM.
+     * Devuelve null si el valor está vacío o no puede interpretarse como tiempo.
+     *
+     * @param  mixed       $value  Valor de tiempo a normalizar.
+     * @return string|null         Tiempo en formato HH:MM o HH:MM:SS, o null si no es válido.
+     */
+    private function normalizeTime($value) {
+        if ($value === null) return null;
+        $value = trim((string)$value);
+        if ($value === '') return null;
+
+        // Ya está en formato HH:MM o HH:MM:SS
+        if (preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $value)) {
+            return $value;
+        }
+
+        // Fracción decimal de Excel (p.e. 0.333333... = 08:00:00)
+        // Excel almacena las horas como fracción del día (1 día = 86400 segundos)
+        if (is_numeric($value)) {
+            $frac = (float)$value;
+            if ($frac >= 0 && $frac < 1) {
+                $totalSeconds = (int)round($frac * 86400);
+                $h = intdiv($totalSeconds, 3600);
+                $m = intdiv($totalSeconds % 3600, 60);
+                $s = $totalSeconds % 60;
+                return sprintf('%02d:%02d:%02d', $h, $m, $s);
+            }
+        }
+
+        // Formato 12 horas con AM/PM (p.e. "8:00 AM", "10:30 PM")
+        if (preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i', $value, $matches)) {
+            $h   = (int)$matches[1];
+            $min = (int)$matches[2];
+            $sec = isset($matches[3]) && $matches[3] !== '' ? (int)$matches[3] : 0;
+            $ampm = strtoupper($matches[4]);
+            if ($ampm === 'PM' && $h !== 12) $h += 12;
+            if ($ampm === 'AM' && $h === 12)  $h  = 0;
+            return sprintf('%02d:%02d:%02d', $h, $min, $sec);
+        }
+
+        return null;
+    }
+
+    /**
      * Procesar CSV de amenidades
      * Columnas: name,amenity_type,description,capacity,hourly_rate,hours_open,hours_close,requires_payment,status
      */
@@ -633,18 +678,21 @@ class ImportController extends Controller {
         $errors   = 0;
         $errorDetails = [];
         $rowNum = 1;
+        $dataRowsFound = 0;
 
         while (($row = fgetcsv($handle)) !== false) {
             $rowNum++;
             if (count($row) < 2) continue;
 
+            $dataRowsFound++;
             $name            = trim($row[0]);
             $amenityType     = isset($row[1]) && in_array(trim($row[1]), $allowedTypes) ? trim($row[1]) : 'otro';
-            $description     = isset($row[2]) ? trim($row[2]) : null;
+            $descriptionRaw  = isset($row[2]) ? trim($row[2]) : '';
+            $description     = $descriptionRaw !== '' ? $descriptionRaw : null;
             $capacity        = isset($row[3]) && is_numeric($row[3]) ? (int)$row[3] : 0;
             $hourlyRate      = isset($row[4]) && is_numeric($row[4]) ? (float)$row[4] : 0.00;
-            $hoursOpen       = isset($row[5]) && trim($row[5]) !== '' ? trim($row[5]) : null;
-            $hoursClose      = isset($row[6]) && trim($row[6]) !== '' ? trim($row[6]) : null;
+            $hoursOpen       = $this->normalizeTime($row[5] ?? null);
+            $hoursClose      = $this->normalizeTime($row[6] ?? null);
             $requiresPayment = isset($row[7]) ? (int)(bool)$row[7] : 0;
             $status          = isset($row[8]) && in_array(trim($row[8]), $allowedStatus) ? trim($row[8]) : 'active';
 
@@ -674,6 +722,13 @@ class ImportController extends Controller {
         }
 
         fclose($handle);
+
+        if ($dataRowsFound === 0) {
+            return [
+                'success' => false,
+                'message' => 'El archivo CSV no contiene filas de datos. Asegúrate de incluir al menos una amenidad debajo de la fila de encabezados.',
+            ];
+        }
 
         return [
             'success' => true,
@@ -1232,8 +1287,8 @@ class ImportController extends Controller {
             $description     = isset($row[2]) && trim($row[2]) !== '' ? trim($row[2]) : null;
             $capacity        = isset($row[3]) && is_numeric($row[3]) ? (int)$row[3] : 0;
             $hourlyRate      = isset($row[4]) && is_numeric($row[4]) ? (float)$row[4] : 0.00;
-            $hoursOpen       = isset($row[5]) && trim($row[5]) !== '' ? trim($row[5]) : null;
-            $hoursClose      = isset($row[6]) && trim($row[6]) !== '' ? trim($row[6]) : null;
+            $hoursOpen       = $this->normalizeTime($row[5] ?? null);
+            $hoursClose      = $this->normalizeTime($row[6] ?? null);
             $requiresPayment = isset($row[7]) ? (int)(bool)$row[7] : 0;
             $status          = isset($row[8]) && in_array(trim($row[8]), $allowedStatus) ? trim($row[8]) : 'active';
             try {
