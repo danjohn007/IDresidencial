@@ -263,11 +263,37 @@
                 
                 <!-- Mantenimiento -->
                 <li>
-                    <a href="<?php echo BASE_URL; ?>/maintenance" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
-                        <i class="fas fa-tools w-5"></i>
-                        <span>Mantenimiento</span>
+                    <button onclick="toggleSubmenu('maintenance-submenu')" class="sidebar-item flex items-center justify-between w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-tools w-5"></i>
+                            <span>Mantenimiento</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm" id="maintenance-submenu-icon"></i>
+                    </button>
+                    <ul id="maintenance-submenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/maintenance" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-users w-5"></i>
+                                <span>Residentes</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>/maintenance/commonAreas" class="sidebar-item flex items-center space-x-3 px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 transition">
+                                <i class="fas fa-city w-5"></i>
+                                <span>Áreas Comunes</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                <!-- Mensajería -->
+                <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador', 'guardia'])): ?>
+                <li>
+                    <a href="<?php echo BASE_URL; ?>/messaging" class="sidebar-item flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 transition">
+                        <i class="fas fa-box w-5"></i>
+                        <span>Mensajería</span>
                     </a>
                 </li>
+                <?php endif; ?>
                 <?php endif; ?>
                 
                 <!-- Proveedores (admin only) -->
