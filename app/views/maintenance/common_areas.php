@@ -12,12 +12,20 @@
                     <h1 class="text-3xl font-bold text-gray-900"><i class="fas fa-city mr-2 text-blue-600"></i>Áreas Comunes</h1>
                     <p class="text-gray-600 mt-1">Reportes de mantenimiento en áreas comunes del residencial</p>
                 </div>
-                <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador', 'guardia'])): ?>
-                <a href="<?php echo BASE_URL; ?>/maintenance/createCommonArea"
-                   class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                    <i class="fas fa-plus mr-2"></i> Nuevo Reporte
-                </a>
-                <?php endif; ?>
+                <div class="flex items-center space-x-2">
+                    <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador'])): ?>
+                    <a href="<?php echo BASE_URL; ?>/maintenance/catalog"
+                       class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 transition">
+                        <i class="fas fa-book mr-2"></i> Catálogo
+                    </a>
+                    <?php endif; ?>
+                    <?php if (in_array($_SESSION['role'], ['superadmin', 'administrador', 'guardia'])): ?>
+                    <a href="<?php echo BASE_URL; ?>/maintenance/createCommonArea"
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-plus mr-2"></i> Nuevo Reporte
+                    </a>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <?php if (isset($_SESSION['success_message'])): ?>
