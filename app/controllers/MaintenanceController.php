@@ -7,11 +7,13 @@ class MaintenanceController extends Controller {
     
     private $maintenanceModel;
     private $residentModel;
+    private $catalogModel;
     
     public function __construct() {
         $this->requireAuth();
         $this->maintenanceModel = $this->model('MaintenanceReport');
-        $this->residentModel = $this->model('Resident');
+        $this->residentModel    = $this->model('Resident');
+        $this->catalogModel     = $this->model('MaintenanceCatalog');
     }
     
     /**
@@ -230,5 +232,149 @@ class MaintenanceController extends Controller {
         $redirectTo = $this->post('_redirect', 'maintenance');
         $allowed = ['maintenance', 'maintenance/commonAreas'];
         $this->redirect(in_array($redirectTo, $allowed) ? $redirectTo : 'maintenance');
+    }
+
+    // ------------------------------------------------------------------
+    // Catálogo de Incidencias Fijas
+    // ------------------------------------------------------------------
+
+    /**
+     * Lista del catálogo de incidencias recurrentes
+     */
+    public function catalog() {
+        $this->requireRole(['superadmin', 'administrador']);
+
+        $items = $this->catalogModel->getAll();
+
+        $data = [
+            'title' => 'Catálogo de Incidencias Fijas',
+            'items' => $items,
+        ];
+
+        $this->view('maintenance/catalog', $data);
+    }
+
+    /**
+     * Crear / guardar nueva entrada del catálogo
+     */
+    public function catalogCreate() {
+        $this->requireRole(['superadmin', 'administrador']);
+
+        $data = [
+            'title' => 'Nueva Incidencia Fija',
+            'item'  => null,
+            'error' => '',
+        ];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $fields = [
+                'title'          => trim($this->post('title')),
+                'description'    => trim($this->post('description')),
+                'category'       => $this->post('category'),
+                'location'       => trim($this->post('location')),
+                'priority'       => $this->post('priority', 'media'),
+                'interval_value' => (int) $this->post('interval_value'),
+                'interval_unit'  => $this->post('interval_unit', 'meses'),
+            ];
+
+            if (empty($fields['title']) || empty($fields['category']) || $fields['interval_value'] < 1) {
+                $data['error'] = 'Por favor complete todos los campos obligatorios correctamente.';
+            } else {
+                if ($this->catalogModel->create($fields)) {
+                    $_SESSION['success_message'] = 'Incidencia fija creada exitosamente.';
+                    $this->redirect('maintenance/catalog');
+                } else {
+                    $data['error'] = 'Error al guardar la incidencia fija.';
+                }
+            }
+        }
+
+        $this->view('maintenance/catalog_form', $data);
+    }
+
+    /**
+     * Editar entrada del catálogo
+     */
+    public function catalogEdit($id) {
+        $this->requireRole(['superadmin', 'administrador']);
+
+        $item = $this->catalogModel->findById($id);
+        if (!$item) {
+            $_SESSION['error_message'] = 'Incidencia fija no encontrada.';
+            $this->redirect('maintenance/catalog');
+        }
+
+        $data = [
+            'title' => 'Editar Incidencia Fija',
+            'item'  => $item,
+            'error' => '',
+        ];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $fields = [
+                'title'          => trim($this->post('title')),
+                'description'    => trim($this->post('description')),
+                'category'       => $this->post('category'),
+                'location'       => trim($this->post('location')),
+                'priority'       => $this->post('priority', 'media'),
+                'interval_value' => (int) $this->post('interval_value'),
+                'interval_unit'  => $this->post('interval_unit', 'meses'),
+                'active'         => (int) $this->post('active', 1),
+            ];
+
+            if (empty($fields['title']) || empty($fields['category']) || $fields['interval_value'] < 1) {
+                $data['error'] = 'Por favor complete todos los campos obligatorios correctamente.';
+            } else {
+                if ($this->catalogModel->update($id, $fields)) {
+                    $_SESSION['success_message'] = 'Incidencia fija actualizada exitosamente.';
+                    $this->redirect('maintenance/catalog');
+                } else {
+                    $data['error'] = 'Error al actualizar la incidencia fija.';
+                }
+            }
+        }
+
+        $this->view('maintenance/catalog_form', $data);
+    }
+
+    /**
+     * Eliminar entrada del catálogo
+     */
+    public function catalogDelete($id) {
+        $this->requireRole(['superadmin', 'administrador']);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if ($this->catalogModel->delete($id)) {
+                $_SESSION['success_message'] = 'Incidencia fija eliminada.';
+            } else {
+                $_SESSION['error_message'] = 'Error al eliminar la incidencia fija.';
+            }
+        }
+
+        $this->redirect('maintenance/catalog');
+    }
+
+    /**
+     * Generar reportes pendientes del catálogo manualmente (también ejecutado por cron)
+     */
+    public function catalogGenerate() {
+        $this->requireRole(['superadmin', 'administrador']);
+
+        $due     = $this->catalogModel->getDueItems();
+        $created = 0;
+
+        foreach ($due as $item) {
+            if ($this->catalogModel->generateReport($item) !== false) {
+                $created++;
+            }
+        }
+
+        if ($created > 0) {
+            $_SESSION['success_message'] = "Se generaron {$created} reporte(s) automático(s) del catálogo.";
+        } else {
+            $_SESSION['success_message'] = 'No hay incidencias fijas con reportes pendientes de generar.';
+        }
+
+        $this->redirect('maintenance/catalog');
     }
 }
