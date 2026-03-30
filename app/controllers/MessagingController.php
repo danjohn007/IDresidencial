@@ -151,12 +151,12 @@ class MessagingController extends Controller {
         }
 
         $stmt = $this->db->prepare("
-            UPDATE packages SET status = 'entregado', delivered_at = NOW(), delivered_by = ?
+            UPDATE packages SET status = 'entregado_pendiente', delivered_at = NOW(), delivered_by = ?
             WHERE id = ? AND status = 'pendiente'
         ");
         if ($stmt->execute([$_SESSION['user_id'], $id]) && $stmt->rowCount() > 0) {
             AuditController::log('update', 'Paquete entregado #' . $id, 'packages', $id);
-            $_SESSION['success_message'] = 'Paquete marcado como entregado';
+            $_SESSION['success_message'] = 'Paquete marcado como entregado, pendiente de confirmación por el residente';
         } else {
             $_SESSION['error_message'] = 'No se pudo actualizar el paquete';
         }
