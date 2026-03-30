@@ -30,10 +30,14 @@
             <?php endif; ?>
 
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
                     <p class="text-sm text-gray-600">Pendientes</p>
                     <p class="text-2xl font-bold text-yellow-600"><?php echo $stats['pendiente'] ?? 0; ?></p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
+                    <p class="text-sm text-gray-600">Pend. Confirmación</p>
+                    <p class="text-2xl font-bold text-orange-600"><?php echo $stats['entregado_pendiente'] ?? 0; ?></p>
                 </div>
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
                     <p class="text-sm text-gray-600">Entregados</p>
@@ -59,6 +63,7 @@
                         <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                             <option value="">Todos</option>
                             <option value="pendiente" <?php echo $status === 'pendiente' ? 'selected' : ''; ?>>Pendiente</option>
+                            <option value="entregado_pendiente" <?php echo $status === 'entregado_pendiente' ? 'selected' : ''; ?>>Entregado, Pend. Confirmación</option>
                             <option value="entregado" <?php echo $status === 'entregado' ? 'selected' : ''; ?>>Entregado</option>
                         </select>
                     </div>
@@ -108,6 +113,8 @@
                             <td class="px-6 py-4">
                                 <?php if ($pkg['status'] === 'pendiente'): ?>
                                 <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">Pendiente</span>
+                                <?php elseif ($pkg['status'] === 'entregado_pendiente'): ?>
+                                <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">Entregado, Pend. Confirmación</span>
                                 <?php else: ?>
                                 <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Entregado</span>
                                 <?php endif; ?>

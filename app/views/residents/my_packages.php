@@ -33,7 +33,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
                     <p class="text-sm text-gray-600">Pendientes</p>
-                    <p class="text-3xl font-bold text-yellow-600"><?php echo $stats['pendiente'] ?? 0; ?></p>
+                    <p class="text-3xl font-bold text-yellow-600"><?php echo ($stats['pendiente'] ?? 0) + ($stats['entregado_pendiente'] ?? 0); ?></p>
                 </div>
                 <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
                     <p class="text-sm text-gray-600">Entregados</p>
@@ -53,6 +53,7 @@
                         <select name="status" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             <option value="">Todos</option>
                             <option value="pendiente" <?php echo $status === 'pendiente' ? 'selected' : ''; ?>>Pendiente</option>
+                            <option value="entregado_pendiente" <?php echo $status === 'entregado_pendiente' ? 'selected' : ''; ?>>Entregado, Pend. Confirmación</option>
                             <option value="entregado" <?php echo $status === 'entregado' ? 'selected' : ''; ?>>Entregado</option>
                         </select>
                     </div>
@@ -109,12 +110,14 @@
                                 <td class="px-6 py-4">
                                     <?php if ($pkg['status'] === 'pendiente'): ?>
                                     <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Pendiente</span>
+                                    <?php elseif ($pkg['status'] === 'entregado_pendiente'): ?>
+                                    <span class="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">Entregado, Pend. Confirmación</span>
                                     <?php else: ?>
                                     <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Entregado</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <?php if ($pkg['status'] === 'pendiente'): ?>
+                                    <?php if ($pkg['status'] === 'pendiente' || $pkg['status'] === 'entregado_pendiente'): ?>
                                     <form method="POST" action="<?php echo BASE_URL; ?>/residents/confirmPackageReceipt/<?php echo $pkg['id']; ?>"
                                           onsubmit="return confirm('¿Confirmas que recibiste este paquete?')">
                                         <button type="submit"

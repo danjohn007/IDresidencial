@@ -3079,7 +3079,7 @@ class ResidentsController extends Controller {
             FROM packages pkg
             JOIN properties p ON pkg.property_id = p.id
             JOIN residents r ON r.property_id = p.id
-            WHERE pkg.id = ? AND r.user_id = ? AND r.status = 'active' AND pkg.status = 'pendiente'
+            WHERE pkg.id = ? AND r.user_id = ? AND r.status = 'active' AND pkg.status IN ('pendiente', 'entregado_pendiente')
             LIMIT 1
         ");
         $stmt->execute([$id, $userId]);
@@ -3092,7 +3092,7 @@ class ResidentsController extends Controller {
 
         $stmt = $this->db->prepare("
             UPDATE packages SET status = 'entregado', delivered_at = NOW(), delivered_by = ?
-            WHERE id = ? AND status = 'pendiente'
+            WHERE id = ? AND status IN ('pendiente', 'entregado_pendiente')
         ");
         if ($stmt->execute([$userId, $id]) && $stmt->rowCount() > 0) {
             AuditController::log('update', 'Paquete confirmado como recibido #' . $id, 'packages', $id);
