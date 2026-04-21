@@ -46,10 +46,16 @@ class AccessController extends Controller {
      * Crear nueva visita con QR
      */
     public function create() {
+        $defaultVisitType = $this->get('visit_type', 'personal');
+        if (!in_array($defaultVisitType, ['personal', 'proveedor', 'delivery', 'rappi', 'uber_eats', 'otro'], true)) {
+            $defaultVisitType = 'personal';
+        }
+
         $data = [
             'title' => 'Generar Pase de Visita',
             'error' => '',
-            'success' => ''
+            'success' => '',
+            'defaultVisitType' => $defaultVisitType
         ];
         
         // Obtener información del residente

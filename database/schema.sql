@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS visits (
     visitor_id VARCHAR(50),
     visitor_phone VARCHAR(20),
     vehicle_plate VARCHAR(20),
-    visit_type ENUM('personal', 'proveedor', 'delivery', 'otro') DEFAULT 'personal',
+    visit_type ENUM('personal', 'proveedor', 'delivery', 'rappi', 'uber_eats', 'otro') DEFAULT 'personal',
     qr_code VARCHAR(255) UNIQUE,
     valid_from TIMESTAMP NOT NULL,
     valid_until TIMESTAMP NOT NULL,

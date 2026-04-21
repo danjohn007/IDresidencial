@@ -33,6 +33,9 @@
                 <!-- Información de la Amenidad -->
                 <div class="bg-white rounded-lg shadow-md p-6 mb-6">
                     <h2 class="text-xl font-semibold mb-4">Información de la Amenidad</h2>
+                    <div id="capacity-update-warning" class="hidden mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700 rounded text-sm">
+                        No se pudo actualizar la capacidad en tiempo real. Verifique la disponibilidad antes de confirmar.
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <p class="text-sm text-gray-600">Tipo</p>
@@ -40,8 +43,11 @@
                         </div>
                         <?php if ($amenity['capacity']): ?>
                         <div>
-                            <p class="text-sm text-gray-600">Capacidad</p>
-                            <p class="font-medium"><?php echo $amenity['capacity']; ?> personas</p>
+                            <p class="text-sm text-gray-600">Capacidad Disponible</p>
+                            <p class="font-medium">
+                                <span id="remaining-capacity-value"><?php echo (int)($remainingCapacity ?? $amenity['capacity']); ?></span> personas
+                                <span class="text-xs text-gray-500">(de <?php echo (int)$amenity['capacity']; ?>)</span>
+                            </p>
                         </div>
                         <?php endif; ?>
                         <div>
@@ -78,6 +84,7 @@
                                        id="reservation_date" 
                                        name="reservation_date" 
                                        required
+                                       value="<?php echo htmlspecialchars($selectedDate ?? date('Y-m-d')); ?>"
                                        min="<?php echo date('Y-m-d'); ?>"
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                             </div>
@@ -119,7 +126,7 @@
                                        id="guests_count" 
                                        name="guests_count" 
                                        min="0"
-                                       max="<?php echo $amenity['capacity'] ?: 100; ?>"
+                                       max="<?php echo (int)($remainingCapacity ?? ($amenity['capacity'] ?: 100)); ?>"
                                        value="0"
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                             </div>
@@ -169,3 +176,57 @@
 </div>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const reservationDateInput = document.getElementById('reservation_date');
+    const guestsInput = document.getElementById('guests_count');
+    const remainingCapacityValue = document.getElementById('remaining-capacity-value');
+    const capacityWarning = document.getElementById('capacity-update-warning');
+
+    if (!reservationDateInput || !guestsInput || !remainingCapacityValue) {
+        return;
+    }
+
+    const baseUrl = <?php echo json_encode(BASE_URL, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    const amenityId = <?php echo (int)$amenity['id']; ?>;
+    const defaultCapacity = <?php echo (int)$amenity['capacity']; ?>;
+
+    const updateCapacity = (dateValue) => {
+        if (!dateValue) {
+            return;
+        }
+
+        fetch(`${baseUrl}/amenities/remainingCapacity/${amenityId}?date=${encodeURIComponent(dateValue)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (typeof data.remaining !== 'number') {
+                    return;
+                }
+
+                remainingCapacityValue.textContent = data.remaining;
+                guestsInput.max = data.remaining;
+                if (capacityWarning) {
+                    capacityWarning.classList.add('hidden');
+                }
+                if (Number(guestsInput.value || 0) > data.remaining) {
+                    guestsInput.value = data.remaining;
+                }
+            })
+            .catch(() => {
+                console.warn('No fue posible actualizar la capacidad disponible para la fecha seleccionada.');
+                remainingCapacityValue.textContent = defaultCapacity;
+                guestsInput.max = defaultCapacity;
+                if (capacityWarning) {
+                    capacityWarning.classList.remove('hidden');
+                }
+            });
+    };
+
+    reservationDateInput.addEventListener('change', function () {
+        updateCapacity(this.value);
+    });
+
+    updateCapacity(reservationDateInput.value);
+});
+</script>

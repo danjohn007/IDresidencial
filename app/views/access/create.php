@@ -105,10 +105,12 @@
                                         Tipo de Visita
                                     </label>
                                     <select name="visit_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                        <option value="personal">Personal</option>
-                                        <option value="proveedor">Proveedor</option>
-                                        <option value="delivery">Delivery</option>
-                                        <option value="otro">Otro</option>
+                                        <option value="personal" <?php echo ($defaultVisitType ?? 'personal') === 'personal' ? 'selected' : ''; ?>>Personal</option>
+                                        <option value="proveedor" <?php echo ($defaultVisitType ?? 'personal') === 'proveedor' ? 'selected' : ''; ?>>Proveedor</option>
+                                        <option value="delivery" <?php echo ($defaultVisitType ?? 'personal') === 'delivery' ? 'selected' : ''; ?>>Delivery</option>
+                                        <option value="rappi" <?php echo ($defaultVisitType ?? 'personal') === 'rappi' ? 'selected' : ''; ?>>Rappi</option>
+                                        <option value="uber_eats" <?php echo ($defaultVisitType ?? 'personal') === 'uber_eats' ? 'selected' : ''; ?>>Uber Eats</option>
+                                        <option value="otro" <?php echo ($defaultVisitType ?? 'personal') === 'otro' ? 'selected' : ''; ?>>Otro</option>
                                     </select>
                                 </div>
                             </div>

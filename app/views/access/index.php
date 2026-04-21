@@ -14,6 +14,9 @@
                     <p class="text-gray-600 mt-1">Gestión de visitas y registro de accesos</p>
                 </div>
                 <div class="space-x-2">
+                    <a href="<?php echo BASE_URL; ?>/access/create?visit_type=rappi" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-concierge-bell mr-2"></i> Visitas Rappi/Uber Eats
+                    </a>
                     <a href="<?php echo BASE_URL; ?>/access/create" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                         <i class="fas fa-qrcode mr-2"></i> Generar Pase
                     </a>

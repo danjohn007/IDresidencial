@@ -49,6 +49,10 @@ class AmenitiesController extends Controller {
         $data = [
             'title' => 'Reservar ' . $amenity['name'],
             'amenity' => $amenity,
+            'selectedDate' => date('Y-m-d'),
+            'remainingCapacity' => $amenity['capacity'] > 0
+                ? $this->reservationModel->getRemainingCapacityByDate($amenityId, date('Y-m-d'), $amenity['capacity'])
+                : null,
             'error' => '',
             'success' => ''
         ];
@@ -65,15 +69,31 @@ class AmenitiesController extends Controller {
                     'reservation_date' => $this->post('reservation_date'),
                     'start_time' => $this->post('start_time'),
                     'end_time' => $this->post('end_time'),
-                    'guests_count' => $this->post('guests_count', 0),
+                    'guests_count' => max(0, (int)$this->post('guests_count', 0)),
                     'amount' => $amenity['hourly_rate'],
                     'payment_status' => 'pending',
                     'status' => 'pending',
                     'notes' => $this->post('notes')
                 ];
+
+                $data['selectedDate'] = $reservationData['reservation_date'];
+                if ($amenity['capacity'] > 0 && !empty($reservationData['reservation_date'])) {
+                    $data['remainingCapacity'] = $this->reservationModel->getRemainingCapacityByDate(
+                        $amenityId,
+                        $reservationData['reservation_date'],
+                        $amenity['capacity']
+                    );
+                }
+
+                if ($amenity['capacity'] > 0
+                    && !empty($reservationData['reservation_date'])
+                    && isset($data['remainingCapacity'])
+                    && $reservationData['guests_count'] > $data['remainingCapacity']) {
+                    $data['error'] = 'La cantidad de invitados excede la capacidad disponible para esa fecha';
+                }
                 
                 // Verificar disponibilidad
-                if (!$this->reservationModel->checkAvailability(
+                elseif (!$this->reservationModel->checkAvailability(
                     $amenityId, 
                     $reservationData['reservation_date'],
                     $reservationData['start_time'],
@@ -93,6 +113,44 @@ class AmenitiesController extends Controller {
         }
         
         $this->view('amenities/reserve', $data);
+    }
+
+    public function remainingCapacity($amenityId = null) {
+        if (!$amenityId) {
+            $this->json(['error' => 'Amenidad inválida'], 400);
+            return;
+        }
+
+        $amenity = $this->amenityModel->findById($amenityId);
+        if (!$amenity) {
+            $this->json(['error' => 'Amenidad no encontrada'], 404);
+            return;
+        }
+
+        $date = $this->get('date', date('Y-m-d'));
+        $dateTime = DateTime::createFromFormat('Y-m-d', $date);
+        if (!$dateTime || $dateTime->format('Y-m-d') !== $date) {
+            $this->json(['error' => 'Fecha inválida'], 400);
+            return;
+        }
+
+        if ((int)$amenity['capacity'] <= 0) {
+            $this->json([
+                'capacity' => 0,
+                'reserved' => 0,
+                'remaining' => null
+            ]);
+            return;
+        }
+
+        $reserved = $this->reservationModel->getReservedGuestsByDate($amenityId, $date);
+        $remaining = max(((int)$amenity['capacity']) - $reserved, 0);
+
+        $this->json([
+            'capacity' => (int)$amenity['capacity'],
+            'reserved' => $reserved,
+            'remaining' => $remaining
+        ]);
     }
     
     /**
