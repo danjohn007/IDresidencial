@@ -3133,7 +3133,7 @@ class ResidentsController extends Controller {
 
         $password = isset($requestData['password']) ? (string)$requestData['password'] : '';
         if (trim($password) === '') {
-            echo json_encode(['success' => false, 'message' => 'Debes capturar tu contraseña']);
+            echo json_encode(['success' => false, 'message' => 'Debes ingresar tu contraseña']);
             exit;
         }
 

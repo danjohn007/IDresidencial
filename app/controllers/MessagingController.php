@@ -156,7 +156,7 @@ class MessagingController extends Controller {
         $deliveryKey = strtoupper(trim($this->post('delivery_key', '')));
 
         if ($receiverName === '' || $deliveryKey === '') {
-            $_SESSION['error_message'] = 'Debes capturar quién recibe y la clave de entrega';
+            $_SESSION['error_message'] = 'Debes ingresar quién recibe y la clave de entrega';
             $this->redirect('messaging');
         }
 
@@ -234,6 +234,7 @@ class MessagingController extends Controller {
     }
 
     private function generateDeliveryKey() {
+        // Se omiten caracteres ambiguos (I, O, 0, 1) para evitar errores al dictar o capturar la clave.
         $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         $maxIndex = strlen($chars) - 1;
         $key = '';

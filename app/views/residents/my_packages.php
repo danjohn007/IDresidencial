@@ -169,6 +169,7 @@
         </div>
         <div class="px-6 py-4">
             <input type="password" id="delivery-key-password" class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                   aria-label="Contraseña"
                    placeholder="Contraseña">
             <p id="delivery-key-error" class="hidden text-sm text-red-600 mt-2"></p>
         </div>
@@ -220,7 +221,7 @@ function confirmDeliveryKeyRequest() {
 
     const password = passwordInput.value || '';
     if (password.trim() === '') {
-        errorLabel.textContent = 'Debes capturar tu contraseña';
+        errorLabel.textContent = 'Debes ingresar tu contraseña';
         errorLabel.classList.remove('hidden');
         return;
     }
