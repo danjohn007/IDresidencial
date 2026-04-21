@@ -117,17 +117,20 @@ class AmenitiesController extends Controller {
     public function remainingCapacity($amenityId = null) {
         if (!$amenityId) {
             $this->json(['error' => 'Amenidad inválida'], 400);
+            return;
         }
 
         $amenity = $this->amenityModel->findById($amenityId);
         if (!$amenity) {
             $this->json(['error' => 'Amenidad no encontrada'], 404);
+            return;
         }
 
         $date = $this->get('date', date('Y-m-d'));
         $dateTime = DateTime::createFromFormat('Y-m-d', $date);
         if (!$dateTime || $dateTime->format('Y-m-d') !== $date) {
             $this->json(['error' => 'Fecha inválida'], 400);
+            return;
         }
 
         if ((int)$amenity['capacity'] <= 0) {
@@ -136,6 +139,7 @@ class AmenitiesController extends Controller {
                 'reserved' => 0,
                 'remaining' => null
             ]);
+            return;
         }
 
         $reserved = $this->reservationModel->getReservedGuestsByDate($amenityId, $date);

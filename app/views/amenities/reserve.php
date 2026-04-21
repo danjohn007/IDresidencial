@@ -184,6 +184,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
+    const baseUrl = <?php echo json_encode(BASE_URL, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
     const amenityId = <?php echo (int)$amenity['id']; ?>;
     const defaultCapacity = <?php echo (int)$amenity['capacity']; ?>;
 
@@ -192,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        fetch(`<?php echo BASE_URL; ?>/amenities/remainingCapacity/${amenityId}?date=${encodeURIComponent(dateValue)}`)
+        fetch(`${baseUrl}/amenities/remainingCapacity/${amenityId}?date=${encodeURIComponent(dateValue)}`)
             .then(response => response.json())
             .then(data => {
                 if (typeof data.remaining !== 'number') {
