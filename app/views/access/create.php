@@ -1,6 +1,7 @@
 <?php require_once APP_PATH . '/views/layouts/header.php'; ?>
 <?php
-$isDeliveryMode = in_array($defaultVisitType ?? 'personal', ['rappi', 'uber_eats'], true);
+$selectedVisitType = $defaultVisitType ?? null;
+$isDeliveryMode = in_array($selectedVisitType, ['rappi', 'uber_eats'], true);
 $deliveryVisitorName = $deliveryVisitorName ?? 'Rappi/Uber Eats';
 ?>
 
@@ -114,15 +115,15 @@ $deliveryVisitorName = $deliveryVisitorName ?? 'Rappi/Uber Eats';
                                     </label>
                                     <select name="visit_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                         <?php if ($isDeliveryMode): ?>
-                                            <option value="rappi" <?php echo ($defaultVisitType ?? 'rappi') === 'rappi' ? 'selected' : ''; ?>>Rappi</option>
-                                            <option value="uber_eats" <?php echo ($defaultVisitType ?? 'rappi') === 'uber_eats' ? 'selected' : ''; ?>>Uber Eats</option>
+                                            <option value="rappi" <?php echo $selectedVisitType === 'rappi' ? 'selected' : ''; ?>>Rappi</option>
+                                            <option value="uber_eats" <?php echo $selectedVisitType === 'uber_eats' ? 'selected' : ''; ?>>Uber Eats</option>
                                         <?php else: ?>
-                                            <option value="personal" <?php echo ($defaultVisitType ?? 'personal') === 'personal' ? 'selected' : ''; ?>>Personal</option>
-                                            <option value="proveedor" <?php echo ($defaultVisitType ?? 'personal') === 'proveedor' ? 'selected' : ''; ?>>Proveedor</option>
-                                            <option value="delivery" <?php echo ($defaultVisitType ?? 'personal') === 'delivery' ? 'selected' : ''; ?>>Delivery</option>
-                                            <option value="rappi" <?php echo ($defaultVisitType ?? 'personal') === 'rappi' ? 'selected' : ''; ?>>Rappi</option>
-                                            <option value="uber_eats" <?php echo ($defaultVisitType ?? 'personal') === 'uber_eats' ? 'selected' : ''; ?>>Uber Eats</option>
-                                            <option value="otro" <?php echo ($defaultVisitType ?? 'personal') === 'otro' ? 'selected' : ''; ?>>Otro</option>
+                                            <option value="personal" <?php echo ($selectedVisitType ?? 'personal') === 'personal' ? 'selected' : ''; ?>>Personal</option>
+                                            <option value="proveedor" <?php echo ($selectedVisitType ?? 'personal') === 'proveedor' ? 'selected' : ''; ?>>Proveedor</option>
+                                            <option value="delivery" <?php echo ($selectedVisitType ?? 'personal') === 'delivery' ? 'selected' : ''; ?>>Delivery</option>
+                                            <option value="rappi" <?php echo ($selectedVisitType ?? 'personal') === 'rappi' ? 'selected' : ''; ?>>Rappi</option>
+                                            <option value="uber_eats" <?php echo ($selectedVisitType ?? 'personal') === 'uber_eats' ? 'selected' : ''; ?>>Uber Eats</option>
+                                            <option value="otro" <?php echo ($selectedVisitType ?? 'personal') === 'otro' ? 'selected' : ''; ?>>Otro</option>
                                         <?php endif; ?>
                                     </select>
                                 </div>
