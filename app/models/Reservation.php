@@ -103,7 +103,7 @@ class Reservation {
             FROM reservations
             WHERE amenity_id = ?
             AND reservation_date = ?
-            AND status NOT IN ('cancelled')
+            AND status <> 'cancelled'
         ");
         $stmt->execute([$amenityId, $date]);
         $result = $stmt->fetch();
