@@ -85,7 +85,10 @@ class AmenitiesController extends Controller {
                     );
                 }
 
-                if ($amenity['capacity'] > 0 && !empty($reservationData['reservation_date']) && $reservationData['guests_count'] > $data['remainingCapacity']) {
+                if ($amenity['capacity'] > 0
+                    && !empty($reservationData['reservation_date'])
+                    && isset($data['remainingCapacity'])
+                    && $reservationData['guests_count'] > $data['remainingCapacity']) {
                     $data['error'] = 'La cantidad de invitados excede la capacidad disponible para esa fecha';
                 }
                 

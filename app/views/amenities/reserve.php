@@ -33,6 +33,9 @@
                 <!-- Información de la Amenidad -->
                 <div class="bg-white rounded-lg shadow-md p-6 mb-6">
                     <h2 class="text-xl font-semibold mb-4">Información de la Amenidad</h2>
+                    <div id="capacity-update-warning" class="hidden mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700 rounded text-sm">
+                        No se pudo actualizar la capacidad en tiempo real. Verifique la disponibilidad antes de confirmar.
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <p class="text-sm text-gray-600">Tipo</p>
@@ -179,6 +182,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const reservationDateInput = document.getElementById('reservation_date');
     const guestsInput = document.getElementById('guests_count');
     const remainingCapacityValue = document.getElementById('remaining-capacity-value');
+    const capacityWarning = document.getElementById('capacity-update-warning');
 
     if (!reservationDateInput || !guestsInput || !remainingCapacityValue) {
         return;
@@ -202,6 +206,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 remainingCapacityValue.textContent = data.remaining;
                 guestsInput.max = data.remaining;
+                if (capacityWarning) {
+                    capacityWarning.classList.add('hidden');
+                }
                 if (Number(guestsInput.value || 0) > data.remaining) {
                     guestsInput.value = data.remaining;
                 }
@@ -210,6 +217,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.warn('No fue posible actualizar la capacidad disponible para la fecha seleccionada.');
                 remainingCapacityValue.textContent = defaultCapacity;
                 guestsInput.max = defaultCapacity;
+                if (capacityWarning) {
+                    capacityWarning.classList.remove('hidden');
+                }
             });
     };
 
