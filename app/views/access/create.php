@@ -17,8 +17,12 @@ $defaultValidUntil = $defaultValidUntil ?? date('Y-m-d\TH:i', strtotime('+4 hour
             <div class="max-w-3xl mx-auto">
                 <!-- Header -->
                 <div class="mb-6">
-                    <h1 class="text-3xl font-bold text-gray-900">Generar Pase de Visita</h1>
-                    <p class="text-gray-600 mt-1">Crea un pase de visita con código QR</p>
+                    <h1 class="text-3xl font-bold text-gray-900">
+                        <?php echo $isDeliveryMode ? 'Registrar Visita Rappi/Uber Eats' : 'Generar Pase de Visita'; ?>
+                    </h1>
+                    <p class="text-gray-600 mt-1">
+                        <?php echo $isDeliveryMode ? 'Registra la visita y guárdala en bitácora' : 'Crea un pase de visita con código QR'; ?>
+                    </p>
                 </div>
 
                 <!-- Error/Success Messages -->
@@ -207,19 +211,21 @@ $defaultValidUntil = $defaultValidUntil ?? date('Y-m-d\TH:i', strtotime('+4 hour
                     </form>
                 </div>
 
-                <!-- Info Box -->
-                <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 class="font-semibold text-blue-900 mb-2">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        Información Importante
-                    </h4>
-                    <ul class="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                        <li>El código QR será único para cada visita</li>
-                        <li>El visitante deberá presentar el código QR en la entrada</li>
-                        <li>El pase expirará automáticamente después de la fecha establecida</li>
-                        <li>El guardia podrá validar y registrar la entrada escaneando el QR</li>
-                    </ul>
-                </div>
+                <?php if (!$isDeliveryMode): ?>
+                    <!-- Info Box -->
+                    <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 class="font-semibold text-blue-900 mb-2">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Información Importante
+                        </h4>
+                        <ul class="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                            <li>El código QR será único para cada visita</li>
+                            <li>El visitante deberá presentar el código QR en la entrada</li>
+                            <li>El pase expirará automáticamente después de la fecha establecida</li>
+                            <li>El guardia podrá validar y registrar la entrada escaneando el QR</li>
+                        </ul>
+                    </div>
+                <?php endif; ?>
             </div>
         </main>
     </div>
