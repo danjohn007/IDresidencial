@@ -11,6 +11,12 @@ ALTER TABLE `packages`
 CREATE INDEX `idx_packages_delivery_key` ON `packages` (`delivery_key`);
 
 UPDATE `packages`
-SET `delivery_key` = UPPER(SUBSTRING(REPLACE(UUID(), '-', ''), 1, 8))
+SET `delivery_key` = UPPER(
+    SUBSTRING(
+        REPLACE(REPLACE(REPLACE(UUID(), '-', ''), '0', '2'), '1', '3'),
+        1,
+        8
+    )
+)
 WHERE (`delivery_key` IS NULL OR `delivery_key` = '')
   AND `status` IN ('pendiente', 'entregado_pendiente');

@@ -215,6 +215,7 @@ function toggleDeliverySubmit(packageId) {
         return;
     }
 
+    key.value = key.value.toUpperCase();
     const canSubmit = receiver.value.trim() !== '' && key.value.trim() !== '';
     submit.classList.toggle('hidden', !canSubmit);
 }
