@@ -119,7 +119,7 @@
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-700">
                                     <?php if ($pkg['status'] === 'pendiente' || $pkg['status'] === 'entregado_pendiente'): ?>
-                                    <span id="delivery-key-<?php echo $pkg['id']; ?>" class="font-mono text-xs">••••••••</span>
+                                    <span id="delivery-key-<?php echo $pkg['id']; ?>" class="font-mono text-xs" aria-label="Clave de entrega oculta">••••••••</span>
                                     <?php else: ?>
                                     <span class="text-xs text-gray-400">—</span>
                                     <?php endif; ?>

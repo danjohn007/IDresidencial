@@ -163,7 +163,7 @@
                                                aria-label="Clave de entrega"
                                                oninput="toggleDeliverySubmit(<?php echo $pkg['id']; ?>)"
                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm uppercase"
-                                               placeholder="Ingresa la clave de entrega del paquete">
+                                               placeholder="Ej. ABCD1234">
                                     </div>
                                     <div>
                                         <button type="submit"
