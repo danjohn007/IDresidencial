@@ -4,6 +4,7 @@
  */
 
 class AccessController extends Controller {
+    private const DELIVERY_VISITOR_NAME = 'Rappi/Uber Eats';
     
     private $visitModel;
     private $accessLogModel;
@@ -55,7 +56,8 @@ class AccessController extends Controller {
             'title' => 'Generar Pase de Visita',
             'error' => '',
             'success' => '',
-            'defaultVisitType' => $defaultVisitType
+            'defaultVisitType' => $defaultVisitType,
+            'deliveryVisitorName' => self::DELIVERY_VISITOR_NAME
         ];
         
         // Obtener información del residente
@@ -81,7 +83,7 @@ class AccessController extends Controller {
             $isDeliveryVisit = in_array($visitData['visit_type'], ['rappi', 'uber_eats'], true);
             if ($isDeliveryVisit) {
                 if (empty($visitData['visitor_name'])) {
-                    $visitData['visitor_name'] = 'Rappi/Uber Eats';
+                    $visitData['visitor_name'] = self::DELIVERY_VISITOR_NAME;
                 }
                 if (empty($visitData['valid_from'])) {
                     $visitData['valid_from'] = date('Y-m-d H:i:s');
@@ -95,7 +97,6 @@ class AccessController extends Controller {
             
             // Validaciones
             if (
-                empty($visitData['resident_id']) ||
                 (!$isDeliveryVisit && empty($visitData['visitor_name'])) ||
                 empty($visitData['valid_from']) ||
                 empty($visitData['valid_until'])

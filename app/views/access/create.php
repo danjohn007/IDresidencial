@@ -1,5 +1,8 @@
 <?php require_once APP_PATH . '/views/layouts/header.php'; ?>
-<?php $isDeliveryMode = in_array($defaultVisitType ?? 'personal', ['rappi', 'uber_eats'], true); ?>
+<?php
+$isDeliveryMode = in_array($defaultVisitType ?? 'personal', ['rappi', 'uber_eats'], true);
+$deliveryVisitorName = $deliveryVisitorName ?? 'Rappi/Uber Eats';
+?>
 
 <div class="flex h-screen overflow-hidden">
     <?php require_once APP_PATH . '/views/layouts/sidebar.php'; ?>
@@ -63,7 +66,7 @@
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <?php if ($isDeliveryMode): ?>
-                                    <input type="hidden" name="visitor_name" value="Rappi/Uber Eats">
+                                    <input type="hidden" name="visitor_name" value="<?php echo htmlspecialchars($deliveryVisitorName); ?>">
                                 <?php else: ?>
                                     <div class="md:col-span-2">
                                         <label class="block text-sm font-medium text-gray-700 mb-2">
