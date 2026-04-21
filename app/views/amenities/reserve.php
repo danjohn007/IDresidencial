@@ -207,6 +207,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             })
             .catch(() => {
+                console.warn('No fue posible actualizar la capacidad disponible para la fecha seleccionada.');
                 remainingCapacityValue.textContent = defaultCapacity;
                 guestsInput.max = defaultCapacity;
             });

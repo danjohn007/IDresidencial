@@ -69,7 +69,7 @@ class AmenitiesController extends Controller {
                     'reservation_date' => $this->post('reservation_date'),
                     'start_time' => $this->post('start_time'),
                     'end_time' => $this->post('end_time'),
-                    'guests_count' => (int)$this->post('guests_count', 0),
+                    'guests_count' => max(0, (int)$this->post('guests_count', 0)),
                     'amount' => $amenity['hourly_rate'],
                     'payment_status' => 'pending',
                     'status' => 'pending',
@@ -85,9 +85,7 @@ class AmenitiesController extends Controller {
                     );
                 }
 
-                if ($reservationData['guests_count'] < 0) {
-                    $data['error'] = 'El número de invitados no puede ser negativo';
-                } elseif ($amenity['capacity'] > 0 && !empty($reservationData['reservation_date']) && $reservationData['guests_count'] > $data['remainingCapacity']) {
+                if ($amenity['capacity'] > 0 && !empty($reservationData['reservation_date']) && $reservationData['guests_count'] > $data['remainingCapacity']) {
                     $data['error'] = 'La cantidad de invitados excede la capacidad disponible para esa fecha';
                 }
                 
