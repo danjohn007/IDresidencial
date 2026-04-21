@@ -80,13 +80,14 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rastreo</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de Recibido</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clave de entrega</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <?php if (empty($packages)): ?>
                             <tr>
-                                <td colspan="7" class="px-6 py-12 text-center text-gray-400">
+                                <td colspan="8" class="px-6 py-12 text-center text-gray-400">
                                     <i class="fas fa-box-open text-4xl mb-3 block"></i>
                                     No hay paquetes registrados<?php echo !empty($status) ? ' con ese estado' : ''; ?>
                                 </td>
@@ -116,15 +117,29 @@
                                     <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Entregado</span>
                                     <?php endif; ?>
                                 </td>
+                                <td class="px-6 py-4 text-sm text-gray-700">
+                                    <?php if ($pkg['status'] === 'pendiente' || $pkg['status'] === 'entregado_pendiente'): ?>
+                                    <span id="delivery-key-<?php echo $pkg['id']; ?>" class="font-mono text-xs">••••••••</span>
+                                    <?php else: ?>
+                                    <span class="text-xs text-gray-400">—</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="px-6 py-4">
                                     <?php if ($pkg['status'] === 'pendiente' || $pkg['status'] === 'entregado_pendiente'): ?>
-                                    <form method="POST" action="<?php echo BASE_URL; ?>/residents/confirmPackageReceipt/<?php echo $pkg['id']; ?>"
-                                          onsubmit="return confirm('¿Confirmas que recibiste este paquete?')">
-                                        <button type="submit"
-                                                class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">
-                                            <i class="fas fa-check mr-1"></i> Confirmar recibido
+                                    <div class="flex flex-col sm:flex-row gap-2">
+                                        <button type="button"
+                                                onclick="showDeliveryKey(<?php echo $pkg['id']; ?>)"
+                                                class="inline-flex items-center justify-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+                                            <i class="fas fa-eye mr-1"></i> Ver
                                         </button>
-                                    </form>
+                                        <form method="POST" action="<?php echo BASE_URL; ?>/residents/confirmPackageReceipt/<?php echo $pkg['id']; ?>"
+                                              onsubmit="return confirm('¿Confirmas que recibiste este paquete?')">
+                                            <button type="submit"
+                                                    class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">
+                                                <i class="fas fa-check mr-1"></i> Confirmar recibido
+                                            </button>
+                                        </form>
+                                    </div>
                                     <?php else: ?>
                                     <?php if (!empty($pkg['delivered_at'])): ?>
                                     <span class="text-xs text-gray-400">
@@ -145,5 +160,35 @@
         </main>
     </div>
 </div>
+
+<script>
+function showDeliveryKey(packageId) {
+    const password = prompt('Escribe tu contraseña para ver la clave de entrega:');
+    if (password === null) {
+        return;
+    }
+
+    fetch('<?php echo BASE_URL; ?>/residents/viewPackageDeliveryKey/' + packageId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'password=' + encodeURIComponent(password)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            alert(data.message || 'No se pudo mostrar la clave de entrega');
+            return;
+        }
+
+        const keyLabel = document.getElementById('delivery-key-' + packageId);
+        if (keyLabel) {
+            keyLabel.textContent = data.delivery_key;
+        }
+    })
+    .catch(() => {
+        alert('Ocurrió un error al consultar la clave de entrega');
+    });
+}
+</script>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>

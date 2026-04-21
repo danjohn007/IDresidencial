@@ -8,6 +8,7 @@ require_once APP_PATH . '/controllers/AuditController.php';
 class MessagingController extends Controller {
 
     private $db;
+    private const DELIVERY_KEY_LENGTH = 8;
 
     public function __construct() {
         $this->requireAuth();
@@ -118,15 +119,16 @@ class MessagingController extends Controller {
             $description = trim($this->post('description', ''));
             $packageType = $this->post('package_type', 'paquete');
             $notes = trim($this->post('notes', ''));
+            $deliveryKey = $this->generateDeliveryKey();
 
             if (!$propertyId) {
                 $data['error'] = 'Debes seleccionar una propiedad.';
             } else {
                 $stmt = $this->db->prepare("
-                    INSERT INTO packages (property_id, tracking_number, sender, description, package_type, notes, status, received_at, received_by)
-                    VALUES (?, ?, ?, ?, ?, ?, 'pendiente', NOW(), ?)
+                    INSERT INTO packages (property_id, tracking_number, sender, description, package_type, notes, delivery_key, status, received_at, received_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', NOW(), ?)
                 ");
-                $ok = $stmt->execute([$propertyId, $trackingNumber ?: null, $sender ?: null, $description ?: null, $packageType, $notes ?: null, $_SESSION['user_id']]);
+                $ok = $stmt->execute([$propertyId, $trackingNumber ?: null, $sender ?: null, $description ?: null, $packageType, $notes ?: null, $deliveryKey, $_SESSION['user_id']]);
 
                 if ($ok) {
                     $packageId = $this->db->lastInsertId();
@@ -150,11 +152,78 @@ class MessagingController extends Controller {
             $this->redirect('messaging');
         }
 
+        $receiverName = trim($this->post('receiver_name', ''));
+        $deliveryKey = strtoupper(trim($this->post('delivery_key', '')));
+
+        if ($receiverName === '' || $deliveryKey === '') {
+            $_SESSION['error_message'] = 'Debes capturar quién recibe y la clave de entrega';
+            $this->redirect('messaging');
+        }
+
+        $stmt = $this->db->prepare("SELECT delivery_key FROM packages WHERE id = ? AND status = 'pendiente' LIMIT 1");
+        $stmt->execute([$id]);
+        $package = $stmt->fetch();
+
+        if (!$package) {
+            $_SESSION['error_message'] = 'No se pudo actualizar el paquete';
+            $this->redirect('messaging');
+        }
+
+        $storedKey = strtoupper((string)($package['delivery_key'] ?? ''));
+        if ($storedKey === '' || $storedKey !== $deliveryKey) {
+            $_SESSION['error_message'] = 'La clave de entrega no coincide';
+            $this->redirect('messaging');
+        }
+
+        $evidencePath = null;
+        if (!empty($_FILES['delivery_evidence']) && $_FILES['delivery_evidence']['error'] === UPLOAD_ERR_OK) {
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $fileType = $finfo->file($_FILES['delivery_evidence']['tmp_name']);
+
+            if (!in_array($fileType, $allowedTypes, true)) {
+                $_SESSION['error_message'] = 'La evidencia debe ser una imagen JPG, PNG, WEBP o GIF';
+                $this->redirect('messaging');
+            }
+
+            $extension = strtolower(pathinfo($_FILES['delivery_evidence']['name'], PATHINFO_EXTENSION));
+            if (!in_array($extension, $allowedExtensions, true)) {
+                $_SESSION['error_message'] = 'Formato de evidencia no permitido';
+                $this->redirect('messaging');
+            }
+
+            if ($_FILES['delivery_evidence']['size'] > (5 * 1024 * 1024)) {
+                $_SESSION['error_message'] = 'La evidencia no puede superar 5MB';
+                $this->redirect('messaging');
+            }
+
+            $uploadDir = PUBLIC_PATH . '/uploads/package_evidence/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+
+            $fileName = 'pkg_' . $id . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+            $destination = $uploadDir . $fileName;
+
+            if (!move_uploaded_file($_FILES['delivery_evidence']['tmp_name'], $destination)) {
+                $_SESSION['error_message'] = 'No se pudo guardar la evidencia';
+                $this->redirect('messaging');
+            }
+
+            $evidencePath = 'uploads/package_evidence/' . $fileName;
+        }
+
         $stmt = $this->db->prepare("
-            UPDATE packages SET status = 'entregado_pendiente', delivered_at = NOW(), delivered_by = ?
+            UPDATE packages
+            SET status = 'entregado_pendiente',
+                delivered_at = NOW(),
+                delivered_by = ?,
+                receiver_name = ?,
+                delivery_evidence_path = ?
             WHERE id = ? AND status = 'pendiente'
         ");
-        if ($stmt->execute([$_SESSION['user_id'], $id]) && $stmt->rowCount() > 0) {
+        if ($stmt->execute([$_SESSION['user_id'], $receiverName, $evidencePath, $id]) && $stmt->rowCount() > 0) {
             AuditController::log('update', 'Paquete entregado #' . $id, 'packages', $id);
             $_SESSION['success_message'] = 'Paquete marcado como entregado, pendiente de confirmación por el residente';
         } else {
@@ -162,5 +231,10 @@ class MessagingController extends Controller {
         }
 
         $this->redirect('messaging');
+    }
+
+    private function generateDeliveryKey() {
+        $key = strtoupper(bin2hex(random_bytes((int) ceil(self::DELIVERY_KEY_LENGTH / 2))));
+        return substr($key, 0, self::DELIVERY_KEY_LENGTH);
     }
 }

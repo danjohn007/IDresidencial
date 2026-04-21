@@ -19,7 +19,7 @@ class ResidentsController extends Controller {
         $action = isset($url[1]) ? $url[1] : 'index';
         
         // Methods that residents can access
-        $residentMethods = ['myPayments', 'generateAccess', 'myAccesses', 'cancelPass', 'makePayment', 'processPayment', 'financialReport', 'serviceRequests', 'createServiceRequest', 'myPackages', 'confirmPackageReceipt'];
+        $residentMethods = ['myPayments', 'generateAccess', 'myAccesses', 'cancelPass', 'makePayment', 'processPayment', 'financialReport', 'serviceRequests', 'createServiceRequest', 'myPackages', 'confirmPackageReceipt', 'viewPackageDeliveryKey'];
         
         // If not a resident method, require admin roles
         if (!in_array($action, $residentMethods)) {
@@ -3102,5 +3102,59 @@ class ResidentsController extends Controller {
         }
 
         $this->redirect('residents/myPackages');
+    }
+
+    /**
+     * Ver clave de entrega (requiere contraseña del residente)
+     */
+    public function viewPackageDeliveryKey($id) {
+        header('Content-Type: application/json');
+
+        if ($_SESSION['role'] !== 'residente') {
+            echo json_encode(['success' => false, 'message' => 'Acceso denegado']);
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+            exit;
+        }
+
+        $password = $this->post('password', '');
+        if (trim($password) === '') {
+            echo json_encode(['success' => false, 'message' => 'Debes capturar tu contraseña']);
+            exit;
+        }
+
+        $userId = $_SESSION['user_id'];
+        $stmt = $this->db->prepare("SELECT password FROM users WHERE id = ? LIMIT 1");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+
+        if (!$user || !password_verify($password, $user['password'])) {
+            echo json_encode(['success' => false, 'message' => 'Contraseña incorrecta']);
+            exit;
+        }
+
+        $stmt = $this->db->prepare("
+            SELECT pkg.delivery_key
+            FROM packages pkg
+            JOIN residents r ON r.property_id = pkg.property_id
+            WHERE pkg.id = ?
+              AND r.user_id = ?
+              AND r.status = 'active'
+              AND pkg.status IN ('pendiente', 'entregado_pendiente')
+            LIMIT 1
+        ");
+        $stmt->execute([$id, $userId]);
+        $package = $stmt->fetch();
+
+        if (!$package || empty($package['delivery_key'])) {
+            echo json_encode(['success' => false, 'message' => 'No se encontró clave de entrega']);
+            exit;
+        }
+
+        echo json_encode(['success' => true, 'delivery_key' => $package['delivery_key']]);
+        exit;
     }
 }
