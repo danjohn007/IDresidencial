@@ -123,7 +123,7 @@ class AccessController extends Controller {
 
                         $this->accessLogModel->create([
                             'log_type' => $this->resolveVisitLogType($visitData['visit_type'] ?? null),
-                            'reference_id' => Database::getInstance()->getConnection()->lastInsertId() ?: null,
+                            'reference_id' => null,
                             'access_type' => 'entry',
                             'access_method' => 'manual',
                             'property_id' => $residentForLog['property_id'] ?? null,
