@@ -53,11 +53,14 @@ class AccessController extends Controller {
             $defaultVisitType = 'personal';
         }
 
+        $isDeliveryMode = in_array($defaultVisitType, ['rappi', 'uber_eats'], true);
+
         $data = [
-            'title' => 'Generar Pase de Visita',
+            'title' => $isDeliveryMode ? 'Registrar Visita Rappi/Uber Eats' : 'Generar Pase de Visita',
             'error' => '',
             'success' => '',
             'defaultVisitType' => $defaultVisitType,
+            'isDeliveryMode' => $isDeliveryMode,
             'deliveryVisitorName' => self::DELIVERY_VISITOR_NAME,
             'defaultValidFrom' => date('Y-m-d\TH:i'),
             'defaultValidUntil' => date('Y-m-d\TH:i', strtotime('+' . self::DELIVERY_VALIDITY_HOURS . ' hours'))
@@ -106,17 +109,44 @@ class AccessController extends Controller {
             ) {
                 $data['error'] = 'Por favor, completa todos los campos requeridos';
             } else {
-                // Generar código QR único
-                $visitData['qr_code'] = $this->visitModel->generateUniqueQR();
+                if ($isDeliveryVisit) {
+                    $visitData['qr_code'] = null;
+                } else {
+                    // Generar código QR único
+                    $visitData['qr_code'] = $this->visitModel->generateUniqueQR();
+                }
                 
                 if ($this->visitModel->create($visitData)) {
-                    // Generar imagen QR
-                    $this->generateQRImage($visitData['qr_code']);
-                    
-                    $_SESSION['success_message'] = 'Pase de visita generado exitosamente';
-                    $this->redirect('access/viewDetails/' . $visitData['qr_code']);
+                    if ($isDeliveryVisit) {
+                        $residentForLog = !empty($visitData['resident_id'])
+                            ? $this->residentModel->findById($visitData['resident_id'])
+                            : null;
+
+                        $this->accessLogModel->create([
+                            'log_type' => $this->resolveVisitLogType($visitData['visit_type'] ?? null),
+                            'reference_id' => null,
+                            'access_type' => 'entry',
+                            'access_method' => 'manual',
+                            'property_id' => $residentForLog['property_id'] ?? null,
+                            'name' => $visitData['visitor_name'],
+                            'vehicle_plate' => $visitData['vehicle_plate'] ?? null,
+                            'guard_id' => $_SESSION['user_id'] ?? null,
+                            'notes' => $visitData['notes'] ?? null
+                        ]);
+
+                        $_SESSION['success_message'] = 'Visita Rappi/Uber Eats registrada exitosamente';
+                        $this->redirect('access/logs');
+                    } else {
+                        // Generar imagen QR
+                        $this->generateQRImage($visitData['qr_code']);
+                        
+                        $_SESSION['success_message'] = 'Pase de visita generado exitosamente';
+                        $this->redirect('access/viewDetails/' . $visitData['qr_code']);
+                    }
                 } else {
-                    $data['error'] = 'Error al generar el pase de visita';
+                    $data['error'] = $isDeliveryVisit
+                        ? 'Error al registrar la visita'
+                        : 'Error al generar el pase de visita';
                 }
             }
         }
