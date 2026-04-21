@@ -121,13 +121,11 @@
                             </td>
                             <td class="px-6 py-4 text-sm">
                                 <?php if ($pkg['status'] === 'pendiente'): ?>
-                                <form method="POST" action="<?php echo BASE_URL; ?>/messaging/deliver/<?php echo $pkg['id']; ?>"
-                                      onsubmit="return confirm('¿Marcar este paquete como entregado?');">
-                                    <button type="submit"
+                                    <button type="button"
+                                            onclick="toggleDeliveryForm(<?php echo $pkg['id']; ?>)"
                                             class="inline-flex items-center px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition">
                                         <i class="fas fa-check mr-1"></i> Entregar
                                     </button>
-                                </form>
                                 <?php else: ?>
                                 <span class="text-xs text-gray-400">
                                     <?php echo $pkg['delivered_at'] ? date('d/m/Y H:i', strtotime($pkg['delivered_at'])) : '-'; ?>
@@ -135,6 +133,49 @@
                                 <?php endif; ?>
                             </td>
                         </tr>
+                        <?php if ($pkg['status'] === 'pendiente'): ?>
+                        <tr id="delivery-form-row-<?php echo $pkg['id']; ?>" class="hidden bg-gray-50">
+                            <td colspan="9" class="px-6 py-4">
+                                <form method="POST"
+                                      action="<?php echo BASE_URL; ?>/messaging/deliver/<?php echo $pkg['id']; ?>"
+                                      enctype="multipart/form-data"
+                                      class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                                    <div>
+                                        <label for="receiver-name-<?php echo $pkg['id']; ?>" class="block text-xs font-medium text-gray-600 mb-1">Recibe <span class="text-red-500">*</span></label>
+                                        <input type="text" name="receiver_name" required
+                                               id="receiver-name-<?php echo $pkg['id']; ?>"
+                                               aria-label="Recibe"
+                                               oninput="toggleDeliverySubmit(<?php echo $pkg['id']; ?>)"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                               placeholder="Nombre de quien recibe">
+                                    </div>
+                                    <div>
+                                        <label for="delivery-evidence-<?php echo $pkg['id']; ?>" class="block text-xs font-medium text-gray-600 mb-1">Evidencia</label>
+                                        <input type="file" name="delivery_evidence" accept="image/*"
+                                               id="delivery-evidence-<?php echo $pkg['id']; ?>"
+                                               aria-label="Evidencia"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                                    </div>
+                                    <div>
+                                        <label for="delivery-key-input-<?php echo $pkg['id']; ?>" class="block text-xs font-medium text-gray-600 mb-1">Clave de entrega <span class="text-red-500">*</span></label>
+                                        <input type="text" name="delivery_key" required
+                                               id="delivery-key-input-<?php echo $pkg['id']; ?>"
+                                               aria-label="Clave de entrega"
+                                               oninput="toggleDeliverySubmit(<?php echo $pkg['id']; ?>)"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm uppercase"
+                                               placeholder="Ej. ABCD1234">
+                                    </div>
+                                    <div>
+                                        <button type="submit"
+                                                id="confirm-delivery-btn-<?php echo $pkg['id']; ?>"
+                                                class="hidden w-full inline-flex justify-center items-center px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition">
+                                            Confirmar entrega
+                                        </button>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
                         <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>
@@ -155,5 +196,28 @@
         </main>
     </div>
 </div>
+
+<script>
+function toggleDeliveryForm(packageId) {
+    const row = document.getElementById('delivery-form-row-' + packageId);
+    if (row) {
+        row.classList.toggle('hidden');
+    }
+}
+
+function toggleDeliverySubmit(packageId) {
+    const receiver = document.getElementById('receiver-name-' + packageId);
+    const key = document.getElementById('delivery-key-input-' + packageId);
+    const submit = document.getElementById('confirm-delivery-btn-' + packageId);
+
+    if (!receiver || !key || !submit) {
+        return;
+    }
+
+    key.value = key.value.toUpperCase();
+    const canSubmit = receiver.value.trim() !== '' && key.value.trim() !== '';
+    submit.classList.toggle('hidden', !canSubmit);
+}
+</script>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>

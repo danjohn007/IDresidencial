@@ -80,13 +80,14 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rastreo</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de Recibido</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clave de entrega</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             <?php if (empty($packages)): ?>
                             <tr>
-                                <td colspan="7" class="px-6 py-12 text-center text-gray-400">
+                                <td colspan="8" class="px-6 py-12 text-center text-gray-400">
                                     <i class="fas fa-box-open text-4xl mb-3 block"></i>
                                     No hay paquetes registrados<?php echo !empty($status) ? ' con ese estado' : ''; ?>
                                 </td>
@@ -116,15 +117,29 @@
                                     <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Entregado</span>
                                     <?php endif; ?>
                                 </td>
+                                <td class="px-6 py-4 text-sm text-gray-700">
+                                    <?php if ($pkg['status'] === 'pendiente' || $pkg['status'] === 'entregado_pendiente'): ?>
+                                    <span id="delivery-key-<?php echo $pkg['id']; ?>" class="font-mono text-xs" aria-label="Clave de entrega oculta">••••••••</span>
+                                    <?php else: ?>
+                                    <span class="text-xs text-gray-400">—</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="px-6 py-4">
                                     <?php if ($pkg['status'] === 'pendiente' || $pkg['status'] === 'entregado_pendiente'): ?>
-                                    <form method="POST" action="<?php echo BASE_URL; ?>/residents/confirmPackageReceipt/<?php echo $pkg['id']; ?>"
-                                          onsubmit="return confirm('¿Confirmas que recibiste este paquete?')">
-                                        <button type="submit"
-                                                class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">
-                                            <i class="fas fa-check mr-1"></i> Confirmar recibido
+                                    <div class="flex flex-col sm:flex-row gap-2">
+                                        <button type="button"
+                                                onclick="showDeliveryKey(<?php echo $pkg['id']; ?>)"
+                                                class="inline-flex items-center justify-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+                                            <i class="fas fa-eye mr-1"></i> Ver
                                         </button>
-                                    </form>
+                                        <form method="POST" action="<?php echo BASE_URL; ?>/residents/confirmPackageReceipt/<?php echo $pkg['id']; ?>"
+                                              onsubmit="return confirm('¿Confirmas que recibiste este paquete?')">
+                                            <button type="submit"
+                                                    class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700">
+                                                <i class="fas fa-check mr-1"></i> Confirmar recibido
+                                            </button>
+                                        </form>
+                                    </div>
                                     <?php else: ?>
                                     <?php if (!empty($pkg['delivered_at'])): ?>
                                     <span class="text-xs text-gray-400">
@@ -145,5 +160,96 @@
         </main>
     </div>
 </div>
+
+<div id="delivery-key-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Ver clave de entrega</h3>
+            <p class="text-sm text-gray-600 mt-1">Ingresa tu contraseña para mostrar la clave.</p>
+        </div>
+        <div class="px-6 py-4">
+            <input type="password" id="delivery-key-password" class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                   aria-label="Contraseña"
+                   placeholder="Contraseña">
+            <p id="delivery-key-error" class="hidden text-sm text-red-600 mt-2"></p>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+            <button type="button" onclick="hideDeliveryKeyModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancelar</button>
+            <button type="button" onclick="confirmDeliveryKeyRequest()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Ver clave</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedPackageForDeliveryKey = null;
+
+function showDeliveryKey(packageId) {
+    selectedPackageForDeliveryKey = packageId;
+    const modal = document.getElementById('delivery-key-modal');
+    const passwordInput = document.getElementById('delivery-key-password');
+    const errorLabel = document.getElementById('delivery-key-error');
+
+    if (!modal || !passwordInput || !errorLabel) {
+        return;
+    }
+
+    passwordInput.value = '';
+    errorLabel.textContent = '';
+    errorLabel.classList.add('hidden');
+    modal.classList.remove('hidden');
+    passwordInput.focus();
+}
+
+function hideDeliveryKeyModal() {
+    const modal = document.getElementById('delivery-key-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    selectedPackageForDeliveryKey = null;
+}
+
+function confirmDeliveryKeyRequest() {
+    if (!selectedPackageForDeliveryKey) {
+        return;
+    }
+
+    const passwordInput = document.getElementById('delivery-key-password');
+    const errorLabel = document.getElementById('delivery-key-error');
+    if (!passwordInput || !errorLabel) {
+        return;
+    }
+
+    const password = passwordInput.value || '';
+    if (password.trim() === '') {
+        errorLabel.textContent = 'Debes ingresar tu contraseña';
+        errorLabel.classList.remove('hidden');
+        return;
+    }
+
+    fetch('<?php echo BASE_URL; ?>/residents/viewPackageDeliveryKey/' + selectedPackageForDeliveryKey, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            errorLabel.textContent = data.message || 'No se pudo mostrar la clave de entrega';
+            errorLabel.classList.remove('hidden');
+            return;
+        }
+
+        const keyLabel = document.getElementById('delivery-key-' + selectedPackageForDeliveryKey);
+        if (keyLabel) {
+            keyLabel.textContent = data.delivery_key;
+        }
+        hideDeliveryKeyModal();
+    })
+    .catch(() => {
+        errorLabel.textContent = 'Ocurrió un error al consultar la clave de entrega';
+        errorLabel.classList.remove('hidden');
+    });
+}
+</script>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
