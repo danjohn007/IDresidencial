@@ -10,8 +10,8 @@ ALTER TABLE `packages`
 
 CREATE INDEX `idx_packages_delivery_key` ON `packages` (`delivery_key`);
 
-UPDATE `packages`
 -- Backfill con subconjunto seguro [A-F2-9], evitando caracteres ambiguos (I, O, 0, 1)
+UPDATE `packages`
 SET `delivery_key` = UPPER(
     SUBSTRING(
         REPLACE(REPLACE(REPLACE(UUID(), '-', ''), '0', '2'), '1', '3'),
