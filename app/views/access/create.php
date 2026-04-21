@@ -1,4 +1,11 @@
 <?php require_once APP_PATH . '/views/layouts/header.php'; ?>
+<?php
+$selectedVisitType = $defaultVisitType ?? null;
+$isDeliveryMode = in_array($selectedVisitType, ['rappi', 'uber_eats'], true);
+$deliveryVisitorName = $deliveryVisitorName ?? 'Rappi/Uber Eats';
+$defaultValidFrom = $defaultValidFrom ?? date('Y-m-d\TH:i');
+$defaultValidUntil = $defaultValidUntil ?? date('Y-m-d\TH:i', strtotime('+4 hours'));
+?>
 
 <div class="flex h-screen overflow-hidden">
     <?php require_once APP_PATH . '/views/layouts/sidebar.php'; ?>
@@ -61,35 +68,39 @@
                             <h3 class="text-lg font-semibold text-gray-900 mb-4">Información del Visitante</h3>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        Nombre Completo <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="text" name="visitor_name" required 
-                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                           placeholder="Nombre del visitante">
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        Identificación
-                                    </label>
-                                    <input type="text" name="visitor_id" 
-                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                           placeholder="INE, Pasaporte, etc.">
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        Teléfono/WhatsApp <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="tel" name="visitor_phone" required
-                                           maxlength="10" pattern="[0-9]{10}"
-                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                           placeholder="4421234567"
-                                           oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)">
-                                    <p class="text-xs text-gray-500 mt-1">10 dígitos sin espacios ni guiones</p>
-                                </div>
+                                <?php if ($isDeliveryMode): ?>
+                                    <input type="hidden" name="visitor_name" value="<?php echo htmlspecialchars($deliveryVisitorName); ?>">
+                                <?php else: ?>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Nombre Completo <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" name="visitor_name" required 
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                               placeholder="Nombre del visitante">
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Identificación
+                                        </label>
+                                        <input type="text" name="visitor_id" 
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                               placeholder="INE, Pasaporte, etc.">
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Teléfono/WhatsApp <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="tel" name="visitor_phone" required
+                                               maxlength="10" pattern="[0-9]{10}"
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                               placeholder="4421234567"
+                                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)">
+                                        <p class="text-xs text-gray-500 mt-1">10 dígitos sin espacios ni guiones</p>
+                                    </div>
+                                <?php endif; ?>
                                 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -105,12 +116,17 @@
                                         Tipo de Visita
                                     </label>
                                     <select name="visit_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                        <option value="personal" <?php echo ($defaultVisitType ?? 'personal') === 'personal' ? 'selected' : ''; ?>>Personal</option>
-                                        <option value="proveedor" <?php echo ($defaultVisitType ?? 'personal') === 'proveedor' ? 'selected' : ''; ?>>Proveedor</option>
-                                        <option value="delivery" <?php echo ($defaultVisitType ?? 'personal') === 'delivery' ? 'selected' : ''; ?>>Delivery</option>
-                                        <option value="rappi" <?php echo ($defaultVisitType ?? 'personal') === 'rappi' ? 'selected' : ''; ?>>Rappi</option>
-                                        <option value="uber_eats" <?php echo ($defaultVisitType ?? 'personal') === 'uber_eats' ? 'selected' : ''; ?>>Uber Eats</option>
-                                        <option value="otro" <?php echo ($defaultVisitType ?? 'personal') === 'otro' ? 'selected' : ''; ?>>Otro</option>
+                                        <?php if ($isDeliveryMode): ?>
+                                            <option value="rappi" <?php echo $selectedVisitType === 'rappi' ? 'selected' : ''; ?>>Rappi</option>
+                                            <option value="uber_eats" <?php echo $selectedVisitType === 'uber_eats' ? 'selected' : ''; ?>>Uber Eats</option>
+                                        <?php else: ?>
+                                            <option value="personal" <?php echo ($selectedVisitType ?? 'personal') === 'personal' ? 'selected' : ''; ?>>Personal</option>
+                                            <option value="proveedor" <?php echo ($selectedVisitType ?? 'personal') === 'proveedor' ? 'selected' : ''; ?>>Proveedor</option>
+                                            <option value="delivery" <?php echo ($selectedVisitType ?? 'personal') === 'delivery' ? 'selected' : ''; ?>>Delivery</option>
+                                            <option value="rappi" <?php echo ($selectedVisitType ?? 'personal') === 'rappi' ? 'selected' : ''; ?>>Rappi</option>
+                                            <option value="uber_eats" <?php echo ($selectedVisitType ?? 'personal') === 'uber_eats' ? 'selected' : ''; ?>>Uber Eats</option>
+                                            <option value="otro" <?php echo ($selectedVisitType ?? 'personal') === 'otro' ? 'selected' : ''; ?>>Otro</option>
+                                        <?php endif; ?>
                                     </select>
                                 </div>
                             </div>
@@ -136,30 +152,35 @@
                             </div>
                         </div>
 
-                        <!-- Vigencia del Pase -->
-                        <div class="mb-6">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Vigencia del Pase</h3>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        Válido Desde <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="datetime-local" name="valid_from" required 
-                                           value="<?php echo date('Y-m-d\TH:i'); ?>"
-                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                </div>
+                        <?php if ($isDeliveryMode): ?>
+                            <input type="hidden" name="valid_from" value="<?php echo $defaultValidFrom; ?>">
+                            <input type="hidden" name="valid_until" value="<?php echo $defaultValidUntil; ?>">
+                        <?php else: ?>
+                            <!-- Vigencia del Pase -->
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Vigencia del Pase</h3>
                                 
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        Válido Hasta <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="datetime-local" name="valid_until" required 
-                                           value="<?php echo date('Y-m-d\TH:i', strtotime('+4 hours')); ?>"
-                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Válido Desde <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="datetime-local" name="valid_from" required 
+                                               value="<?php echo $defaultValidFrom; ?>"
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Válido Hasta <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="datetime-local" name="valid_until" required 
+                                               value="<?php echo $defaultValidUntil; ?>"
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        <?php endif; ?>
 
                         <!-- Notas -->
                         <div class="mb-6">
@@ -180,7 +201,7 @@
                             <button type="submit" 
                                     class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                                 <i class="fas fa-qrcode mr-2"></i>
-                                Generar Pase QR
+                                <?php echo $isDeliveryMode ? 'Registrar acceso' : 'Generar Pase QR'; ?>
                             </button>
                         </div>
                     </form>

@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS visits (
 -- ============================================
 CREATE TABLE IF NOT EXISTS access_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    log_type ENUM('resident', 'visit', 'vehicle', 'provider') NOT NULL,
+    log_type ENUM('resident', 'visit', 'vehicle', 'provider', 'emergency', 'resident_pass', 'rappi_uber_eats') NOT NULL,
     reference_id INT,
     access_type ENUM('entry', 'exit') NOT NULL,
     access_method ENUM('qr', 'rfid', 'manual', 'plate_recognition') NOT NULL,

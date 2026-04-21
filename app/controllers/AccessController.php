@@ -4,6 +4,8 @@
  */
 
 class AccessController extends Controller {
+    private const DELIVERY_VISITOR_NAME = 'Rappi/Uber Eats';
+    private const DELIVERY_VALIDITY_HOURS = 4;
     
     private $visitModel;
     private $accessLogModel;
@@ -55,7 +57,10 @@ class AccessController extends Controller {
             'title' => 'Generar Pase de Visita',
             'error' => '',
             'success' => '',
-            'defaultVisitType' => $defaultVisitType
+            'defaultVisitType' => $defaultVisitType,
+            'deliveryVisitorName' => self::DELIVERY_VISITOR_NAME,
+            'defaultValidFrom' => date('Y-m-d\TH:i'),
+            'defaultValidUntil' => date('Y-m-d\TH:i', strtotime('+' . self::DELIVERY_VALIDITY_HOURS . ' hours'))
         ];
         
         // Obtener información del residente
@@ -77,9 +82,28 @@ class AccessController extends Controller {
                 'notes' => $this->post('notes'),
                 'status' => 'pending'
             ];
+
+            $isDeliveryVisit = in_array($visitData['visit_type'], ['rappi', 'uber_eats'], true);
+            if ($isDeliveryVisit) {
+                if (empty($visitData['visitor_name'])) {
+                    $visitData['visitor_name'] = self::DELIVERY_VISITOR_NAME;
+                }
+                if (empty($visitData['valid_from'])) {
+                    $visitData['valid_from'] = date('Y-m-d H:i:s');
+                }
+                if (empty($visitData['valid_until'])) {
+                    $visitData['valid_until'] = date('Y-m-d H:i:s', strtotime('+' . self::DELIVERY_VALIDITY_HOURS . ' hours'));
+                }
+                $visitData['visitor_id'] = null;
+                $visitData['visitor_phone'] = null;
+            }
             
             // Validaciones
-            if (empty($visitData['visitor_name']) || empty($visitData['valid_from']) || empty($visitData['valid_until'])) {
+            if (
+                (!$isDeliveryVisit && empty($visitData['visitor_name'])) ||
+                empty($visitData['valid_from']) ||
+                empty($visitData['valid_until'])
+            ) {
                 $data['error'] = 'Por favor, completa todos los campos requeridos';
             } else {
                 // Generar código QR único
@@ -320,7 +344,7 @@ class AccessController extends Controller {
             // Registrar en bitácora
             $visit = $this->visitModel->findById($visitId);
             $this->accessLogModel->create([
-                'log_type' => 'visit',
+                'log_type' => $this->resolveVisitLogType($visit['visit_type'] ?? null),
                 'reference_id' => $visitId,
                 'access_type' => 'entry',
                 'access_method' => 'qr',
@@ -381,7 +405,7 @@ class AccessController extends Controller {
         
         // Registrar en bitácora
         $this->accessLogModel->create([
-            'log_type' => 'visit',
+            'log_type' => $this->resolveVisitLogType($visit['visit_type'] ?? null),
             'reference_id' => $visitId,
             'access_type' => $accessType,
             'access_method' => 'qr',
@@ -420,7 +444,7 @@ class AccessController extends Controller {
             // Registrar en bitácora
             $visit = $this->visitModel->findById($visitId);
             $this->accessLogModel->create([
-                'log_type' => 'visit',
+                'log_type' => $this->resolveVisitLogType($visit['visit_type'] ?? null),
                 'reference_id' => $visitId,
                 'access_type' => 'exit',
                 'access_method' => 'qr',
@@ -460,6 +484,10 @@ class AccessController extends Controller {
         ];
         
         $this->view('access/logs', $data);
+    }
+
+    private function resolveVisitLogType($visitType) {
+        return in_array($visitType, ['rappi', 'uber_eats'], true) ? 'rappi_uber_eats' : 'visit';
     }
     
     /**
