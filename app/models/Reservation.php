@@ -96,4 +96,22 @@ class Reservation {
         $stmt = $this->db->prepare("UPDATE reservations SET status = ? WHERE id = ?");
         return $stmt->execute([$status, $id]);
     }
+
+    public function getReservedGuestsByDate($amenityId, $date) {
+        $stmt = $this->db->prepare("
+            SELECT COALESCE(SUM(guests_count), 0) AS reserved_guests
+            FROM reservations
+            WHERE amenity_id = ?
+            AND reservation_date = ?
+            AND status NOT IN ('cancelled')
+        ");
+        $stmt->execute([$amenityId, $date]);
+        $result = $stmt->fetch();
+        return (int)($result['reserved_guests'] ?? 0);
+    }
+
+    public function getRemainingCapacityByDate($amenityId, $date, $totalCapacity) {
+        $reservedGuests = $this->getReservedGuestsByDate($amenityId, $date);
+        return max(((int)$totalCapacity) - $reservedGuests, 0);
+    }
 }
