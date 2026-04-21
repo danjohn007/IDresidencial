@@ -60,6 +60,7 @@ class AccessController extends Controller {
             'error' => '',
             'success' => '',
             'defaultVisitType' => $defaultVisitType,
+            'isDeliveryMode' => $isDeliveryMode,
             'deliveryVisitorName' => self::DELIVERY_VISITOR_NAME,
             'defaultValidFrom' => date('Y-m-d\TH:i'),
             'defaultValidUntil' => date('Y-m-d\TH:i', strtotime('+' . self::DELIVERY_VALIDITY_HOURS . ' hours'))
