@@ -1,4 +1,15 @@
 <?php require_once APP_PATH . '/views/layouts/header.php'; ?>
+<?php
+$logTypeLabels = [
+    'resident' => 'Residente',
+    'visit' => 'Visita',
+    'vehicle' => 'Vehículo',
+    'provider' => 'Proveedor',
+    'rappi_uber_eats' => 'Rappi/Uber Eats',
+    'resident_pass' => 'Pase de residente',
+    'emergency' => 'Emergencia'
+];
+?>
 
 <div class="flex h-screen overflow-hidden">
     <?php require_once APP_PATH . '/views/layouts/sidebar.php'; ?>
@@ -28,6 +39,7 @@
                             <option value="visit" <?php echo $filters['log_type'] === 'visit' ? 'selected' : ''; ?>>Visita</option>
                             <option value="vehicle" <?php echo $filters['log_type'] === 'vehicle' ? 'selected' : ''; ?>>Vehículo</option>
                             <option value="provider" <?php echo $filters['log_type'] === 'provider' ? 'selected' : ''; ?>>Proveedor</option>
+                            <option value="rappi_uber_eats" <?php echo $filters['log_type'] === 'rappi_uber_eats' ? 'selected' : ''; ?>>Rappi/Uber Eats</option>
                         </select>
                     </div>
                     <div>
@@ -80,7 +92,7 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                                            <?php echo ucfirst($log['log_type']); ?>
+                                            <?php echo $logTypeLabels[$log['log_type']] ?? ucfirst(str_replace('_', ' ', $log['log_type'])); ?>
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">

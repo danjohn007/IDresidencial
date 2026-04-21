@@ -108,7 +108,7 @@ class GuardController extends Controller {
                     $this->visitModel->registerEntry($visitDetails['id'], $_SESSION['user_id']);
                     
                     $this->accessLogModel->create([
-                        'log_type' => 'visit',
+                        'log_type' => in_array($visitDetails['visit_type'] ?? null, ['rappi', 'uber_eats'], true) ? 'rappi_uber_eats' : 'visit',
                         'reference_id' => $visitDetails['id'],
                         'access_type' => 'entry',
                         'access_method' => 'qr',

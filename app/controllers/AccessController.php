@@ -77,9 +77,29 @@ class AccessController extends Controller {
                 'notes' => $this->post('notes'),
                 'status' => 'pending'
             ];
+
+            $isDeliveryVisit = in_array($visitData['visit_type'], ['rappi', 'uber_eats'], true);
+            if ($isDeliveryVisit) {
+                if (empty($visitData['visitor_name'])) {
+                    $visitData['visitor_name'] = 'Rappi/Uber Eats';
+                }
+                if (empty($visitData['valid_from'])) {
+                    $visitData['valid_from'] = date('Y-m-d H:i:s');
+                }
+                if (empty($visitData['valid_until'])) {
+                    $visitData['valid_until'] = date('Y-m-d H:i:s', strtotime('+4 hours'));
+                }
+                $visitData['visitor_id'] = null;
+                $visitData['visitor_phone'] = null;
+            }
             
             // Validaciones
-            if (empty($visitData['visitor_name']) || empty($visitData['valid_from']) || empty($visitData['valid_until'])) {
+            if (
+                empty($visitData['resident_id']) ||
+                (!$isDeliveryVisit && empty($visitData['visitor_name'])) ||
+                empty($visitData['valid_from']) ||
+                empty($visitData['valid_until'])
+            ) {
                 $data['error'] = 'Por favor, completa todos los campos requeridos';
             } else {
                 // Generar código QR único
@@ -320,7 +340,7 @@ class AccessController extends Controller {
             // Registrar en bitácora
             $visit = $this->visitModel->findById($visitId);
             $this->accessLogModel->create([
-                'log_type' => 'visit',
+                'log_type' => $this->resolveVisitLogType($visit['visit_type'] ?? null),
                 'reference_id' => $visitId,
                 'access_type' => 'entry',
                 'access_method' => 'qr',
@@ -381,7 +401,7 @@ class AccessController extends Controller {
         
         // Registrar en bitácora
         $this->accessLogModel->create([
-            'log_type' => 'visit',
+            'log_type' => $this->resolveVisitLogType($visit['visit_type'] ?? null),
             'reference_id' => $visitId,
             'access_type' => $accessType,
             'access_method' => 'qr',
@@ -420,7 +440,7 @@ class AccessController extends Controller {
             // Registrar en bitácora
             $visit = $this->visitModel->findById($visitId);
             $this->accessLogModel->create([
-                'log_type' => 'visit',
+                'log_type' => $this->resolveVisitLogType($visit['visit_type'] ?? null),
                 'reference_id' => $visitId,
                 'access_type' => 'exit',
                 'access_method' => 'qr',
@@ -460,6 +480,10 @@ class AccessController extends Controller {
         ];
         
         $this->view('access/logs', $data);
+    }
+
+    private function resolveVisitLogType($visitType) {
+        return in_array($visitType, ['rappi', 'uber_eats'], true) ? 'rappi_uber_eats' : 'visit';
     }
     
     /**
