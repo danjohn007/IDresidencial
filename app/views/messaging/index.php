@@ -141,7 +141,7 @@
                                       enctype="multipart/form-data"
                                       class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
                                     <div>
-                                        <label class="block text-xs font-medium text-gray-600 mb-1">Recibe <span class="text-red-500">*</span></label>
+                                        <label for="receiver-name-<?php echo $pkg['id']; ?>" class="block text-xs font-medium text-gray-600 mb-1">Recibe <span class="text-red-500">*</span></label>
                                         <input type="text" name="receiver_name" required
                                                id="receiver-name-<?php echo $pkg['id']; ?>"
                                                oninput="toggleDeliverySubmit(<?php echo $pkg['id']; ?>)"
@@ -149,12 +149,13 @@
                                                placeholder="Nombre de quien recibe">
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-medium text-gray-600 mb-1">Evidencia</label>
+                                        <label for="delivery-evidence-<?php echo $pkg['id']; ?>" class="block text-xs font-medium text-gray-600 mb-1">Evidencia</label>
                                         <input type="file" name="delivery_evidence" accept="image/*"
+                                               id="delivery-evidence-<?php echo $pkg['id']; ?>"
                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-medium text-gray-600 mb-1">Clave de entrega <span class="text-red-500">*</span></label>
+                                        <label for="delivery-key-input-<?php echo $pkg['id']; ?>" class="block text-xs font-medium text-gray-600 mb-1">Clave de entrega <span class="text-red-500">*</span></label>
                                         <input type="text" name="delivery_key" required
                                                id="delivery-key-input-<?php echo $pkg['id']; ?>"
                                                oninput="toggleDeliverySubmit(<?php echo $pkg['id']; ?>)"

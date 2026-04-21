@@ -3120,7 +3120,18 @@ class ResidentsController extends Controller {
             exit;
         }
 
-        $password = $this->post('password', '');
+        $requestData = $_POST;
+        if (empty($requestData)) {
+            $rawInput = file_get_contents('php://input');
+            if (!empty($rawInput)) {
+                $decoded = json_decode($rawInput, true);
+                if (is_array($decoded)) {
+                    $requestData = $decoded;
+                }
+            }
+        }
+
+        $password = isset($requestData['password']) ? (string)$requestData['password'] : '';
         if (trim($password) === '') {
             echo json_encode(['success' => false, 'message' => 'Debes capturar tu contraseña']);
             exit;

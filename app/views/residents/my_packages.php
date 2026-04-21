@@ -161,32 +161,92 @@
     </div>
 </div>
 
+<div id="delivery-key-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Ver clave de entrega</h3>
+            <p class="text-sm text-gray-600 mt-1">Ingresa tu contraseña para mostrar la clave.</p>
+        </div>
+        <div class="px-6 py-4">
+            <input type="password" id="delivery-key-password" class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                   placeholder="Contraseña">
+            <p id="delivery-key-error" class="hidden text-sm text-red-600 mt-2"></p>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+            <button type="button" onclick="hideDeliveryKeyModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancelar</button>
+            <button type="button" onclick="confirmDeliveryKeyRequest()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Ver clave</button>
+        </div>
+    </div>
+</div>
+
 <script>
+let selectedPackageForDeliveryKey = null;
+
 function showDeliveryKey(packageId) {
-    const password = prompt('Escribe tu contraseña para ver la clave de entrega:');
-    if (password === null) {
+    selectedPackageForDeliveryKey = packageId;
+    const modal = document.getElementById('delivery-key-modal');
+    const passwordInput = document.getElementById('delivery-key-password');
+    const errorLabel = document.getElementById('delivery-key-error');
+
+    if (!modal || !passwordInput || !errorLabel) {
         return;
     }
 
-    fetch('<?php echo BASE_URL; ?>/residents/viewPackageDeliveryKey/' + packageId, {
+    passwordInput.value = '';
+    errorLabel.textContent = '';
+    errorLabel.classList.add('hidden');
+    modal.classList.remove('hidden');
+    passwordInput.focus();
+}
+
+function hideDeliveryKeyModal() {
+    const modal = document.getElementById('delivery-key-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    selectedPackageForDeliveryKey = null;
+}
+
+function confirmDeliveryKeyRequest() {
+    if (!selectedPackageForDeliveryKey) {
+        return;
+    }
+
+    const passwordInput = document.getElementById('delivery-key-password');
+    const errorLabel = document.getElementById('delivery-key-error');
+    if (!passwordInput || !errorLabel) {
+        return;
+    }
+
+    const password = passwordInput.value || '';
+    if (password.trim() === '') {
+        errorLabel.textContent = 'Debes capturar tu contraseña';
+        errorLabel.classList.remove('hidden');
+        return;
+    }
+
+    fetch('<?php echo BASE_URL; ?>/residents/viewPackageDeliveryKey/' + selectedPackageForDeliveryKey, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'password=' + encodeURIComponent(password)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: password })
     })
     .then(response => response.json())
     .then(data => {
         if (!data.success) {
-            alert(data.message || 'No se pudo mostrar la clave de entrega');
+            errorLabel.textContent = data.message || 'No se pudo mostrar la clave de entrega';
+            errorLabel.classList.remove('hidden');
             return;
         }
 
-        const keyLabel = document.getElementById('delivery-key-' + packageId);
+        const keyLabel = document.getElementById('delivery-key-' + selectedPackageForDeliveryKey);
         if (keyLabel) {
             keyLabel.textContent = data.delivery_key;
         }
+        hideDeliveryKeyModal();
     })
     .catch(() => {
-        alert('Ocurrió un error al consultar la clave de entrega');
+        errorLabel.textContent = 'Ocurrió un error al consultar la clave de entrega';
+        errorLabel.classList.remove('hidden');
     });
 }
 </script>

@@ -170,7 +170,7 @@ class MessagingController extends Controller {
         }
 
         $storedKey = strtoupper((string)($package['delivery_key'] ?? ''));
-        if ($storedKey === '' || $storedKey !== $deliveryKey) {
+        if ($storedKey === '' || !hash_equals($storedKey, $deliveryKey)) {
             $_SESSION['error_message'] = 'La clave de entrega no coincide';
             $this->redirect('messaging');
         }
@@ -203,7 +203,7 @@ class MessagingController extends Controller {
                 mkdir($uploadDir, 0755, true);
             }
 
-            $fileName = 'pkg_' . $id . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+            $fileName = 'pkg_' . time() . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
             $destination = $uploadDir . $fileName;
 
             if (!move_uploaded_file($_FILES['delivery_evidence']['tmp_name'], $destination)) {
@@ -234,7 +234,14 @@ class MessagingController extends Controller {
     }
 
     private function generateDeliveryKey() {
-        $key = strtoupper(bin2hex(random_bytes((int) ceil(self::DELIVERY_KEY_LENGTH / 2))));
-        return substr($key, 0, self::DELIVERY_KEY_LENGTH);
+        $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $maxIndex = strlen($chars) - 1;
+        $key = '';
+
+        for ($i = 0; $i < self::DELIVERY_KEY_LENGTH; $i++) {
+            $key .= $chars[random_int(0, $maxIndex)];
+        }
+
+        return $key;
     }
 }
