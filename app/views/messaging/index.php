@@ -168,8 +168,7 @@
                                     <div>
                                         <button type="submit"
                                                 id="confirm-delivery-btn-<?php echo $pkg['id']; ?>"
-                                                class="hidden w-full inline-flex justify-center items-center px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition"
-                                                >
+                                                class="hidden w-full inline-flex justify-center items-center px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition">
                                             Confirmar entrega
                                         </button>
                                     </div>
