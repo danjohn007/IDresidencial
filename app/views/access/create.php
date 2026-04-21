@@ -3,6 +3,8 @@
 $selectedVisitType = $defaultVisitType ?? null;
 $isDeliveryMode = in_array($selectedVisitType, ['rappi', 'uber_eats'], true);
 $deliveryVisitorName = $deliveryVisitorName ?? 'Rappi/Uber Eats';
+$defaultValidFrom = $defaultValidFrom ?? date('Y-m-d\TH:i');
+$defaultValidUntil = $defaultValidUntil ?? date('Y-m-d\TH:i', strtotime('+4 hours'));
 ?>
 
 <div class="flex h-screen overflow-hidden">
@@ -151,8 +153,8 @@ $deliveryVisitorName = $deliveryVisitorName ?? 'Rappi/Uber Eats';
                         </div>
 
                         <?php if ($isDeliveryMode): ?>
-                            <input type="hidden" name="valid_from" value="<?php echo date('Y-m-d\TH:i'); ?>">
-                            <input type="hidden" name="valid_until" value="<?php echo date('Y-m-d\TH:i', strtotime('+4 hours')); ?>">
+                            <input type="hidden" name="valid_from" value="<?php echo $defaultValidFrom; ?>">
+                            <input type="hidden" name="valid_until" value="<?php echo $defaultValidUntil; ?>">
                         <?php else: ?>
                             <!-- Vigencia del Pase -->
                             <div class="mb-6">
@@ -164,7 +166,7 @@ $deliveryVisitorName = $deliveryVisitorName ?? 'Rappi/Uber Eats';
                                             Válido Desde <span class="text-red-500">*</span>
                                         </label>
                                         <input type="datetime-local" name="valid_from" required 
-                                               value="<?php echo date('Y-m-d\TH:i'); ?>"
+                                               value="<?php echo $defaultValidFrom; ?>"
                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     </div>
                                     
@@ -173,7 +175,7 @@ $deliveryVisitorName = $deliveryVisitorName ?? 'Rappi/Uber Eats';
                                             Válido Hasta <span class="text-red-500">*</span>
                                         </label>
                                         <input type="datetime-local" name="valid_until" required 
-                                               value="<?php echo date('Y-m-d\TH:i', strtotime('+4 hours')); ?>"
+                                               value="<?php echo $defaultValidUntil; ?>"
                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     </div>
                                 </div>

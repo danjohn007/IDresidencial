@@ -5,6 +5,7 @@
 
 class AccessController extends Controller {
     private const DELIVERY_VISITOR_NAME = 'Rappi/Uber Eats';
+    private const DELIVERY_VALIDITY_HOURS = 4;
     
     private $visitModel;
     private $accessLogModel;
@@ -57,7 +58,9 @@ class AccessController extends Controller {
             'error' => '',
             'success' => '',
             'defaultVisitType' => $defaultVisitType,
-            'deliveryVisitorName' => self::DELIVERY_VISITOR_NAME
+            'deliveryVisitorName' => self::DELIVERY_VISITOR_NAME,
+            'defaultValidFrom' => date('Y-m-d\TH:i'),
+            'defaultValidUntil' => date('Y-m-d\TH:i', strtotime('+' . self::DELIVERY_VALIDITY_HOURS . ' hours'))
         ];
         
         // Obtener información del residente
@@ -89,7 +92,7 @@ class AccessController extends Controller {
                     $visitData['valid_from'] = date('Y-m-d H:i:s');
                 }
                 if (empty($visitData['valid_until'])) {
-                    $visitData['valid_until'] = date('Y-m-d H:i:s', strtotime('+4 hours'));
+                    $visitData['valid_until'] = date('Y-m-d H:i:s', strtotime('+' . self::DELIVERY_VALIDITY_HOURS . ' hours'));
                 }
                 $visitData['visitor_id'] = null;
                 $visitData['visitor_phone'] = null;
