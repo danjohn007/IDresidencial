@@ -164,19 +164,33 @@
                                     <i class="fas fa-paperclip mr-1"></i>Adjuntar Evidencia
                                 </label>
                                 <?php
-                                $evFile = $movement['evidence_file'] ?? '';
-                                $safePath = (preg_match('#^uploads/evidence/[\w\-]+\.[\w]+$#', $evFile)) ? $evFile : '';
+                                $evRaw   = $movement['evidence_file'] ?? '';
+                                $evPaths = [];
+                                if ($evRaw) {
+                                    $decoded = json_decode($evRaw, true);
+                                    if (is_array($decoded)) {
+                                        $evPaths = $decoded;
+                                    } elseif (preg_match('#^uploads/evidence/[\w\-]+\.[\w]+$#', $evRaw)) {
+                                        $evPaths = [$evRaw];
+                                    }
+                                }
                                 ?>
-                                <?php if ($safePath): ?>
-                                <p class="text-sm text-blue-600 mb-2">
-                                    <a href="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($safePath); ?>" target="_blank">
-                                        <i class="fas fa-file mr-1"></i>Ver archivo actual
-                                    </a>
-                                </p>
+                                <?php if (!empty($evPaths)): ?>
+                                <div class="mb-2 space-y-1">
+                                    <?php foreach ($evPaths as $evPath): ?>
+                                    <?php if (preg_match('#^uploads/evidence/[\w\-]+\.[\w]+$#', $evPath)): ?>
+                                    <p class="text-sm text-blue-600">
+                                        <a href="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($evPath); ?>" target="_blank">
+                                            <i class="fas fa-file mr-1"></i><?php echo htmlspecialchars(basename($evPath)); ?>
+                                        </a>
+                                    </p>
+                                    <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </div>
                                 <?php endif; ?>
-                                <input type="file" name="evidence_file" accept=".pdf,.jpg,.jpeg,.png"
+                                <input type="file" name="evidence_file[]" accept=".pdf,.jpg,.jpeg,.png" multiple
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                                <p class="text-xs text-gray-500 mt-1">Opcional. Deja vacío para mantener el archivo actual.</p>
+                                <p class="text-xs text-gray-500 mt-1">Opcional. Puedes seleccionar múltiples archivos. Deja vacío para mantener los archivos actuales.</p>
                             </div>
                         </div>
 

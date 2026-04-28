@@ -106,6 +106,34 @@
                             </div>
                             <?php endif; ?>
 
+                            <?php
+                            $evRaw   = $movement['evidence_file'] ?? '';
+                            $evPaths = [];
+                            if ($evRaw) {
+                                $decoded = json_decode($evRaw, true);
+                                if (is_array($decoded)) {
+                                    $evPaths = $decoded;
+                                } elseif (preg_match('#^uploads/evidence/[\w\-]+\.[\w]+$#', $evRaw)) {
+                                    $evPaths = [$evRaw];
+                                }
+                            }
+                            ?>
+                            <?php if (!empty($evPaths)): ?>
+                            <div class="md:col-span-2">
+                                <dt class="text-sm font-medium text-gray-500">Evidencia</dt>
+                                <dd class="mt-1 space-y-1">
+                                    <?php foreach ($evPaths as $evPath): ?>
+                                    <?php if (preg_match('#^uploads/evidence/[\w\-]+\.[\w]+$#', $evPath)): ?>
+                                    <a href="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($evPath); ?>" target="_blank"
+                                       class="inline-flex items-center text-blue-600 hover:underline text-sm mr-3">
+                                        <i class="fas fa-file mr-1"></i><?php echo htmlspecialchars(basename($evPath)); ?>
+                                    </a>
+                                    <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </dd>
+                            </div>
+                            <?php endif; ?>
+
                             <div class="md:col-span-2 pt-4 border-t border-gray-200">
                                 <dt class="text-sm font-medium text-gray-500">Fecha de Registro</dt>
                                 <dd class="mt-1 text-sm text-gray-600">

@@ -160,9 +160,9 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     <i class="fas fa-paperclip mr-1"></i>Adjuntar Evidencia
                                 </label>
-                                <input type="file" name="evidence_file" accept=".pdf,.jpg,.jpeg,.png"
+                                <input type="file" name="evidence_file[]" accept=".pdf,.jpg,.jpeg,.png" multiple
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                                <p class="text-xs text-gray-500 mt-1">Opcional. Formatos aceptados: PDF, JPG, PNG</p>
+                                <p class="text-xs text-gray-500 mt-1">Opcional. Puedes seleccionar múltiples archivos. Formatos aceptados: PDF, JPG, PNG</p>
                             </div>
                         </div>
 

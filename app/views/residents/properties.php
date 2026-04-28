@@ -28,6 +28,44 @@
                 </div>
             <?php endif; ?>
 
+            <!-- Search & Filters -->
+            <div class="bg-white rounded-lg shadow p-4 mb-6">
+                <form method="GET" action="<?php echo BASE_URL; ?>/residents/properties" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+                        <input type="text" name="search" value="<?php echo htmlspecialchars($search ?? ''); ?>"
+                               placeholder="Número, sección, calle..."
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                        <select name="property_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            <option value="">Todos los tipos</option>
+                            <option value="casa" <?php echo ($filter_type ?? '') === 'casa' ? 'selected' : ''; ?>>Casa</option>
+                            <option value="departamento" <?php echo ($filter_type ?? '') === 'departamento' ? 'selected' : ''; ?>>Departamento</option>
+                            <option value="lote" <?php echo ($filter_type ?? '') === 'lote' ? 'selected' : ''; ?>>Lote</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                        <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            <option value="">Todos los estados</option>
+                            <option value="ocupada" <?php echo ($filter_status ?? '') === 'ocupada' ? 'selected' : ''; ?>>Ocupada</option>
+                            <option value="desocupada" <?php echo ($filter_status ?? '') === 'desocupada' ? 'selected' : ''; ?>>Desocupada</option>
+                            <option value="en_construccion" <?php echo ($filter_status ?? '') === 'en_construccion' ? 'selected' : ''; ?>>En Construcción</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end space-x-2">
+                        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-search mr-1"></i> Filtrar
+                        </button>
+                        <a href="<?php echo BASE_URL; ?>/residents/properties" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300" title="Limpiar filtros">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+
             <!-- Properties Table -->
             <div class="bg-white rounded-lg shadow overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">

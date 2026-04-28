@@ -12,13 +12,28 @@
                     <h1 class="text-3xl font-bold text-gray-900">💳 Cartera Vencida</h1>
                     <p class="text-gray-600 mt-1">Cuotas pendientes y vencidas</p>
                 </div>
-                <form method="POST" action="<?php echo BASE_URL; ?>/financial/applyPenalties"
-                      onsubmit="return confirm('¿Aplicar penalizaciones a todas las cuotas vencidas según las reglas configuradas? Esta acción no se puede deshacer.');">
-                    <button type="submit"
-                            class="inline-flex items-center px-5 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 shadow">
-                        <i class="fas fa-gavel mr-2"></i> Aplicar Penalizaciones
+                <div class="flex items-center space-x-2 flex-wrap gap-2">
+                    <!-- Export buttons -->
+                    <button type="button" onclick="openExportModal('print')"
+                            class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 shadow text-sm">
+                        <i class="fas fa-print mr-2"></i> Imprimir
                     </button>
-                </form>
+                    <button type="button" onclick="openExportModal('pdf')"
+                            class="inline-flex items-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 shadow text-sm">
+                        <i class="fas fa-file-pdf mr-2"></i> PDF
+                    </button>
+                    <button type="button" onclick="openExportModal('excel')"
+                            class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow text-sm">
+                        <i class="fas fa-file-excel mr-2"></i> Excel
+                    </button>
+                    <form method="POST" action="<?php echo BASE_URL; ?>/financial/applyPenalties"
+                          onsubmit="return confirm('¿Aplicar penalizaciones a todas las cuotas vencidas según las reglas configuradas? Esta acción no se puede deshacer.');">
+                        <button type="submit"
+                                class="inline-flex items-center px-5 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 shadow">
+                            <i class="fas fa-gavel mr-2"></i> Aplicar Penalizaciones
+                        </button>
+                    </form>
+                </div>
             </div>
 
             <?php if (isset($_SESSION['success_message'])): ?>
@@ -128,12 +143,12 @@
                 </table>
             </div>
 
-            <!-- Password Modal -->
+            <!-- Password Modal (for resident name reveal and export actions) -->
             <div id="passwordModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
                 <div class="absolute inset-0 bg-black bg-opacity-50" onclick="closePasswordModal()"></div>
                 <div class="relative bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
                     <h3 class="text-lg font-bold text-gray-900 mb-1">Verificación de Seguridad</h3>
-                    <p class="text-sm text-gray-600 mb-4">Ingresa la contraseña de un Superadmin para ver el nombre del residente.</p>
+                    <p class="text-sm text-gray-600 mb-4">Ingresa la contraseña de un Superadmin para continuar.</p>
                     <div id="passwordModalError" class="mb-3 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded hidden"></div>
                     <input type="password" id="superadminPassword" placeholder="Contraseña Superadmin"
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -167,23 +182,48 @@
 </div>
 
 <script>
-var _currentModalIndex = null;
-var _currentModalName = null;
+var _currentModalIndex  = null;
+var _currentModalName   = null;
+var _currentExportAction = null; // 'print' | 'pdf' | 'excel' | null
+
+// Build current filter query string
+function currentFilters() {
+    var params = new URLSearchParams();
+    params.set('search',    '<?php echo addslashes($search); ?>');
+    params.set('date_from', '<?php echo addslashes($date_from); ?>');
+    params.set('date_to',   '<?php echo addslashes($date_to); ?>');
+    return params.toString();
+}
 
 function openPasswordModal(index, name) {
-    _currentModalIndex = index;
-    _currentModalName = name;
-    document.getElementById('superadminPassword').value = '';
-    document.getElementById('passwordModalError').classList.add('hidden');
-    document.getElementById('passwordModalError').textContent = '';
+    _currentModalIndex   = index;
+    _currentModalName    = name;
+    _currentExportAction = null;
+    _resetModal();
+    document.getElementById('passwordModal').classList.remove('hidden');
+    setTimeout(function(){ document.getElementById('superadminPassword').focus(); }, 100);
+}
+
+function openExportModal(action) {
+    _currentModalIndex   = null;
+    _currentModalName    = null;
+    _currentExportAction = action;
+    _resetModal();
     document.getElementById('passwordModal').classList.remove('hidden');
     setTimeout(function(){ document.getElementById('superadminPassword').focus(); }, 100);
 }
 
 function closePasswordModal() {
     document.getElementById('passwordModal').classList.add('hidden');
-    _currentModalIndex = null;
-    _currentModalName = null;
+    _currentModalIndex   = null;
+    _currentModalName    = null;
+    _currentExportAction = null;
+}
+
+function _resetModal() {
+    document.getElementById('superadminPassword').value = '';
+    document.getElementById('passwordModalError').classList.add('hidden');
+    document.getElementById('passwordModalError').textContent = '';
 }
 
 function submitPassword() {
@@ -203,11 +243,23 @@ function submitPassword() {
     .then(function(res){ return res.json(); })
     .then(function(data) {
         if (data.success) {
-            var nameText = document.getElementById('name-text-' + _currentModalIndex);
-            var nameBtn  = document.getElementById('name-btn-'  + _currentModalIndex);
-            if (nameText) nameText.classList.remove('hidden');
-            if (nameBtn)  nameBtn.classList.add('hidden');
-            closePasswordModal();
+            if (_currentExportAction === 'excel') {
+                window.location.href = '<?php echo BASE_URL; ?>/financial/exportOverdueCSV?' + currentFilters();
+                closePasswordModal();
+            } else if (_currentExportAction === 'pdf' || _currentExportAction === 'print') {
+                var printUrl = '<?php echo BASE_URL; ?>/financial/exportOverduePDF?' + currentFilters();
+                var win = window.open(printUrl, '_blank');
+                closePasswordModal();
+                if (_currentExportAction === 'print' && win) {
+                    win.addEventListener('load', function(){ win.print(); });
+                }
+            } else if (_currentModalIndex !== null) {
+                var nameText = document.getElementById('name-text-' + _currentModalIndex);
+                var nameBtn  = document.getElementById('name-btn-'  + _currentModalIndex);
+                if (nameText) nameText.classList.remove('hidden');
+                if (nameBtn)  nameBtn.classList.add('hidden');
+                closePasswordModal();
+            }
         } else {
             showModalError('Contraseña incorrecta. Solo se aceptan contraseñas de Superadmin.');
         }
