@@ -160,9 +160,11 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     <i class="fas fa-paperclip mr-1"></i>Adjuntar Evidencia
                                 </label>
-                                <input type="file" name="evidence_file[]" accept=".pdf,.jpg,.jpeg,.png" multiple
+                                <input type="file" id="evidence_file_input" accept=".pdf,.jpg,.jpeg,.png" multiple
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                                 <p class="text-xs text-gray-500 mt-1">Opcional. Puedes seleccionar múltiples archivos. Formatos aceptados: PDF, JPG, PNG</p>
+                                <ul id="evidence_file_list" class="mt-2 space-y-1 text-sm text-gray-700"></ul>
+                                <div id="evidence_file_container"></div>
                             </div>
                         </div>
 
@@ -184,6 +186,70 @@
 </div>
 
 <script>
+// --- Multiple-file accumulation for evidence upload ---
+(function () {
+    const input     = document.getElementById('evidence_file_input');
+    const list      = document.getElementById('evidence_file_list');
+    const container = document.getElementById('evidence_file_container');
+    let accumulatedFiles = new DataTransfer();
+
+    input.addEventListener('change', function () {
+        Array.from(this.files).forEach(function (file) {
+            // Avoid duplicate filenames
+            const existing = Array.from(accumulatedFiles.files).map(f => f.name);
+            if (!existing.includes(file.name)) {
+                accumulatedFiles.items.add(file);
+            }
+        });
+        // Reset so the same file can be re-added after removal
+        this.value = '';
+        renderFileList();
+    });
+
+    function renderFileList() {
+        list.innerHTML = '';
+        container.innerHTML = '';
+
+        Array.from(accumulatedFiles.files).forEach(function (file, idx) {
+            // Visible list item with remove button
+            const li = document.createElement('li');
+            li.className = 'flex items-center space-x-2';
+            li.innerHTML =
+                '<i class="fas fa-file text-blue-500"></i>' +
+                '<span class="flex-1 truncate">' + escapeHtml(file.name) + '</span>' +
+                '<button type="button" class="text-red-500 hover:text-red-700 text-xs" data-idx="' + idx + '">' +
+                '<i class="fas fa-times"></i> Eliminar</button>';
+            li.querySelector('button').addEventListener('click', function () {
+                removeFile(parseInt(this.getAttribute('data-idx')));
+            });
+            list.appendChild(li);
+
+            // Real hidden input that carries the file
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'file';
+            hiddenInput.name = 'evidence_file[]';
+            hiddenInput.style.display = 'none';
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            hiddenInput.files = dt.files;
+            container.appendChild(hiddenInput);
+        });
+    }
+
+    function removeFile(idx) {
+        const newDt = new DataTransfer();
+        Array.from(accumulatedFiles.files).forEach(function (file, i) {
+            if (i !== idx) newDt.items.add(file);
+        });
+        accumulatedFiles = newDt;
+        renderFileList();
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+})();
+
 // Tipos de movimiento por categoría
 const movementTypes = <?php echo json_encode($movementTypes); ?>;
 
