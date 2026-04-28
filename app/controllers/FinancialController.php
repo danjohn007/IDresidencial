@@ -46,7 +46,7 @@ class FinancialController extends Controller {
             }
             $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
             $mime = mime_content_type($files['tmp_name'][$i]);
-            if (!in_array($ext, self::EVIDENCE_ALLOWED_EXT) || !in_array($mime, self::EVIDENCE_ALLOWED_MIME)) {
+            if (!$mime || !in_array($ext, self::EVIDENCE_ALLOWED_EXT) || !in_array($mime, self::EVIDENCE_ALLOWED_MIME)) {
                 continue;
             }
             $filename = 'evidence_' . bin2hex(random_bytes(16)) . '.' . $ext;
@@ -727,7 +727,7 @@ class FinancialController extends Controller {
         $stmt->execute($params);
         $records = $stmt->fetchAll();
 
-        $totalAmount = array_sum(array_column($records, 'amount'));
+        $totalAmount = array_sum(array_map('floatval', array_column($records, 'amount')));
 
         $data = [
             'title'      => 'Cartera Vencida',

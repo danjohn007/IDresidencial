@@ -186,12 +186,17 @@ var _currentModalIndex  = null;
 var _currentModalName   = null;
 var _currentExportAction = null; // 'print' | 'pdf' | 'excel' | null
 
+// Filter values embedded safely as JSON
+var _filterSearch   = <?php echo json_encode($search, JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+var _filterDateFrom = <?php echo json_encode($date_from, JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+var _filterDateTo   = <?php echo json_encode($date_to, JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+
 // Build current filter query string
 function currentFilters() {
     var params = new URLSearchParams();
-    params.set('search',    '<?php echo addslashes($search); ?>');
-    params.set('date_from', '<?php echo addslashes($date_from); ?>');
-    params.set('date_to',   '<?php echo addslashes($date_to); ?>');
+    params.set('search',    _filterSearch);
+    params.set('date_from', _filterDateFrom);
+    params.set('date_to',   _filterDateTo);
     return params.toString();
 }
 
@@ -247,11 +252,13 @@ function submitPassword() {
                 window.location.href = '<?php echo BASE_URL; ?>/financial/exportOverdueCSV?' + currentFilters();
                 closePasswordModal();
             } else if (_currentExportAction === 'pdf' || _currentExportAction === 'print') {
-                var printUrl = '<?php echo BASE_URL; ?>/financial/exportOverduePDF?' + currentFilters();
-                var win = window.open(printUrl, '_blank');
+                var exportUrl = '<?php echo BASE_URL; ?>/financial/exportOverduePDF?' + currentFilters();
+                var win = window.open(exportUrl, '_blank');
                 closePasswordModal();
                 if (_currentExportAction === 'print' && win) {
-                    win.addEventListener('load', function(){ win.print(); });
+                    win.onload = function() {
+                        try { win.print(); } catch(e) {}
+                    };
                 }
             } else if (_currentModalIndex !== null) {
                 var nameText = document.getElementById('name-text-' + _currentModalIndex);
