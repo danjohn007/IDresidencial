@@ -21,6 +21,68 @@
 
                 <div class="bg-white rounded-lg shadow p-6">
                     <form method="POST" class="space-y-6">
+                        <!-- Información del Visitante -->
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-800 mb-3">Información del Visitante</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Nombre Completo <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" name="visitor_name" required maxlength="255"
+                                           value="<?php echo htmlspecialchars($_POST['visitor_name'] ?? ''); ?>"
+                                           placeholder="Nombre del visitante"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Tipo de Visita <span class="text-red-500">*</span>
+                                    </label>
+                                    <select name="visit_type" required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        <option value="personal" <?php echo (($_POST['visit_type'] ?? 'personal') === 'personal') ? 'selected' : ''; ?>>Personal</option>
+                                        <option value="proveedor" <?php echo (($_POST['visit_type'] ?? '') === 'proveedor') ? 'selected' : ''; ?>>Proveedor</option>
+                                        <option value="delivery" <?php echo (($_POST['visit_type'] ?? '') === 'delivery') ? 'selected' : ''; ?>>Delivery</option>
+                                        <option value="otro" <?php echo (($_POST['visit_type'] ?? '') === 'otro') ? 'selected' : ''; ?>>Otro</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Placa del Vehículo
+                                    </label>
+                                    <input type="text" name="vehicle_plate" maxlength="20"
+                                           value="<?php echo htmlspecialchars($_POST['vehicle_plate'] ?? ''); ?>"
+                                           placeholder="ABC-123-D"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Identificación (INE)
+                                    </label>
+                                    <input type="text" name="visitor_id" maxlength="100"
+                                           value="<?php echo htmlspecialchars($_POST['visitor_id'] ?? ''); ?>"
+                                           placeholder="INE, Pasaporte, etc."
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Teléfono / WhatsApp
+                                    </label>
+                                    <input type="text" name="visitor_phone" maxlength="20"
+                                           value="<?php echo htmlspecialchars($_POST['visitor_phone'] ?? ''); ?>"
+                                           placeholder="10 dígitos sin espacios ni guiones"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vigencia del Pase -->
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-800 mb-3">Vigencia del Pase</h2>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                 Tipo de Pase <span class="text-red-500">*</span>
@@ -64,11 +126,12 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Notas
+                                Notas Adicionales
                             </label>
                             <textarea name="notes" rows="3" 
                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                      placeholder="Nombre del visitante, empresa, motivo de visita, etc."></textarea>
+                                      placeholder="Información adicional sobre la visita..."><?php echo htmlspecialchars($_POST['notes'] ?? ''); ?></textarea>
+                        </div>
                         </div>
 
                         <div class="flex justify-end space-x-3">
