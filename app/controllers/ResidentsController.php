@@ -307,30 +307,66 @@ class ResidentsController extends Controller {
      * Gestión de propiedades
      */
     public function properties() {
-        $stmt = $this->db->query("
+        $search        = trim($this->get('search', ''));
+        $filterType    = $this->get('property_type', '');
+        $filterStatus  = $this->get('status', '');
+
+        $where  = [];
+        $params = [];
+
+        if ($search !== '') {
+            $where[]  = "(p.property_number LIKE ? OR p.section LIKE ? OR p.street LIKE ?)";
+            $like     = '%' . $search . '%';
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+        }
+        if ($filterType !== '') {
+            $where[]  = "p.property_type = ?";
+            $params[] = $filterType;
+        }
+        if ($filterStatus !== '') {
+            $where[]  = "p.status = ?";
+            $params[] = $filterStatus;
+        }
+
+        $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        $sql = "
             SELECT p.*, 
                    COUNT(r.id) as resident_count
             FROM properties p
             LEFT JOIN residents r ON p.id = r.property_id AND r.status = 'active'
+            $whereClause
             GROUP BY p.id
             ORDER BY p.property_number
-        ");
+        ";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         $properties = $stmt->fetchAll();
-        
-        // Calculate statistics
-        $stats = [
-            'total' => count($properties),
-            'ocupada' => count(array_filter($properties, fn($p) => $p['status'] === 'ocupada')),
-            'desocupada' => count(array_filter($properties, fn($p) => $p['status'] === 'desocupada')),
-            'en_construccion' => count(array_filter($properties, fn($p) => $p['status'] === 'en_construccion'))
-        ];
-        
+
+        // Statistics always reflect ALL properties (unfiltered)
+        $statsStmt = $this->db->query("
+            SELECT status, COUNT(*) as cnt FROM properties GROUP BY status
+        ");
+        $statRows = $statsStmt->fetchAll();
+        $stats = ['total' => 0, 'ocupada' => 0, 'desocupada' => 0, 'en_construccion' => 0];
+        foreach ($statRows as $row) {
+            $stats['total'] += $row['cnt'];
+            if (isset($stats[$row['status']])) {
+                $stats[$row['status']] = $row['cnt'];
+            }
+        }
+
         $data = [
-            'title' => 'Propiedades',
-            'properties' => $properties,
-            'stats' => $stats
+            'title'          => 'Propiedades',
+            'properties'     => $properties,
+            'stats'          => $stats,
+            'search'         => $search,
+            'filter_type'    => $filterType,
+            'filter_status'  => $filterStatus,
         ];
-        
+
         $this->view('residents/properties', $data);
     }
     

@@ -83,15 +83,25 @@
                             <td class="px-6 py-4 text-sm text-gray-500"><?php echo htmlspecialchars($record['created_by_name'] ?? '-'); ?></td>
                             <td class="px-6 py-4 text-sm">
                                 <?php
-                                $evFile = $record['evidence_file'] ?? '';
-                                // Only allow safe relative paths within uploads/evidence/
-                                $safePath = (preg_match('#^uploads/evidence/[\w\-]+\.[\w]+$#', $evFile)) ? $evFile : '';
+                                $evRaw   = $record['evidence_file'] ?? '';
+                                $evPaths = [];
+                                if ($evRaw) {
+                                    $decoded = json_decode($evRaw, true);
+                                    if (is_array($decoded)) {
+                                        $evPaths = $decoded;
+                                    } elseif (preg_match('#^uploads/evidence/[\w\-]+\.[\w]+$#', $evRaw)) {
+                                        $evPaths = [$evRaw];
+                                    }
+                                }
+                                $evPaths = array_filter($evPaths, fn($p) => preg_match('#^uploads/evidence/[\w\-]+\.[\w]+$#', $p));
                                 ?>
-                                <?php if ($safePath): ?>
-                                <a href="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($safePath); ?>" 
-                                   target="_blank" class="text-blue-600 hover:text-blue-900">
+                                <?php if (!empty($evPaths)): ?>
+                                <?php foreach ($evPaths as $evPath): ?>
+                                <a href="<?php echo BASE_URL; ?>/<?php echo htmlspecialchars($evPath); ?>"
+                                   target="_blank" class="inline-block text-blue-600 hover:text-blue-900 mr-2">
                                     <i class="fas fa-paperclip mr-1"></i>Ver
                                 </a>
+                                <?php endforeach; ?>
                                 <?php else: ?>
                                 <span class="text-gray-400">—</span>
                                 <?php endif; ?>

@@ -14,26 +14,52 @@ class FinancialController extends Controller {
     private const EVIDENCE_ALLOWED_MIME = ['application/pdf', 'image/jpeg', 'image/png'];
     
     /**
-     * Upload evidence file with validation. Returns relative path or null.
+     * Upload evidence file(s) with validation.
+     * Returns JSON-encoded array of relative paths, or null if no files uploaded.
      */
     private function uploadEvidenceFile(): ?string {
-        if (empty($_FILES['evidence_file']['name']) || $_FILES['evidence_file']['error'] !== UPLOAD_ERR_OK) {
+        if (empty($_FILES['evidence_file']['name'])) {
             return null;
         }
-        $ext = strtolower(pathinfo($_FILES['evidence_file']['name'], PATHINFO_EXTENSION));
-        $mime = mime_content_type($_FILES['evidence_file']['tmp_name']);
-        if (!in_array($ext, self::EVIDENCE_ALLOWED_EXT) || !in_array($mime, self::EVIDENCE_ALLOWED_MIME)) {
-            return null;
+
+        // Normalise to array form (handles both single and multiple inputs)
+        $files = $_FILES['evidence_file'];
+        if (!is_array($files['name'])) {
+            $files = [
+                'name'     => [$files['name']],
+                'type'     => [$files['type']],
+                'tmp_name' => [$files['tmp_name']],
+                'error'    => [$files['error']],
+                'size'     => [$files['size']],
+            ];
         }
+
         $uploadDir = PUBLIC_PATH . self::EVIDENCE_UPLOAD_DIR;
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
-        $filename = 'evidence_' . bin2hex(random_bytes(16)) . '.' . $ext;
-        if (move_uploaded_file($_FILES['evidence_file']['tmp_name'], $uploadDir . $filename)) {
-            return ltrim(self::EVIDENCE_UPLOAD_DIR, '/') . $filename;
+
+        $paths = [];
+        foreach ($files['name'] as $i => $name) {
+            if ($files['error'][$i] !== UPLOAD_ERR_OK || empty($name)) {
+                continue;
+            }
+            $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            $mime = mime_content_type($files['tmp_name'][$i]);
+            if (!$mime || !in_array($ext, self::EVIDENCE_ALLOWED_EXT) || !in_array($mime, self::EVIDENCE_ALLOWED_MIME)) {
+                continue;
+            }
+            $filename = 'evidence_' . bin2hex(random_bytes(16)) . '.' . $ext;
+            if (move_uploaded_file($files['tmp_name'][$i], $uploadDir . $filename)) {
+                $paths[] = ltrim(self::EVIDENCE_UPLOAD_DIR, '/') . $filename;
+            }
         }
-        return null;
+
+        if (empty($paths)) {
+            return null;
+        }
+
+        return json_encode($paths);
     }
     
     public function __construct() {
@@ -594,6 +620,124 @@ class FinancialController extends Controller {
         ];
         
         $this->view('financial/overdue', $data);
+    }
+
+    /**
+     * Exportar cartera vencida como CSV (Excel)
+     */
+    public function exportOverdueCSV() {
+        $search    = $this->get('search', '');
+        $date_from = $this->get('date_from', date('Y-m-01'));
+        $date_to   = $this->get('date_to', date('Y-m-d'));
+
+        $where  = ["mf.status IN ('pending', 'overdue')"];
+        $params = [];
+
+        if (!empty($search)) {
+            $where[]  = "(p.property_number LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?)";
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
+        }
+        if (!empty($date_from)) {
+            $where[]  = "mf.due_date >= ?";
+            $params[] = $date_from;
+        }
+        if (!empty($date_to)) {
+            $where[]  = "mf.due_date <= ?";
+            $params[] = $date_to;
+        }
+
+        $whereClause = 'WHERE ' . implode(' AND ', $where);
+
+        $stmt = $this->db->prepare("
+            SELECT mf.*, p.property_number,
+                   CONCAT(u.first_name, ' ', u.last_name) as resident_name,
+                   u.phone as resident_phone,
+                   DATEDIFF(NOW(), mf.due_date) as days_overdue
+            FROM maintenance_fees mf
+            INNER JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1
+            LEFT JOIN users u ON r.user_id = u.id
+            $whereClause
+            ORDER BY mf.due_date ASC
+        ");
+        $stmt->execute($params);
+        $records = $stmt->fetchAll();
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="cartera_vencida_' . date('Y-m-d') . '.csv"');
+        $out = fopen('php://output', 'w');
+        fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
+        fputcsv($out, ['Propiedad', 'Residente', 'Teléfono', 'Período', 'Monto', 'Vencimiento', 'Días Vencido', 'Estado']);
+        foreach ($records as $record) {
+            fputcsv($out, [
+                $record['property_number'],
+                $record['resident_name'] ?? 'Sin asignar',
+                $record['resident_phone'] ?? '-',
+                $record['period'],
+                number_format($record['amount'], 2),
+                date('d/m/Y', strtotime($record['due_date'])),
+                max(0, intval($record['days_overdue'])),
+                $record['status'] === 'overdue' ? 'Vencido' : 'Pendiente',
+            ]);
+        }
+        fclose($out);
+        exit;
+    }
+
+    /**
+     * Exportar cartera vencida como HTML imprimible (PDF/Print)
+     */
+    public function exportOverduePDF() {
+        $search    = $this->get('search', '');
+        $date_from = $this->get('date_from', date('Y-m-01'));
+        $date_to   = $this->get('date_to', date('Y-m-d'));
+
+        $where  = ["mf.status IN ('pending', 'overdue')"];
+        $params = [];
+
+        if (!empty($search)) {
+            $where[]  = "(p.property_number LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?)";
+            $params[] = '%' . $search . '%';
+            $params[] = '%' . $search . '%';
+        }
+        if (!empty($date_from)) {
+            $where[]  = "mf.due_date >= ?";
+            $params[] = $date_from;
+        }
+        if (!empty($date_to)) {
+            $where[]  = "mf.due_date <= ?";
+            $params[] = $date_to;
+        }
+
+        $whereClause = 'WHERE ' . implode(' AND ', $where);
+
+        $stmt = $this->db->prepare("
+            SELECT mf.*, p.property_number,
+                   CONCAT(u.first_name, ' ', u.last_name) as resident_name,
+                   u.phone as resident_phone,
+                   DATEDIFF(NOW(), mf.due_date) as days_overdue
+            FROM maintenance_fees mf
+            INNER JOIN properties p ON mf.property_id = p.id
+            LEFT JOIN residents r ON r.property_id = p.id AND r.is_primary = 1
+            LEFT JOIN users u ON r.user_id = u.id
+            $whereClause
+            ORDER BY mf.due_date ASC
+        ");
+        $stmt->execute($params);
+        $records = $stmt->fetchAll();
+
+        $totalAmount = array_sum(array_map('floatval', array_column($records, 'amount')));
+
+        $data = [
+            'title'      => 'Cartera Vencida',
+            'records'    => $records,
+            'search'     => $search,
+            'date_from'  => $date_from,
+            'date_to'    => $date_to,
+            'totalAmount'=> $totalAmount,
+        ];
+        $this->view('financial/overdue_print', $data);
     }
 
     /**
