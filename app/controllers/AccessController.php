@@ -272,13 +272,13 @@ class AccessController extends Controller {
                             'access_type' => 'entry',
                             'access_method' => 'qr',
                             'property_id' => $pass['property_id'] ?? null,
-                            'name' => $pass['first_name'] . ' ' . $pass['last_name'],
-                            'vehicle_plate' => null,
+                            'name' => !empty($pass['visitor_name']) ? $pass['visitor_name'] : ($pass['first_name'] . ' ' . $pass['last_name']),
+                            'vehicle_plate' => $pass['vehicle_plate'] ?? null,
                             'guard_id' => $_SESSION['user_id']
                         ]);
 
                         $data['visit'] = [
-                            'visitor_name'    => $pass['first_name'] . ' ' . $pass['last_name'],
+                            'visitor_name'    => !empty($pass['visitor_name']) ? $pass['visitor_name'] : ($pass['first_name'] . ' ' . $pass['last_name']),
                             'property_number' => $pass['property_number'],
                             'valid_from'      => $pass['valid_from'],
                             'valid_until'     => $pass['valid_until'] ?? 'Sin vencimiento',
@@ -883,8 +883,8 @@ class AccessController extends Controller {
                 'access_type' => 'entry',
                 'access_method' => 'qr',
                 'property_id' => $pass['property_id'] ?? null,
-                'name' => $pass['first_name'] . ' ' . $pass['last_name'],
-                'vehicle_plate' => null,
+                'name' => !empty($pass['visitor_name']) ? $pass['visitor_name'] : ($pass['first_name'] . ' ' . $pass['last_name']),
+                'vehicle_plate' => $pass['vehicle_plate'] ?? null,
                 'guard_id' => $_SESSION['user_id']
             ]);
 
@@ -893,7 +893,7 @@ class AccessController extends Controller {
                 'type' => 'resident_pass',
                 'visit' => [
                     'id' => null,
-                    'visitor_name' => $pass['first_name'] . ' ' . $pass['last_name'],
+                    'visitor_name' => !empty($pass['visitor_name']) ? $pass['visitor_name'] : ($pass['first_name'] . ' ' . $pass['last_name']),
                     'property_number' => $pass['property_number'],
                     'resident_name' => $pass['first_name'] . ' ' . $pass['last_name'],
                     'valid_from' => $pass['valid_from'],

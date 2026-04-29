@@ -900,11 +900,28 @@ class ResidentsController extends Controller {
         ];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $passType = $this->post('pass_type', 'single_use');
-            $validFrom = $this->post('valid_from', date('Y-m-d H:i:s'));
-            $validUntil = $this->post('valid_until');
-            $maxUses = intval($this->post('max_uses', 1));
-            $notes = $this->post('notes', '');
+            $passType     = $this->post('pass_type', 'single_use');
+            $validFrom    = $this->post('valid_from', date('Y-m-d H:i:s'));
+            $validUntil   = $this->post('valid_until');
+            $maxUses      = intval($this->post('max_uses', 1));
+            $notes        = $this->post('notes', '');
+            $visitorName  = trim($this->post('visitor_name', ''));
+            $visitType    = $this->post('visit_type', 'personal');
+            $vehiclePlate = trim($this->post('vehicle_plate', ''));
+            $visitorId    = trim($this->post('visitor_id', ''));
+            $visitorPhone = trim($this->post('visitor_phone', ''));
+
+            if (empty($visitorName)) {
+                $data['error'] = 'El nombre del visitante es obligatorio.';
+                $this->view('residents/generate_access', $data);
+                return;
+            }
+
+            if (empty($visitType)) {
+                $data['error'] = 'El tipo de visita es obligatorio.';
+                $this->view('residents/generate_access', $data);
+                return;
+            }
             
             // Generar código QR único con formato VIS-YYYYMMDD-XXXXXXXX
             do {
@@ -916,8 +933,9 @@ class ResidentsController extends Controller {
             try {
                 $stmt = $this->db->prepare("
                     INSERT INTO resident_access_passes 
-                    (resident_id, pass_type, qr_code, valid_from, valid_until, max_uses, notes, status) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+                    (resident_id, pass_type, qr_code, valid_from, valid_until, max_uses, notes, status,
+                     visitor_name, visitor_id, visitor_phone, vehicle_plate, visit_type) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([
                     $resident['id'], 
@@ -926,7 +944,12 @@ class ResidentsController extends Controller {
                     $validFrom, 
                     $validUntil, 
                     $maxUses, 
-                    $notes
+                    $notes,
+                    $visitorName ?: null,
+                    $visitorId   ?: null,
+                    $visitorPhone ?: null,
+                    $vehiclePlate ?: null,
+                    $visitType ?: null,
                 ]);
                 
                 $passId = $this->db->lastInsertId();
