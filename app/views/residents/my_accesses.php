@@ -65,13 +65,49 @@
                                     </div>
                                 </div>
 
+                                <!-- Visitor & Resident Info -->
+                                <div class="space-y-2 text-sm mb-3">
+                                    <?php if (!empty($pass['visitor_name'])): ?>
+                                    <div class="flex items-start text-gray-600">
+                                        <i class="fas fa-user w-5 mr-2 mt-0.5"></i>
+                                        <div>
+                                            <span class="text-xs text-gray-400 block">Visitante</span>
+                                            <span class="font-semibold text-gray-800"><?php echo htmlspecialchars($pass['visitor_name']); ?></span>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($pass['visitor_phone'])): ?>
+                                    <div class="flex items-center text-gray-600">
+                                        <i class="fas fa-phone w-5 mr-2"></i>
+                                        <div>
+                                            <span class="text-xs text-gray-400 block">Teléfono</span>
+                                            <span><?php echo htmlspecialchars($pass['visitor_phone']); ?></span>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+                                    <div class="flex items-start text-gray-600">
+                                        <i class="fas fa-id-card w-5 mr-2 mt-0.5"></i>
+                                        <div>
+                                            <span class="text-xs text-gray-400 block">Residente</span>
+                                            <span><?php echo htmlspecialchars($pass['first_name'] . ' ' . $pass['last_name']); ?></span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center text-gray-600">
+                                        <i class="fas fa-home w-5 mr-2"></i>
+                                        <div>
+                                            <span class="text-xs text-gray-400 block">Propiedad</span>
+                                            <span><?php echo htmlspecialchars($pass['property_number']); ?><?php if (!empty($pass['section'])): ?> - <?php echo htmlspecialchars($pass['section']); ?><?php endif; ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Details -->
-                                <div class="space-y-2 text-sm">
+                                <div class="space-y-2 text-sm border-t pt-2">
                                     <div class="flex items-center text-gray-600">
                                         <i class="fas fa-calendar-alt w-5 mr-2"></i>
                                         <span>Desde: <?php echo date('d/m/Y H:i', strtotime($pass['valid_from'])); ?></span>
                                     </div>
-                                    <?php if ($pass['valid_until']): ?>
+                                    <?php if (!empty($pass['valid_until']) && $pass['valid_until'] !== '0000-00-00 00:00:00'): ?>
                                     <div class="flex items-center text-gray-600">
                                         <i class="fas fa-calendar-check w-5 mr-2"></i>
                                         <span>Hasta: <?php echo date('d/m/Y H:i', strtotime($pass['valid_until'])); ?></span>
@@ -79,7 +115,11 @@
                                     <?php endif; ?>
                                     <div class="flex items-center text-gray-600">
                                         <i class="fas fa-hashtag w-5 mr-2"></i>
-                                        <span>Usos: <?php echo $pass['uses_count']; ?> / <?php echo $pass['max_uses']; ?></span>
+                                        <?php if ($pass['max_uses'] == 0): ?>
+                                            <span>Usos: <?php echo $pass['uses_count']; ?> / Ilimitado</span>
+                                        <?php else: ?>
+                                            <span>Usos: <?php echo $pass['uses_count']; ?> / <?php echo $pass['max_uses']; ?></span>
+                                        <?php endif; ?>
                                     </div>
                                     <?php if ($pass['notes']): ?>
                                     <div class="pt-2 border-t">
@@ -89,14 +129,26 @@
                                 </div>
 
                                 <!-- Actions -->
-                                <?php if ($pass['status'] === 'active'): ?>
                                 <div class="mt-4 pt-4 border-t">
+                                    <?php if ($pass['status'] === 'active'): ?>
                                     <button onclick="cancelPass(<?php echo $pass['id']; ?>)" 
                                             class="w-full px-4 py-2 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50">
                                         <i class="fas fa-ban mr-2"></i> Cancelar Pase
                                     </button>
+                                    <?php elseif ($pass['status'] === 'used'): ?>
+                                    <div class="w-full px-4 py-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                                        <i class="fas fa-check-circle mr-2"></i> Pase Utilizado
+                                    </div>
+                                    <?php elseif ($pass['status'] === 'expired'): ?>
+                                    <div class="w-full px-4 py-2 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg text-center">
+                                        <i class="fas fa-clock mr-2"></i> Pase Expirado
+                                    </div>
+                                    <?php elseif ($pass['status'] === 'cancelled'): ?>
+                                    <div class="w-full px-4 py-2 text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg text-center">
+                                        <i class="fas fa-ban mr-2"></i> Pase Cancelado
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
-                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>

@@ -87,8 +87,9 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                 Tipo de Pase <span class="text-red-500">*</span>
                             </label>
-                            <select name="pass_type" required 
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <select name="pass_type" id="pass_type" required 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    onchange="updateMaxUsesField()">
                                 <option value="single_use">Uso Único</option>
                                 <option value="temporary">Temporal (múltiples usos)</option>
                                 <option value="permanent">Permanente</option>
@@ -115,13 +116,13 @@
                             </div>
                         </div>
 
-                        <div>
+                        <div id="max_uses_container">
                             <label class="block text-sm font-medium text-gray-700 mb-2">
                                 Usos Máximos
                             </label>
-                            <input type="number" name="max_uses" value="1" min="1"
+                            <input type="number" name="max_uses" id="max_uses" value="1" min="1"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                            <p class="text-xs text-gray-500 mt-1">Para pases de uso único, dejar en 1</p>
+                            <p class="text-xs text-gray-500 mt-1" id="max_uses_hint">Para pases de uso único, dejar en 1</p>
                         </div>
 
                         <div>
@@ -166,5 +167,31 @@
         </main>
     </div>
 </div>
+
+<script>
+function updateMaxUsesField() {
+    var passType = document.getElementById('pass_type').value;
+    var container = document.getElementById('max_uses_container');
+    var input = document.getElementById('max_uses');
+    var hint = document.getElementById('max_uses_hint');
+
+    if (passType === 'permanent') {
+        container.style.display = 'none';
+        input.removeAttribute('required');
+    } else if (passType === 'single_use') {
+        container.style.display = '';
+        input.value = 1;
+        input.setAttribute('readonly', 'readonly');
+        hint.textContent = 'El pase de uso único siempre permite exactamente 1 uso.';
+    } else {
+        container.style.display = '';
+        input.removeAttribute('readonly');
+        input.value = input.value < 2 ? 2 : input.value;
+        hint.textContent = 'Número de veces que se puede usar el pase dentro del período.';
+    }
+}
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', updateMaxUsesField);
+</script>
 
 <?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
