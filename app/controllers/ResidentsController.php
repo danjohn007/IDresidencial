@@ -903,8 +903,17 @@ class ResidentsController extends Controller {
             $passType     = $this->post('pass_type', 'single_use');
             $validFrom    = $this->post('valid_from', date('Y-m-d H:i:s'));
             $validUntil   = $this->post('valid_until');
-            $maxUses      = intval($this->post('max_uses', 1));
             $notes        = $this->post('notes', '');
+
+            // Enforce correct max_uses per pass type
+            if ($passType === 'permanent') {
+                $maxUses = 0; // 0 = unlimited
+                $validUntil = null; // permanent passes have no expiration
+            } elseif ($passType === 'single_use') {
+                $maxUses = 1;
+            } else {
+                $maxUses = intval($this->post('max_uses', 1));
+            }
             $visitorName  = trim($this->post('visitor_name', ''));
             $visitType    = $this->post('visit_type', 'personal');
             $vehiclePlate = trim($this->post('vehicle_plate', ''));
@@ -1029,11 +1038,17 @@ class ResidentsController extends Controller {
             $this->redirect('dashboard');
         }
         
-        // Obtener pases de acceso
+        // Obtener pases de acceso con información del residente y propiedad
         $stmt = $this->db->prepare("
-            SELECT * FROM resident_access_passes 
-            WHERE resident_id = ? 
-            ORDER BY created_at DESC
+            SELECT rap.*,
+                   u.first_name, u.last_name,
+                   p.property_number, p.section
+            FROM resident_access_passes rap
+            INNER JOIN residents r ON rap.resident_id = r.id
+            INNER JOIN users u ON r.user_id = u.id
+            INNER JOIN properties p ON r.property_id = p.id
+            WHERE rap.resident_id = ?
+            ORDER BY rap.created_at DESC
         ");
         $stmt->execute([$resident['resident_id']]);
         $passes = $stmt->fetchAll();
