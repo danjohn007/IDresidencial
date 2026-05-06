@@ -170,10 +170,10 @@
 
 <script>
 function updateMaxUsesField() {
-    var passType = document.getElementById('pass_type').value;
-    var container = document.getElementById('max_uses_container');
-    var input = document.getElementById('max_uses');
-    var hint = document.getElementById('max_uses_hint');
+    const passType = document.getElementById('pass_type').value;
+    const container = document.getElementById('max_uses_container');
+    const input = document.getElementById('max_uses');
+    const hint = document.getElementById('max_uses_hint');
 
     if (passType === 'permanent') {
         container.style.display = 'none';

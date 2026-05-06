@@ -4,8 +4,7 @@
 -- the incorrect max_uses value being exhausted.
 
 UPDATE `resident_access_passes`
-SET `max_uses`  = 0,
-    `status`    = IF(`status` = 'active', 'active', `status`)
+SET `max_uses` = 0
 WHERE `pass_type` = 'permanent'
   AND `max_uses` != 0;
 

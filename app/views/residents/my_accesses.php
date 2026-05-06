@@ -115,7 +115,7 @@
                                     <?php endif; ?>
                                     <div class="flex items-center text-gray-600">
                                         <i class="fas fa-hashtag w-5 mr-2"></i>
-                                        <?php if ($pass['max_uses'] == 0): ?>
+                                        <?php if ($pass['max_uses'] === 0): ?>
                                             <span>Usos: <?php echo $pass['uses_count']; ?> / Ilimitado</span>
                                         <?php else: ?>
                                             <span>Usos: <?php echo $pass['uses_count']; ?> / <?php echo $pass['max_uses']; ?></span>

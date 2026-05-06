@@ -912,7 +912,7 @@ class ResidentsController extends Controller {
             } elseif ($passType === 'single_use') {
                 $maxUses = 1;
             } else {
-                $maxUses = max(1, intval($this->post('max_uses', 1)));
+                $maxUses = intval($this->post('max_uses', 1));
             }
             $visitorName  = trim($this->post('visitor_name', ''));
             $visitType    = $this->post('visit_type', 'personal');
